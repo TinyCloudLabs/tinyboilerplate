@@ -19,6 +19,8 @@ import { ItemsCRUD } from "./components/ItemsCRUD";
 
 const OPENKEY_HOST =
   import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
+const OPENKEY_CLIENT_ID =
+  import.meta.env.VITE_OPENKEY_CLIENT_ID || "";
 const TINYCLOUD_HOST =
   import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
 const BACKEND_URL =
@@ -68,6 +70,14 @@ export function App() {
 
       // 3. Create API client for backend calls
       const apiClient = createApiClient(BACKEND_URL, { userAddress: addr });
+
+      // 4. Start proactive token refresh (opt-in background timer)
+      if (OPENKEY_CLIENT_ID) {
+        tokenStore.startAutoRefresh({
+          openKeyHost: OPENKEY_HOST,
+          clientId: OPENKEY_CLIENT_ID,
+        });
+      }
 
       // Update state
       setAddress(addr);

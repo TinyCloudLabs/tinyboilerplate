@@ -34,7 +34,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "tsc --watch --preserveWatchOutput",
     "test": "bun test",
     "generate-key": "bun run scripts/generate-key.ts",
     "postinstall": "node scripts/fix-wasm-esm.mjs"

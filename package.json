@@ -22,7 +22,12 @@
     "build:core": "cd packages/core && bun run build",
     "build:client": "cd packages/client && bun run build",
     "build:server": "cd packages/server && bun run build",
-    "dev": "cd examples/react-express && bun run dev",
+    "dev": "bun run build && concurrently --kill-others -n core,client,server,frontend,backend -c blue,cyan,magenta,green,yellow \"bun run dev:core\" \"bun run dev:client\" \"bun run dev:server\" \"bun run dev:frontend\" \"bun run dev:backend\"",
+    "dev:core": "cd packages/core && bun run dev",
+    "dev:client": "cd packages/client && bun run dev",
+    "dev:server": "cd packages/server && bun run dev",
+    "dev:frontend": "cd examples/react-express/frontend && bun run dev",
+    "dev:backend": "cd examples/react-express/backend && bun run dev",
     "generate-key": "cd packages/server && bun run generate-key",
     "test": "bun run test:core && bun run test:client && bun run test:server",
     "test:core": "cd packages/core && bun test",
@@ -31,6 +36,7 @@
   },
   "devDependencies": {
     "@tinycloud/node-sdk": "1.5.0",
+    "concurrently": "^9.2.1",
     "playwright": "^1.58.2"
   }
 }

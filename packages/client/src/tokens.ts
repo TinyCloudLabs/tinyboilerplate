@@ -1,4 +1,5 @@
 import { DEFAULT_FETCH_TIMEOUT_MS } from "@tinyboilerplate/core";
+import type { TokenPersistence } from "./persistence.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -15,14 +16,36 @@ export interface TokenRefreshConfig {
   clientId: string;
 }
 
+export interface TokenStoreConfig {
+  /** Optional persistence layer for surviving page reloads. */
+  persistence?: TokenPersistence;
+}
+
 // ── Token Store ──────────────────────────────────────────────────────
 
 /**
- * In-memory JWT token store with refresh logic.
+ * JWT token store with refresh logic and optional persistence.
  * Framework-agnostic: wire into React state, Vue refs, or any other system.
+ *
+ * Without persistence (default), tokens are in-memory only and lost on page reload.
+ * Pass a `TokenPersistence` implementation to survive reloads:
+ *
+ * ```ts
+ * import { TokenStore, createLocalStoragePersistence } from "@tinyboilerplate/client";
+ *
+ * const store = new TokenStore({
+ *   persistence: createLocalStoragePersistence(),
+ * });
+ * store.restore(); // attempt to load persisted tokens on startup
+ * ```
  */
 export class TokenStore {
   private tokens: StoredTokens | null = null;
+  private readonly persistence?: TokenPersistence;
+
+  constructor(config?: TokenStoreConfig) {
+    this.persistence = config?.persistence;
+  }
 
   /** Buffer before actual expiry to trigger refresh (30 seconds). */
   private static readonly EXPIRY_BUFFER_MS = 30_000;
@@ -38,6 +61,7 @@ export class TokenStore {
       refreshToken: refreshToken || null,
       expiresAt: Date.now() + expiresIn * 1000,
     };
+    this.persistence?.save(this.tokens);
   }
 
   /** Get the current access token, or null if not set. */
@@ -67,6 +91,30 @@ export class TokenStore {
   /** Clear all stored tokens (e.g., on sign-out). */
   clear(): void {
     this.tokens = null;
+    this.persistence?.clear();
+  }
+
+  /**
+   * Attempt to restore tokens from the persistence layer.
+   * Returns true if valid (non-expired) tokens were restored.
+   * Returns false if no persistence is configured, no tokens are stored,
+   * or the stored tokens are expired.
+   */
+  restore(): boolean {
+    if (!this.persistence) return false;
+
+    const loaded = this.persistence.load();
+    if (!loaded) return false;
+
+    // Check if the loaded tokens are expired (using the same buffer logic)
+    if (Date.now() >= loaded.expiresAt - TokenStore.EXPIRY_BUFFER_MS) {
+      // Expired tokens — clear them from persistence too
+      this.persistence.clear();
+      return false;
+    }
+
+    this.tokens = loaded;
+    return true;
   }
 
   /**

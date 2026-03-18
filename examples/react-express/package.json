@@ -2,7 +2,7 @@
   "name": "@tinyboilerplate/example-react-express",
   "private": true,
   "scripts": {
-    "dev": "bun run dev:backend & bun run dev:frontend",
+    "dev": "concurrently --kill-others -n frontend,backend -c green,yellow \"bun run dev:frontend\" \"bun run dev:backend\"",
     "dev:frontend": "cd frontend && bun run dev",
     "dev:backend": "cd backend && bun run dev"
   }

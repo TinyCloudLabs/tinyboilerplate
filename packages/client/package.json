@@ -33,7 +33,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "tsc --watch --preserveWatchOutput",
     "test": "bun test"
   },
   "dependencies": {

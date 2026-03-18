@@ -65,6 +65,15 @@ function hexToString(hex: string): string {
 // ── Sign In ──────────────────────────────────────────────────────────
 
 /**
+ * Detect popup-blocked errors across browsers.
+ * Popup blockers cause errors with varying messages — match common patterns.
+ */
+function isPopupBlockedError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /popup.*(blocked|closed)|blocked.*popup|user.*cancel|window.*closed/i.test(message);
+}
+
+/**
  * Single-step OpenKey sign-in: connect → get signing provider.
  *
  * Opens one popup for passkey authentication. Returns an ethers
@@ -77,7 +86,18 @@ export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResul
   });
 
   // Single popup — user authenticates with passkey, selects key
-  const authResult = await openkey.connect();
+  let authResult;
+  try {
+    authResult = await openkey.connect();
+  } catch (err) {
+    if (isPopupBlockedError(err)) {
+      throw new Error(
+        "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.",
+        { cause: err },
+      );
+    }
+    throw err;
+  }
 
   // Create EIP-1193 provider that routes signing through OpenKey
   const eip1193 = new OpenKeyEIP1193Provider(

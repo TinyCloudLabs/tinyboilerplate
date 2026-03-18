@@ -1,10 +1,11 @@
 import type { ApiError } from "@tinyboilerplate/core";
+import type { TokenStore, TokenRefreshConfig } from "./tokens.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface ApiClientConfig {
-  /** User's blockchain address. Sent as X-User-Address header for auth. */
-  userAddress: string;
+  /** If set, auto-refresh tokens on 401 responses. */
+  refreshConfig?: TokenRefreshConfig;
 }
 
 export interface ApiClient {
@@ -17,35 +18,65 @@ export interface ApiClient {
 // ── API Client ───────────────────────────────────────────────────────
 
 /**
- * Create a fetch wrapper that auto-attaches the X-User-Address header.
+ * Create a fetch wrapper that auto-attaches Bearer auth from a TokenStore.
+ * Optionally refreshes tokens on 401 responses.
  */
 export function createApiClient(
   backendUrl: string,
-  config: ApiClientConfig,
+  tokenStore: TokenStore,
+  config?: ApiClientConfig,
 ): ApiClient {
-  const { userAddress } = config;
-
   async function request<T>(path: string, init: RequestInit): Promise<T> {
+    const token = tokenStore.getAccessToken();
+    if (!token) {
+      throw new Error("No access token available. Sign in first.");
+    }
+
     const res = await fetch(`${backendUrl}${path}`, {
       ...init,
       headers: {
         ...init.headers,
-        "X-User-Address": userAddress,
+        Authorization: `Bearer ${token}`,
       },
     });
 
+    // Auto-refresh on 401 if configured
+    if (res.status === 401 && config?.refreshConfig) {
+      await tokenStore.refresh(config.refreshConfig);
+      const newToken = tokenStore.getAccessToken();
+      const retryRes = await fetch(`${backendUrl}${path}`, {
+        ...init,
+        headers: {
+          ...init.headers,
+          Authorization: `Bearer ${newToken}`,
+        },
+      });
+
+      if (!retryRes.ok) {
+        const err: ApiError = await retryRes.json().catch((cause) => ({
+          error: `HTTP ${retryRes.status}`,
+          message: retryRes.statusText,
+        }));
+        throw new Error(`API error (${retryRes.status}): ${err.message}`, {
+          cause: err,
+        });
+      }
+
+      if (retryRes.status === 204) return undefined as T;
+      return retryRes.json() as Promise<T>;
+    }
+
     if (!res.ok) {
-      const err: ApiError = await res.json().catch(() => ({
+      const err: ApiError = await res.json().catch((cause) => ({
         error: `HTTP ${res.status}`,
         message: res.statusText,
       }));
-      throw new Error(`API error (${res.status}): ${err.message}`);
+      throw new Error(`API error (${res.status}): ${err.message}`, {
+        cause: err,
+      });
     }
 
-    if (res.status === 204) {
-      return undefined as T;
-    }
-
+    if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
   }
 

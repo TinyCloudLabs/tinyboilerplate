@@ -81,6 +81,47 @@ export interface ServerInfo {
   status: string;
 }
 
+// ── Pagination ──────────────────────────────────────────────────────
+
+/**
+ * Parameters for requesting a paginated list.
+ * Supports both cursor-based and offset-based pagination.
+ *
+ * - Cursor-based: pass `cursor` (opaque string from a previous response).
+ * - Offset-based: pass `offset` (zero-based index into the result set).
+ * - `limit` controls page size in either mode (clamped to MAX_PAGE_LIMIT).
+ */
+export interface PaginationParams {
+  /** Opaque cursor returned by a previous paginated response. */
+  cursor?: string;
+  /** Maximum number of items to return (default: DEFAULT_PAGE_LIMIT). */
+  limit?: number;
+  /** Zero-based offset for offset-based pagination. */
+  offset?: number;
+}
+
+/**
+ * Metadata returned alongside a paginated list of items.
+ */
+export interface PaginationMeta {
+  /** Total number of items matching the query (omitted when unknown or expensive to compute). */
+  total?: number;
+  /** Opaque cursor to pass in the next request for cursor-based pagination. Absent on the last page. */
+  cursor?: string;
+  /** True when more items exist beyond the current page. */
+  hasMore: boolean;
+}
+
+/**
+ * Generic paginated response wrapper.
+ *
+ * @typeParam T - The type of each item in the list.
+ */
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
 // ── API Responses ────────────────────────────────────────────────────
 
 export interface ItemResponse {
@@ -129,3 +170,9 @@ export const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
 
 /** Default maximum entries in the DelegationCache */
 export const DEFAULT_DELEGATION_CACHE_MAX_SIZE = 1000;
+
+/** Default page size for paginated list responses */
+export const DEFAULT_PAGE_LIMIT = 50;
+
+/** Maximum allowed page size for paginated list responses */
+export const MAX_PAGE_LIMIT = 200;

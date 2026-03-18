@@ -96,6 +96,23 @@ export function App() {
     }
   }, []);
 
+  // ── Auth state change listener ─────────────────────────────────
+  // Subscribe to token lifecycle events. Use this to drive reactive UI
+  // updates (e.g., redirect to login on session loss).
+
+  useEffect(() => {
+    const unsub = tokenStore.onAuthStateChange((event) => {
+      console.log("[auth]", event.type);
+      if (event.type === "tokens_cleared") {
+        // Session ended — could auto-redirect to login, update UI, etc.
+      }
+      if (event.type === "refresh_failed") {
+        setAuthError("Session expired. Please sign in again.");
+      }
+    });
+    return unsub;
+  }, []);
+
   // ── Sign Out ──────────────────────────────────────────────────────
 
   const handleSignOut = useCallback(async () => {

@@ -212,3 +212,4 @@ The items route supports `?store=kv` (default) or `?store=sql`. KV stores items 
 - **Build order**: Must build `core` before `client`/`server` since they depend on it. `bun run build` handles this.
 - **Key format**: `BACKEND_PRIVATE_KEY` must be 0x-prefixed 32-byte hex. The generate-key script produces the correct format.
 - **Delegation expiry vs cache TTL**: Delegation expiry (default 7 days) is the user-facing expiry. Cache TTL (50 min) is the internal re-activation cycle. These are independent.
+- **SDK Version Overrides**: Root `package.json` pins `@tinycloud/sdk-core@1.5.0`, `@tinycloud/sdk-services@1.5.0`, and `@tinycloud/web-core@1.1.0` via `overrides` to ensure consistent types across workspace packages. Without these, different packages may resolve different SDK versions, causing TypeScript type mismatches. Update these when upgrading the TinyCloud SDK.

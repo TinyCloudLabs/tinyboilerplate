@@ -1,4 +1,7 @@
-import { DELEGATION_CACHE_TTL_MS } from "@tinyboilerplate/core";
+import {
+  DELEGATION_CACHE_TTL_MS,
+  DEFAULT_DELEGATION_CACHE_MAX_SIZE,
+} from "@tinyboilerplate/core";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -14,15 +17,18 @@ export interface DelegatedAccess {
 interface CacheEntry {
   delegatedAccess: DelegatedAccess;
   cachedAt: number;
+  lastAccessedAt: number;
 }
 
 // ── Delegation Cache ─────────────────────────────────────────────────
 
 /**
- * In-memory cache for DelegatedAccess objects.
+ * In-memory LRU cache for DelegatedAccess objects.
  *
  * Each entry has a TTL of DELEGATION_CACHE_TTL_MS (50 minutes),
  * which is safely under the 1-hour TinyCloud sub-session cap.
+ *
+ * When the cache exceeds maxSize, the least-recently-used entry is evicted.
  *
  * On cache miss or expiry, callers should re-activate the delegation
  * via `node.useDelegation()`.
@@ -30,14 +36,17 @@ interface CacheEntry {
 export class DelegationCache {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly ttlMs: number;
+  private readonly maxSize: number;
 
-  constructor(ttlMs?: number) {
+  constructor(ttlMs?: number, maxSize?: number) {
     this.ttlMs = ttlMs ?? DELEGATION_CACHE_TTL_MS;
+    this.maxSize = maxSize ?? DEFAULT_DELEGATION_CACHE_MAX_SIZE;
   }
 
   /**
    * Get a cached DelegatedAccess for the given address.
    * Returns null if not cached or if the entry has expired.
+   * Updates lastAccessedAt for LRU tracking.
    */
   get(address: string): DelegatedAccess | null {
     const key = address.toLowerCase();
@@ -51,17 +60,29 @@ export class DelegationCache {
       return null;
     }
 
+    // Touch for LRU
+    entry.lastAccessedAt = Date.now();
+
     return entry.delegatedAccess;
   }
 
   /**
    * Cache a DelegatedAccess for the given address.
+   * Evicts the least-recently-used entry if the cache is at capacity.
    */
   set(address: string, delegatedAccess: DelegatedAccess): void {
     const key = address.toLowerCase();
+
+    // If key already exists, just update it (no eviction needed)
+    if (!this.cache.has(key) && this.cache.size >= this.maxSize) {
+      this.evictLRU();
+    }
+
+    const now = Date.now();
     this.cache.set(key, {
       delegatedAccess,
-      cachedAt: Date.now(),
+      cachedAt: now,
+      lastAccessedAt: now,
     });
   }
 
@@ -92,5 +113,24 @@ export class DelegationCache {
    */
   get size(): number {
     return this.cache.size;
+  }
+
+  /**
+   * Evict the least-recently-used entry from the cache.
+   */
+  private evictLRU(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+
+    for (const [key, entry] of this.cache) {
+      if (entry.lastAccessedAt < oldestTime) {
+        oldestTime = entry.lastAccessedAt;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey !== null) {
+      this.cache.delete(oldestKey);
+    }
   }
 }

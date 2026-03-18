@@ -1,8 +1,10 @@
+import { DEFAULT_FETCH_TIMEOUT_MS } from "@tinyboilerplate/core";
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface StoredTokens {
   accessToken: string;
-  refreshToken: string;
+  refreshToken: string | null;
   expiresAt: number; // Unix timestamp in ms
 }
 
@@ -28,11 +30,12 @@ export class TokenStore {
   /**
    * Store tokens from an OAuth flow or refresh response.
    * `expiresIn` is in seconds (as returned by OAuth token endpoints).
+   * Empty-string refreshToken is normalized to null.
    */
-  setTokens(accessToken: string, refreshToken: string, expiresIn: number): void {
+  setTokens(accessToken: string, refreshToken: string | null, expiresIn: number): void {
     this.tokens = {
       accessToken,
-      refreshToken,
+      refreshToken: refreshToken || null,
       expiresAt: Date.now() + expiresIn * 1000,
     };
   }
@@ -84,6 +87,7 @@ export class TokenStore {
         refresh_token: refreshToken,
         client_id: config.clientId,
       }),
+      signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -96,7 +100,7 @@ export class TokenStore {
     const data = await res.json();
     this.setTokens(
       data.access_token,
-      data.refresh_token ?? refreshToken, // Some providers don't rotate refresh tokens
+      data.refresh_token || refreshToken, // Keep old token if server returns empty/missing
       data.expires_in,
     );
   }

@@ -1,12 +1,13 @@
 import type { TinyCloudNode } from "@tinycloud/node-sdk";
-import type { StoredDelegation } from "@tinyboilerplate/core";
+import type { StoredDelegation, ISODateString } from "@tinyboilerplate/core";
+import { toISODateString } from "@tinyboilerplate/core";
 import { withSessionRefresh } from "./identity.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface DelegationMetadata {
-  grantedAt?: string;
-  expiresAt: string;
+  grantedAt?: ISODateString;
+  expiresAt: ISODateString;
   actions: string[];
   path: string;
 }
@@ -45,7 +46,7 @@ export class DelegationStore {
     const key = this.keyFor(address);
     const record: StoredDelegation = {
       serialized,
-      grantedAt: metadata.grantedAt ?? new Date().toISOString(),
+      grantedAt: metadata.grantedAt ?? toISODateString(),
       expiresAt: metadata.expiresAt,
       actions: metadata.actions,
       path: metadata.path,

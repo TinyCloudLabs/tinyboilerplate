@@ -25,12 +25,33 @@ class AuthenticationError extends TinyBoilerplateError {
   }
 }
 
+class TokenError extends TinyBoilerplateError {
+  constructor(message: string, options?: ErrorOptions) {
+    super("token_error", message, options);
+    this.name = "TokenError";
+  }
+}
+
 class NetworkError extends TinyBoilerplateError {
   public readonly statusCode?: number;
   constructor(message: string, options?: ErrorOptions & { statusCode?: number }) {
     super("network_error", message, options);
     this.name = "NetworkError";
     this.statusCode = options?.statusCode;
+  }
+}
+
+class PopupBlockedError extends TinyBoilerplateError {
+  constructor(message: string, options?: ErrorOptions) {
+    super("popup_blocked", message, options);
+    this.name = "PopupBlockedError";
+  }
+}
+
+class DelegationError extends TinyBoilerplateError {
+  constructor(message: string, options?: ErrorOptions) {
+    super("delegation_error", message, options);
+    this.name = "DelegationError";
   }
 }
 
@@ -56,7 +77,10 @@ mock.module("@tinyboilerplate/core", () => ({
   // Error types
   TinyBoilerplateError,
   AuthenticationError,
+  TokenError,
   NetworkError,
+  PopupBlockedError,
+  DelegationError,
   // Logger
   consoleLogger,
   noopLogger,

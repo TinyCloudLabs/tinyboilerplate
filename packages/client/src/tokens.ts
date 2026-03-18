@@ -22,6 +22,31 @@ export interface TokenStoreConfig {
   persistence?: TokenPersistence;
 }
 
+/**
+ * Options for the proactive background token refresh timer.
+ *
+ * The timer periodically checks whether the access token should be refreshed
+ * and, if so, calls `refresh()` in the background. Fully opt-in — the timer
+ * never starts unless you call `startAutoRefresh()`.
+ */
+export interface AutoRefreshOptions {
+  /** How often to check whether a refresh is needed (default: 60 000 ms / 1 min). */
+  intervalMs?: number;
+  /**
+   * Fraction of token lifetime at which to trigger a refresh (0-1).
+   * For example, 0.8 means "refresh after 80 % of the lifetime has elapsed".
+   * Default: 0.8.
+   */
+  refreshAtLifetimeFraction?: number;
+  /**
+   * Absolute minimum time before expiry at which to trigger a refresh.
+   * If the remaining time is less than this value a refresh is attempted
+   * regardless of the lifetime fraction.
+   * Default: 300 000 ms (5 min).
+   */
+  minTimeBeforeExpiryMs?: number;
+}
+
 // ── Token Store ──────────────────────────────────────────────────────
 
 /**
@@ -44,6 +69,11 @@ export class TokenStore {
   private tokens: StoredTokens | null = null;
   private readonly persistence?: TokenPersistence;
   private readonly listeners = new Set<AuthEventListener>();
+
+  // ── Auto-refresh state ──────────────────────────────────────────────
+  private autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private refreshInProgress = false;
+  private tokenLifetimeMs: number | null = null;
 
   constructor(config?: TokenStoreConfig) {
     this.persistence = config?.persistence;
@@ -89,10 +119,11 @@ export class TokenStore {
    * Empty-string refreshToken is normalized to null.
    */
   setTokens(accessToken: string, refreshToken: string | null, expiresIn: number): void {
+    this.tokenLifetimeMs = expiresIn * 1000;
     this.tokens = {
       accessToken,
       refreshToken: refreshToken || null,
-      expiresAt: Date.now() + expiresIn * 1000,
+      expiresAt: Date.now() + this.tokenLifetimeMs,
     };
     this.persistence?.save(this.tokens);
     this.emit({ type: "tokens_set" });
@@ -124,7 +155,9 @@ export class TokenStore {
 
   /** Clear all stored tokens (e.g., on sign-out). */
   clear(): void {
+    this.stopAutoRefresh();
     this.tokens = null;
+    this.tokenLifetimeMs = null;
     this.persistence?.clear();
     this.emit({ type: "tokens_cleared" });
   }
@@ -149,6 +182,9 @@ export class TokenStore {
     }
 
     this.tokens = loaded;
+    // Approximate lifetime from remaining time — we do not know the original
+    // expiresIn that was used, so the remaining time is our best guess.
+    this.tokenLifetimeMs = loaded.expiresAt - Date.now();
     this.emit({ type: "tokens_restored" });
     return true;
   }
@@ -189,5 +225,89 @@ export class TokenStore {
       data.refresh_token || refreshToken, // Keep old token if server returns empty/missing
       data.expires_in,
     );
+  }
+
+  // ── Proactive Auto-Refresh ──────────────────────────────────────────
+
+  /** Default auto-refresh options. */
+  private static readonly AUTO_REFRESH_DEFAULTS: Required<AutoRefreshOptions> = {
+    intervalMs: 60_000,
+    refreshAtLifetimeFraction: 0.8,
+    minTimeBeforeExpiryMs: 5 * 60_000,
+  };
+
+  /**
+   * Start a background timer that proactively refreshes the access token
+   * before it expires. The timer is fully opt-in and must be stopped
+   * explicitly (via `stopAutoRefresh()`) or implicitly (via `clear()`).
+   *
+   * If a timer is already running it will be stopped and replaced.
+   */
+  startAutoRefresh(
+    refreshConfig: TokenRefreshConfig,
+    options?: AutoRefreshOptions,
+  ): void {
+    // Stop any previously running timer
+    this.stopAutoRefresh();
+
+    const opts = { ...TokenStore.AUTO_REFRESH_DEFAULTS, ...options };
+
+    this.autoRefreshTimer = setInterval(() => {
+      void this.maybeRefresh(refreshConfig, opts);
+    }, opts.intervalMs);
+  }
+
+  /** Stop the background auto-refresh timer (if running). */
+  stopAutoRefresh(): void {
+    if (this.autoRefreshTimer !== null) {
+      clearInterval(this.autoRefreshTimer);
+      this.autoRefreshTimer = null;
+    }
+  }
+
+  /** Returns `true` if the auto-refresh timer is currently running. */
+  isAutoRefreshRunning(): boolean {
+    return this.autoRefreshTimer !== null;
+  }
+
+  /**
+   * Check whether a proactive refresh is needed and, if so, execute it.
+   * Concurrent calls are debounced — only the first in-flight refresh runs.
+   */
+  private async maybeRefresh(
+    config: TokenRefreshConfig,
+    opts: Required<AutoRefreshOptions>,
+  ): Promise<void> {
+    // Nothing to refresh
+    if (!this.tokens) return;
+    // No refresh token means we cannot refresh
+    if (!this.tokens.refreshToken) return;
+    // Another refresh is already in progress
+    if (this.refreshInProgress) return;
+
+    const now = Date.now();
+    const remaining = this.tokens.expiresAt - now;
+    const lifetime = this.tokenLifetimeMs ?? remaining;
+
+    // Determine whether we should refresh:
+    //   1. Remaining time is less than `minTimeBeforeExpiryMs`, OR
+    //   2. We have consumed more than `refreshAtLifetimeFraction` of the
+    //      token's lifetime.
+    const elapsedFraction = lifetime > 0 ? 1 - remaining / lifetime : 1;
+    const needsRefresh =
+      remaining <= opts.minTimeBeforeExpiryMs ||
+      elapsedFraction >= opts.refreshAtLifetimeFraction;
+
+    if (!needsRefresh) return;
+
+    this.refreshInProgress = true;
+    try {
+      await this.refresh(config);
+    } catch {
+      // refresh() already emits `refresh_failed` and calls `clear()` which
+      // stops the timer, so there is nothing more to do here.
+    } finally {
+      this.refreshInProgress = false;
+    }
   }
 }

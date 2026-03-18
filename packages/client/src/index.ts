@@ -21,6 +21,7 @@ export {
 
 export {
   TokenStore,
+  type AutoRefreshOptions,
   type StoredTokens,
   type TokenRefreshConfig,
   type TokenStoreConfig,

@@ -49,6 +49,14 @@ export {
   type Unsubscribe,
 } from "./auth-events.js";
 
+export {
+  DelegationMonitor,
+  type DelegationMonitorOptions,
+  type ExpiringCallback,
+  type ExpiredCallback,
+  type MonitorUnsubscribe,
+} from "./delegation-monitor.js";
+
 // Re-export core types used across packages
 export {
   type ISODateString,

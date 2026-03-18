@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
+import type OpenKey from "@openkey/sdk";
 import {
   openKeySignIn,
   createAndSignIn,
   createApiClient,
+  signOut,
   TokenStore,
   createLocalStoragePersistence,
   type ApiClient,
@@ -39,6 +41,7 @@ export function App() {
   const [did, setDid] = useState<string | null>(null);
   const [tcw, setTcw] = useState<TinyCloudWeb | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
+  const [openkey, setOpenkey] = useState<OpenKey | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -53,7 +56,7 @@ export function App() {
 
     try {
       // 1. OpenKey sign-in — single popup, passkey auth
-      const { address: addr, web3Provider } = await openKeySignIn({
+      const { address: addr, web3Provider, openkey: okInstance } = await openKeySignIn({
         host: OPENKEY_HOST,
       });
 
@@ -71,6 +74,7 @@ export function App() {
       setDid(tcwInstance.did ?? null);
       setTcw(tcwInstance);
       setApi(apiClient);
+      setOpenkey(okInstance);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -94,16 +98,27 @@ export function App() {
 
   // ── Sign Out ──────────────────────────────────────────────────────
 
-  const handleSignOut = useCallback(() => {
-    tcw?.signOut?.();
-    tokenStore.clear(); // Clear persisted tokens
+  const handleSignOut = useCallback(async () => {
+    const errors = await signOut({
+      api: api ?? undefined,
+      tcw: tcw ?? undefined,
+      tokenStore,
+      openkey: openkey ?? undefined,
+    });
+
+    if (errors.length > 0) {
+      console.warn("[App] Sign-out completed with errors:", errors);
+    }
+
+    // Clear React state
     setAddress(null);
     setDid(null);
     setTcw(null);
     setApi(null);
+    setOpenkey(null);
     setDelegationActive(false);
     setAuthError(null);
-  }, [tcw]);
+  }, [tcw, api, openkey]);
 
   // ── Render ────────────────────────────────────────────────────────
 

@@ -117,8 +117,11 @@ export async function fetchUserInfo(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to fetch user info: ${text}`);
+    const raw = await res.text().catch(() => "");
+    const sanitized = raw.replace(/[\x00-\x1f]/g, "").slice(0, 256);
+    throw new Error(
+      `Failed to fetch user info (${res.status}): ${sanitized || res.statusText}`,
+    );
   }
 
   return res.json() as Promise<UserInfo>;

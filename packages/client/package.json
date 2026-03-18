@@ -1,6 +1,8 @@
 {
   "name": "@tinyboilerplate/client",
   "version": "0.1.0",
+  "description": "Browser SDK for TinyCloud + OpenKey authentication, delegation, and API client",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +11,25 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TinyCloudLabs/tinyboilerplate.git",
+    "directory": "packages/client"
+  },
+  "keywords": [
+    "tinycloud",
+    "openkey",
+    "web3",
+    "delegation",
+    "auth"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsc",

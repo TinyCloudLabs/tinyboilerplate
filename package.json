@@ -1,6 +1,11 @@
 {
   "name": "tinyboilerplate",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TinyCloudLabs/tinyboilerplate.git"
+  },
   "workspaces": [
     "packages/*",
     "examples/react-express/frontend",

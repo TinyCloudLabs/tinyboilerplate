@@ -1,3 +1,15 @@
+// ── Errors ──────────────────────────────────────────────────────────
+
+export {
+  TinyBoilerplateError,
+  AuthenticationError,
+  TokenError,
+  NetworkError,
+  PopupBlockedError,
+  DelegationError,
+  type TinyBoilerplateErrorCode,
+} from "./errors.js";
+
 // ── Logger Interface ─────────────────────────────────────────────────
 
 /**
@@ -37,8 +49,79 @@ export function toISODateString(date: Date = new Date()): ISODateString {
   return date.toISOString() as ISODateString;
 }
 
-// ── Item (the abstract CRUD entity) ──────────────────────────────────
+// ── Generic Entity Types ─────────────────────────────────────────────
 
+/**
+ * Generic timestamped entity. The type parameter `T` describes the shape of
+ * the domain-specific payload stored in `data`.
+ *
+ * Use without a type argument for loosely-typed records, or supply one for
+ * full type safety:
+ *
+ * @example
+ * ```ts
+ * // Untyped — data is Record<string, unknown>
+ * const record: Entity = { id: "1", data: { foo: "bar" }, ... };
+ *
+ * // Strongly typed
+ * interface BlogPostData { title: string; body: string; published: boolean }
+ * type BlogPost = Entity<BlogPostData>;
+ * ```
+ */
+export interface Entity<T = Record<string, unknown>> {
+  id: string;
+  data: T;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}
+
+/** Input for creating a new entity. */
+export interface CreateEntityInput<T = Record<string, unknown>> {
+  data: T;
+}
+
+/** Input for updating an existing entity. All data fields become optional. */
+export interface UpdateEntityInput<T = Record<string, unknown>> {
+  data?: Partial<T>;
+}
+
+/** Single-entity API response wrapper. */
+export interface EntityResponse<T = Record<string, unknown>> {
+  entity: Entity<T>;
+}
+
+/**
+ * List-of-entities API response wrapper with optional pagination metadata.
+ *
+ * For full pagination support, prefer `PaginatedResponse<Entity<T>>` instead.
+ * This type is useful for simple list endpoints that don't need cursor/offset pagination.
+ *
+ * @example
+ * ```ts
+ * const res: EntityListResponse<BlogPostData> = {
+ *   entities: [post1, post2],
+ *   total: 42,
+ *   cursor: "abc123",
+ * };
+ * ```
+ */
+export interface EntityListResponse<T = Record<string, unknown>> {
+  entities: Entity<T>[];
+  /** Total count of entities matching the query (useful for pagination UIs). */
+  total?: number;
+  /** Opaque cursor for fetching the next page. */
+  cursor?: string;
+}
+
+// ── Item (concrete CRUD entity — kept for backwards compatibility) ───
+
+/**
+ * The original boilerplate entity with top-level `title` and `data` fields.
+ *
+ * For new entity types, prefer `Entity<T>` which nests domain fields inside
+ * a typed `data` property. Item is retained unchanged so existing consumers
+ * (routes, frontend) continue to work without migration.
+ */
 export interface Item {
   id: string;
   title: string;
@@ -79,6 +162,47 @@ export interface StoredDelegation {
 export interface ServerInfo {
   did: string;
   status: string;
+}
+
+// ── Pagination ──────────────────────────────────────────────────────
+
+/**
+ * Parameters for requesting a paginated list.
+ * Supports both cursor-based and offset-based pagination.
+ *
+ * - Cursor-based: pass `cursor` (opaque string from a previous response).
+ * - Offset-based: pass `offset` (zero-based index into the result set).
+ * - `limit` controls page size in either mode (clamped to MAX_PAGE_LIMIT).
+ */
+export interface PaginationParams {
+  /** Opaque cursor returned by a previous paginated response. */
+  cursor?: string;
+  /** Maximum number of items to return (default: DEFAULT_PAGE_LIMIT). */
+  limit?: number;
+  /** Zero-based offset for offset-based pagination. */
+  offset?: number;
+}
+
+/**
+ * Metadata returned alongside a paginated list of items.
+ */
+export interface PaginationMeta {
+  /** Total number of items matching the query (omitted when unknown or expensive to compute). */
+  total?: number;
+  /** Opaque cursor to pass in the next request for cursor-based pagination. Absent on the last page. */
+  cursor?: string;
+  /** True when more items exist beyond the current page. */
+  hasMore: boolean;
+}
+
+/**
+ * Generic paginated response wrapper.
+ *
+ * @typeParam T - The type of each item in the list.
+ */
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationMeta;
 }
 
 // ── API Responses ────────────────────────────────────────────────────
@@ -129,3 +253,9 @@ export const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
 
 /** Default maximum entries in the DelegationCache */
 export const DEFAULT_DELEGATION_CACHE_MAX_SIZE = 1000;
+
+/** Default page size for paginated list responses */
+export const DEFAULT_PAGE_LIMIT = 50;
+
+/** Maximum allowed page size for paginated list responses */
+export const MAX_PAGE_LIMIT = 200;

@@ -1,6 +1,8 @@
 {
   "name": "@tinyboilerplate/core",
   "version": "0.1.0",
+  "description": "Shared types and constants for TinyBoilerplate — a full-stack TinyCloud + OpenKey starter kit",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +11,25 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TinyCloudLabs/tinyboilerplate.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "tinycloud",
+    "openkey",
+    "web3",
+    "delegation",
+    "auth"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsc",

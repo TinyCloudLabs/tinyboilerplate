@@ -1,6 +1,8 @@
 {
   "name": "@tinyboilerplate/server",
   "version": "0.1.0",
+  "description": "Server SDK for JWT verification, delegation management, and auth middleware",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +11,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist",
+    "scripts",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TinyCloudLabs/tinyboilerplate.git",
+    "directory": "packages/server"
+  },
+  "keywords": [
+    "tinycloud",
+    "openkey",
+    "web3",
+    "delegation",
+    "auth"
+  ],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsc",

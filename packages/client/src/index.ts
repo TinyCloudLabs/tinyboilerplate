@@ -38,6 +38,11 @@ export {
   type ApiClientConfig,
 } from "./api.js";
 
+export {
+  signOut,
+  type SignOutConfig,
+} from "./sign-out.js";
+
 // Re-export core types used across packages
 export {
   type ISODateString,

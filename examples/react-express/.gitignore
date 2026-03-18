@@ -1,0 +1,4 @@
+# Defense in depth — root .gitignore also covers these
+.env
+.env.local
+.env.*.local

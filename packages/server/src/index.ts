@@ -27,6 +27,17 @@ export {
   type JWTVerifierConfig,
 } from "./auth.js";
 
+export {
+  createAuthMiddleware,
+  authenticateRequest,
+  AuthError,
+  type AuthMiddlewareConfig,
+  type AuthenticatedUser,
+  type MiddlewareRequest,
+  type MiddlewareResponse,
+  type NextFunction,
+} from "./middleware.js";
+
 // Re-export logger primitives from core for convenience
 export {
   type Logger,

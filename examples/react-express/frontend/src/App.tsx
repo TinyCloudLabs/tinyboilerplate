@@ -1,9 +1,13 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
+import type OpenKey from "@openkey/sdk";
 import {
   openKeySignIn,
   createAndSignIn,
   createApiClient,
+  signOut,
+  TokenStore,
+  createLocalStoragePersistence,
   type ApiClient,
 } from "@tinyboilerplate/client";
 
@@ -20,6 +24,14 @@ const TINYCLOUD_HOST =
 const BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
+// ── Token store with localStorage persistence ───────────────────────
+// Tokens survive page reloads. Remove the persistence option to revert
+// to in-memory-only behavior.
+
+const tokenStore = new TokenStore({
+  persistence: createLocalStoragePersistence(),
+});
+
 // ── App ─────────────────────────────────────────────────────────────
 
 export function App() {
@@ -29,6 +41,7 @@ export function App() {
   const [did, setDid] = useState<string | null>(null);
   const [tcw, setTcw] = useState<TinyCloudWeb | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
+  const [openkey, setOpenkey] = useState<OpenKey | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -43,7 +56,7 @@ export function App() {
 
     try {
       // 1. OpenKey sign-in — single popup, passkey auth
-      const { address: addr, web3Provider } = await openKeySignIn({
+      const { address: addr, web3Provider, openkey: okInstance } = await openKeySignIn({
         host: OPENKEY_HOST,
       });
 
@@ -61,6 +74,7 @@ export function App() {
       setDid(tcwInstance.did ?? null);
       setTcw(tcwInstance);
       setApi(apiClient);
+      setOpenkey(okInstance);
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -68,17 +82,60 @@ export function App() {
     }
   }, []);
 
+  // ── Restore session on mount ─────────────────────────────────────
+  // If tokens were persisted from a previous session, restore them.
+  // Note: This only restores the JWT tokens — TinyCloud session (tcw)
+  // still requires a fresh sign-in. A full session restore would need
+  // additional work to reconnect the TinyCloud web SDK.
+
+  useEffect(() => {
+    if (tokenStore.restore()) {
+      console.log("[App] Restored tokens from localStorage");
+      // Tokens are available but TinyCloud session needs re-auth.
+      // In a production app, you might auto-trigger sign-in here.
+    }
+  }, []);
+
+  // ── Auth state change listener ─────────────────────────────────
+  // Subscribe to token lifecycle events. Use this to drive reactive UI
+  // updates (e.g., redirect to login on session loss).
+
+  useEffect(() => {
+    const unsub = tokenStore.onAuthStateChange((event) => {
+      console.log("[auth]", event.type);
+      if (event.type === "tokens_cleared") {
+        // Session ended — could auto-redirect to login, update UI, etc.
+      }
+      if (event.type === "refresh_failed") {
+        setAuthError("Session expired. Please sign in again.");
+      }
+    });
+    return unsub;
+  }, []);
+
   // ── Sign Out ──────────────────────────────────────────────────────
 
-  const handleSignOut = useCallback(() => {
-    tcw?.signOut?.();
+  const handleSignOut = useCallback(async () => {
+    const errors = await signOut({
+      api: api ?? undefined,
+      tcw: tcw ?? undefined,
+      tokenStore,
+      openkey: openkey ?? undefined,
+    });
+
+    if (errors.length > 0) {
+      console.warn("[App] Sign-out completed with errors:", errors);
+    }
+
+    // Clear React state
     setAddress(null);
     setDid(null);
     setTcw(null);
     setApi(null);
+    setOpenkey(null);
     setDelegationActive(false);
     setAuthError(null);
-  }, [tcw]);
+  }, [tcw, api, openkey]);
 
   // ── Render ────────────────────────────────────────────────────────
 

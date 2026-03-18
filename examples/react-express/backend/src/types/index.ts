@@ -1,12 +1,12 @@
-import type { DelegatedAccess } from "@tinyboilerplate/server";
+import type {
+  DelegatedAccess,
+  AuthenticatedUser,
+} from "@tinyboilerplate/server";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        sub: string;
-        address: string;
-      };
+      user?: AuthenticatedUser;
       delegatedAccess?: DelegatedAccess;
     }
   }

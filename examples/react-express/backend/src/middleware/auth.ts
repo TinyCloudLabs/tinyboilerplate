@@ -1,27 +1,33 @@
-import type { Request, Response, NextFunction } from "express";
+import {
+  createAuthMiddleware as createServerAuthMiddleware,
+  createJWTVerifier,
+} from "@tinyboilerplate/server";
+
+// ── Environment ──────────────────────────────────────────────────────
+
+const OPENKEY_ISSUER_URL =
+  process.env.OPENKEY_ISSUER_URL ?? "https://openkey.so";
+
+const OPENKEY_CLIENT_ID = process.env.OPENKEY_CLIENT_ID;
 
 // ── Auth Middleware ──────────────────────────────────────────────────
 
 /**
- * Simple address-based auth middleware.
+ * JWT-based auth middleware.
  *
- * The frontend authenticates via OpenKey passkey + TinyCloud SIWE.
- * The delegation itself is cryptographic proof of authorization.
- * This middleware extracts the user's address from the X-User-Address header.
+ * Verifies the Bearer token via JWKS, resolves the user's wallet address
+ * from the OpenKey userinfo endpoint, and attaches `req.user` with
+ * `{ sub, address, claims }`.
+ *
+ * Uses `createAuthMiddleware` from `@tinyboilerplate/server` under the hood.
  */
 export function createAuthMiddleware() {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const address = req.headers["x-user-address"] as string | undefined;
+  const verify = createJWTVerifier(OPENKEY_ISSUER_URL, {
+    audience: OPENKEY_CLIENT_ID,
+  });
 
-    if (!address) {
-      res.status(401).json({
-        error: "missing_address",
-        message: "X-User-Address header is required",
-      });
-      return;
-    }
-
-    req.user = { sub: address, address };
-    next();
-  };
+  return createServerAuthMiddleware({
+    verify,
+    openKeyUrl: OPENKEY_ISSUER_URL,
+  });
 }

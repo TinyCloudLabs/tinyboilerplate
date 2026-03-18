@@ -6,6 +6,7 @@ import {
   createBackendIdentity,
   DelegationStore,
   DelegationCache,
+  createHealthEndpoint,
 } from "@tinyboilerplate/server";
 
 import { createAuthMiddleware } from "./middleware/auth.js";
@@ -18,6 +19,7 @@ import { createItemsRouter } from "./routes/items.js";
 
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
 const TINYCLOUD_HOST = process.env.TINYCLOUD_HOST ?? "https://node.tinycloud.xyz";
+const OPENKEY_ISSUER_URL = process.env.OPENKEY_ISSUER_URL ?? "https://openkey.so";
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 if (!BACKEND_PRIVATE_KEY) {
@@ -54,6 +56,15 @@ async function main() {
   app.use(express.json());
 
   // 5. Mount routes
+  app.get(
+    "/api/health",
+    createHealthEndpoint({
+      node,
+      did,
+      openKeyIssuerUrl: OPENKEY_ISSUER_URL,
+    }) as any,
+  );
+
   app.use("/api/server-info", createServerInfoRouter(did));
 
   app.use(

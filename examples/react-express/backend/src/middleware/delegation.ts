@@ -11,6 +11,27 @@ interface DelegationMiddlewareConfig {
   cache: DelegationCache;
 }
 
+// ── Auth Error Detection ─────────────────────────────────────────────
+
+/**
+ * Detect whether an error represents an authentication/authorization failure.
+ * Checks for a structured `statusCode` property first (future-proof),
+ * then falls back to pattern matching on the message.
+ */
+function isAuthError(err: unknown): boolean {
+  // Prefer structured error with status code
+  if (err != null && typeof err === "object" && "statusCode" in err) {
+    return (err as { statusCode: unknown }).statusCode === 401;
+  }
+  if (err != null && typeof err === "object" && "status" in err) {
+    return (err as { status: unknown }).status === 401;
+  }
+
+  // Fallback: pattern match (word-boundary for "401" to avoid false positives)
+  const msg = err instanceof Error ? err.message : String(err);
+  return /\b401\b/.test(msg) || /\bunauthorized\b/i.test(msg);
+}
+
 // ── Delegation Middleware Factory ────────────────────────────────────
 
 /**
@@ -73,10 +94,8 @@ export function createDelegationMiddleware(config: DelegationMiddlewareConfig) {
       req.delegatedAccess = access;
       next();
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-
       // If TinyCloud returns 401, evict cache and retry once
-      if (message.includes("401") || message.includes("Unauthorized") || message.includes("unauthorized")) {
+      if (isAuthError(err)) {
         cache.evict(address);
 
         try {
@@ -103,6 +122,7 @@ export function createDelegationMiddleware(config: DelegationMiddlewareConfig) {
         return;
       }
 
+      const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({
         error: "delegation_activation_failed",
         message: `Failed to activate delegation: ${message}`,

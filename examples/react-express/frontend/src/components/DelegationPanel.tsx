@@ -41,7 +41,9 @@ export const DelegationPanel: FC<DelegationPanelProps> = ({
 
     async function fetchServerInfo() {
       try {
-        const res = await fetch(`${backendUrl}/api/server-info`);
+        const res = await fetch(`${backendUrl}/api/server-info`, {
+          signal: AbortSignal.timeout(30_000),
+        });
         if (!res.ok) throw new Error(`Server info: ${res.statusText}`);
         const info: ServerInfo = await res.json();
         if (!cancelled) setBackendDID(info.did);

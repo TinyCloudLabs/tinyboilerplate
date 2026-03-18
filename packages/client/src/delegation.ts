@@ -3,6 +3,7 @@ import {
   DEFAULT_DELEGATION_ACTIONS,
   DEFAULT_DELEGATION_EXPIRY_MS,
   DEFAULT_DELEGATION_PATH,
+  DEFAULT_FETCH_TIMEOUT_MS,
   type DelegationResponse,
 } from "@tinyboilerplate/core";
 
@@ -51,11 +52,13 @@ export async function sendDelegation(
       "X-User-Address": userAddress,
     },
     body: JSON.stringify({ serialized }),
+    signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "unknown", message: res.statusText }));
-    throw new Error(`Failed to send delegation: ${err.message ?? err.error}`);
+    const err = await res.json().catch(() => ({}));
+    const detail = err.message ?? err.error ?? res.statusText;
+    throw new Error(`Failed to send delegation: ${detail}`);
   }
 
   return res.json() as Promise<DelegationResponse>;
@@ -71,11 +74,13 @@ export async function checkDelegationStatus(
     headers: {
       "X-User-Address": userAddress,
     },
+    signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "unknown", message: res.statusText }));
-    throw new Error(`Failed to check delegation status: ${err.message ?? err.error}`);
+    const err = await res.json().catch(() => ({}));
+    const detail = err.message ?? err.error ?? res.statusText;
+    throw new Error(`Failed to check delegation status: ${detail}`);
   }
 
   return res.json() as Promise<DelegationResponse>;
@@ -92,10 +97,12 @@ export async function revokeDelegation(
     headers: {
       "X-User-Address": userAddress,
     },
+    signal: AbortSignal.timeout(DEFAULT_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "unknown", message: res.statusText }));
-    throw new Error(`Failed to revoke delegation: ${err.message ?? err.error}`);
+    const err = await res.json().catch(() => ({}));
+    const detail = err.message ?? err.error ?? res.statusText;
+    throw new Error(`Failed to revoke delegation: ${detail}`);
   }
 }

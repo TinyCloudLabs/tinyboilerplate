@@ -71,6 +71,13 @@ function hexToString(hex: string): string {
  * Web3Provider wired to OpenKey for signing, ready for TinyCloudWeb.
  */
 export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResult> {
+  if (!config?.host) {
+    console.warn(
+      "[tinyboilerplate] No OpenKey host specified — defaulting to production (https://openkey.so). " +
+      "Set `host` explicitly to silence this warning.",
+    );
+  }
+
   const openkey = new OpenKey({
     host: config?.host ?? "https://openkey.so",
     appName: config?.appName ?? "TinyBoilerplate",

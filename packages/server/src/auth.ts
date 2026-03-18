@@ -46,10 +46,21 @@ export function createJWTVerifier(
     "/api/auth/jwks",
     openKeyIssuerUrl,
   );
-  const jwks = createRemoteJWKSet(jwksUrl);
+  const jwks = createRemoteJWKSet(jwksUrl, {
+    cacheMaxAge: 600_000,      // Re-fetch JWKS every 10 minutes
+    cooldownDuration: 30_000,  // Wait 30s between fetches on miss
+  });
 
   const issuer = config?.issuer ?? openKeyIssuerUrl;
   const audience = config?.audience;
+
+  if (!audience) {
+    console.warn(
+      "[tinyboilerplate/server] WARNING: No JWT audience configured. " +
+        "JWTs issued for other applications will pass verification. " +
+        "Set the `audience` option in createJWTVerifier config to your client ID.",
+    );
+  }
 
   async function verify(authHeaderOrToken: string): Promise<VerifyResult> {
     const token = authHeaderOrToken.startsWith("Bearer ")
@@ -106,8 +117,11 @@ export async function fetchUserInfo(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to fetch user info: ${text}`);
+    const raw = await res.text().catch(() => "");
+    const sanitized = raw.replace(/[\x00-\x1f]/g, "").slice(0, 256);
+    throw new Error(
+      `Failed to fetch user info (${res.status}): ${sanitized || res.statusText}`,
+    );
   }
 
   return res.json() as Promise<UserInfo>;

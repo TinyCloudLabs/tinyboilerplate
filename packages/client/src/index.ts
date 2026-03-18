@@ -23,7 +23,14 @@ export {
   TokenStore,
   type StoredTokens,
   type TokenRefreshConfig,
+  type TokenStoreConfig,
 } from "./tokens.js";
+
+export {
+  createLocalStoragePersistence,
+  createSessionStoragePersistence,
+  type TokenPersistence,
+} from "./persistence.js";
 
 export {
   createApiClient,

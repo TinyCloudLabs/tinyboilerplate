@@ -51,6 +51,14 @@ export function createJWTVerifier(
   const issuer = config?.issuer ?? openKeyIssuerUrl;
   const audience = config?.audience;
 
+  if (!audience) {
+    console.warn(
+      "[tinyboilerplate/server] WARNING: No JWT audience configured. " +
+        "JWTs issued for other applications will pass verification. " +
+        "Set the `audience` option in createJWTVerifier config to your client ID.",
+    );
+  }
+
   async function verify(authHeaderOrToken: string): Promise<VerifyResult> {
     const token = authHeaderOrToken.startsWith("Bearer ")
       ? authHeaderOrToken.slice(7)

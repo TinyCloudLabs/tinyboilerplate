@@ -1,3 +1,14 @@
+// ── Errors ──────────────────────────────────────────────────────────
+
+export {
+  TinyBoilerplateError,
+  AuthenticationError,
+  TokenError,
+  NetworkError,
+  PopupBlockedError,
+  DelegationError,
+} from "./errors.js";
+
 // ── Logger Interface ─────────────────────────────────────────────────
 
 /**

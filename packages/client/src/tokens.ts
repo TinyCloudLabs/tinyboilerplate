@@ -1,4 +1,4 @@
-import { DEFAULT_FETCH_TIMEOUT_MS } from "@tinyboilerplate/core";
+import { DEFAULT_FETCH_TIMEOUT_MS, TokenError } from "@tinyboilerplate/core";
 import type { TokenPersistence } from "./persistence.js";
 import type { AuthEvent, AuthEventListener, Unsubscribe } from "./auth-events.js";
 
@@ -160,7 +160,7 @@ export class TokenStore {
   async refresh(config: TokenRefreshConfig): Promise<void> {
     const refreshToken = this.tokens?.refreshToken;
     if (!refreshToken) {
-      throw new Error("No refresh token available");
+      throw new TokenError("No refresh token available");
     }
 
     const res = await fetch(`${config.openKeyHost}/api/auth/oauth2/token`, {
@@ -177,7 +177,7 @@ export class TokenStore {
     if (!res.ok) {
       // Emit refresh_failed before clearing (clear emits tokens_cleared)
       const text = await res.text().catch(() => res.statusText);
-      const error = new Error(`Token refresh failed: ${text}`);
+      const error = new TokenError(`Token refresh failed: ${text}`);
       this.emit({ type: "refresh_failed", error });
       this.clear();
       throw error;

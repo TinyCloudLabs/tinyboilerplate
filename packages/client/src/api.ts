@@ -1,5 +1,5 @@
 import type { ApiError } from "@tinyboilerplate/core";
-import { DEFAULT_FETCH_TIMEOUT_MS } from "@tinyboilerplate/core";
+import { AuthenticationError, DEFAULT_FETCH_TIMEOUT_MS, NetworkError } from "@tinyboilerplate/core";
 import type { TokenStore, TokenRefreshConfig } from "./tokens.js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ export function createApiClient(
   async function request<T>(path: string, init: RequestInit): Promise<T> {
     const token = tokenStore.getAccessToken();
     if (!token) {
-      throw new Error("No access token available. Sign in first.");
+      throw new AuthenticationError("No access token available. Sign in first.");
     }
 
     const res = await fetch(`${backendUrl}${path}`, {
@@ -65,8 +65,9 @@ export function createApiClient(
           error: `HTTP ${retryRes.status}`,
         }));
         const detail = err.message ?? err.error ?? retryRes.statusText;
-        throw new Error(`API error (${retryRes.status}): ${detail}`, {
+        throw new NetworkError(`API error (${retryRes.status}): ${detail}`, {
           cause: err,
+          statusCode: retryRes.status,
         });
       }
 
@@ -79,8 +80,9 @@ export function createApiClient(
         error: `HTTP ${res.status}`,
       }));
       const detail = err.message ?? err.error ?? res.statusText;
-      throw new Error(`API error (${res.status}): ${detail}`, {
+      throw new NetworkError(`API error (${res.status}): ${detail}`, {
         cause: err,
+        statusCode: res.status,
       });
     }
 

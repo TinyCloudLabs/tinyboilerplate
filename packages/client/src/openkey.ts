@@ -1,6 +1,6 @@
 import OpenKey from "@openkey/sdk";
 import { providers } from "ethers";
-import { consoleLogger, type Logger } from "@tinyboilerplate/core";
+import { consoleLogger, PopupBlockedError, type Logger } from "@tinyboilerplate/core";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResul
     authResult = await openkey.connect();
   } catch (err) {
     if (isPopupBlockedError(err)) {
-      throw new Error(
+      throw new PopupBlockedError(
         "Sign-in popup was blocked by the browser. Please allow popups for this site and try again.",
         { cause: err },
       );

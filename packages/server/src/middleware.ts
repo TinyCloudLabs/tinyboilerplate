@@ -1,3 +1,4 @@
+import { TinyBoilerplateError } from "@tinyboilerplate/core";
 import { fetchUserInfo } from "./auth.js";
 import type { JWTClaims, VerifyResult } from "./auth.js";
 
@@ -39,15 +40,13 @@ export interface AuthenticatedUser {
  * Typed error for authentication failures.
  * Carries an HTTP status code and a machine-readable error code.
  */
-export class AuthError extends Error {
+export class AuthError extends TinyBoilerplateError {
   public readonly status: number;
-  public readonly code: string;
 
-  constructor(status: number, code: string, message: string) {
-    super(message);
+  constructor(status: number, code: string, message: string, options?: ErrorOptions) {
+    super(code, message, options);
     this.name = "AuthError";
     this.status = status;
-    this.code = code;
   }
 }
 
@@ -85,7 +84,7 @@ export async function authenticateRequest(
     verifyResult = await config.verify(authHeader);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    throw new AuthError(401, "invalid_token", `Token verification failed: ${message}`);
+    throw new AuthError(401, "invalid_token", `Token verification failed: ${message}`, { cause: err });
   }
 
   const { claims, token } = verifyResult;

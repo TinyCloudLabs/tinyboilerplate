@@ -38,6 +38,18 @@ export {
   type NextFunction,
 } from "./middleware.js";
 
+export {
+  createHealthCheck,
+  createHealthEndpoint,
+  type HealthCheckConfig,
+  type HealthResult,
+  type CheckResult,
+  type CheckStatus,
+  type OverallStatus,
+  type HealthRequest,
+  type HealthResponse,
+} from "./health.js";
+
 // Re-export logger primitives from core for convenience
 export {
   type Logger,

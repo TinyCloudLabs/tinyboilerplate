@@ -7,7 +7,6 @@ export {
   NetworkError,
   PopupBlockedError,
   DelegationError,
-  type TinyBoilerplateErrorCode,
 } from "./errors.js";
 
 // ── Logger Interface ─────────────────────────────────────────────────

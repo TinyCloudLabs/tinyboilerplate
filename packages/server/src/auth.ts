@@ -46,7 +46,10 @@ export function createJWTVerifier(
     "/api/auth/jwks",
     openKeyIssuerUrl,
   );
-  const jwks = createRemoteJWKSet(jwksUrl);
+  const jwks = createRemoteJWKSet(jwksUrl, {
+    cacheMaxAge: 600_000,      // Re-fetch JWKS every 10 minutes
+    cooldownDuration: 30_000,  // Wait 30s between fetches on miss
+  });
 
   const issuer = config?.issuer ?? openKeyIssuerUrl;
   const audience = config?.audience;

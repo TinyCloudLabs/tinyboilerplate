@@ -25,3 +25,14 @@ export {
   type UserInfo,
   type JWTVerifierConfig,
 } from "./auth.js";
+
+export {
+  createAuthMiddleware,
+  authenticateRequest,
+  AuthError,
+  type AuthMiddlewareConfig,
+  type AuthenticatedUser,
+  type MiddlewareRequest,
+  type MiddlewareResponse,
+  type NextFunction,
+} from "./middleware.js";

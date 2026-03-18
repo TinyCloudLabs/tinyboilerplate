@@ -1,11 +1,14 @@
 import OpenKey from "@openkey/sdk";
 import { providers } from "ethers";
+import { consoleLogger, type Logger } from "@tinyboilerplate/core";
 
 // ── Configuration ────────────────────────────────────────────────────
 
 export interface OpenKeyConfig {
   host?: string;
   appName?: string;
+  /** Logger instance for diagnostic output. Defaults to console. */
+  logger?: Logger;
 }
 
 export interface SignInResult {
@@ -80,8 +83,10 @@ function isPopupBlockedError(err: unknown): boolean {
  * Web3Provider wired to OpenKey for signing, ready for TinyCloudWeb.
  */
 export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResult> {
+  const logger = config?.logger ?? consoleLogger;
+
   if (!config?.host) {
-    console.warn(
+    logger.warn(
       "[tinyboilerplate] No OpenKey host specified — defaulting to production (https://openkey.so). " +
       "Set `host` explicitly to silence this warning.",
     );

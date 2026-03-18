@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { JWTPayload, JWTVerifyResult } from "jose";
+import { consoleLogger, type Logger } from "@tinyboilerplate/core";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ export interface JWTVerifierConfig {
   issuer?: string;
   /** Expected audience (your client ID or app identifier) */
   audience?: string;
+  /** Logger instance for diagnostic output. Defaults to console. */
+  logger?: Logger;
 }
 
 // ── JWT Verifier ─────────────────────────────────────────────────────
@@ -53,9 +56,10 @@ export function createJWTVerifier(
 
   const issuer = config?.issuer ?? openKeyIssuerUrl;
   const audience = config?.audience;
+  const logger = config?.logger ?? consoleLogger;
 
   if (!audience) {
-    console.warn(
+    logger.warn(
       "[tinyboilerplate/server] WARNING: No JWT audience configured. " +
         "JWTs issued for other applications will pass verification. " +
         "Set the `audience` option in createJWTVerifier config to your client ID.",

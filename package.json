@@ -19,7 +19,8 @@
     "build:server": "cd packages/server && bun run build",
     "dev": "cd examples/react-express && bun run dev",
     "generate-key": "cd packages/server && bun run generate-key",
-    "test": "bun run test:client && bun run test:server",
+    "test": "bun run test:core && bun run test:client && bun run test:server",
+    "test:core": "cd packages/core && bun test",
     "test:client": "cd packages/client && bun test",
     "test:server": "cd packages/server && bun test"
   },

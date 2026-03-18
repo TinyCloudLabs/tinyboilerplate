@@ -10,6 +10,7 @@ export {
 export {
   DelegationStore,
   type DelegationMetadata,
+  type DelegationStoreOptions,
 } from "./delegation-store.js";
 
 export {
@@ -36,3 +37,10 @@ export {
   type MiddlewareResponse,
   type NextFunction,
 } from "./middleware.js";
+
+// Re-export logger primitives from core for convenience
+export {
+  type Logger,
+  consoleLogger,
+  noopLogger,
+} from "@tinyboilerplate/core";

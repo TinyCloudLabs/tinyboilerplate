@@ -1,8 +1,22 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import type { Item, CreateItemInput, UpdateItemInput, StoreType } from "@tinyboilerplate/core";
+import { toISODateString } from "@tinyboilerplate/core";
+import type { DelegatedAccess } from "@tinyboilerplate/server";
 
 // ── Items Router ─────────────────────────────────────────────────────
+
+function requireAccess(req: Request, res: Response): DelegatedAccess | null {
+  const access = req.delegatedAccess;
+  if (!access) {
+    res.status(500).json({
+      error: "internal_error",
+      message: "Missing delegated access — delegation middleware may not be applied",
+    });
+    return null;
+  }
+  return access;
+}
 
 export function createItemsRouter() {
   const router = Router();
@@ -10,7 +24,8 @@ export function createItemsRouter() {
   // GET /api/items?store=kv|sql
   router.get("/", async (req: Request, res: Response) => {
     const storeType = getStoreType(req);
-    const access = req.delegatedAccess!;
+    const access = requireAccess(req, res);
+    if (!access) return;
 
     try {
       if (storeType === "sql") {
@@ -47,7 +62,8 @@ export function createItemsRouter() {
   // POST /api/items?store=kv|sql
   router.post("/", async (req: Request, res: Response) => {
     const storeType = getStoreType(req);
-    const access = req.delegatedAccess!;
+    const access = requireAccess(req, res);
+    if (!access) return;
     const input: CreateItemInput = req.body;
 
     if (!input.title || typeof input.title !== "string") {
@@ -58,7 +74,7 @@ export function createItemsRouter() {
       return;
     }
 
-    const now = new Date().toISOString();
+    const now = toISODateString();
     const item: Item = {
       id: crypto.randomUUID(),
       title: input.title,
@@ -87,7 +103,8 @@ export function createItemsRouter() {
   // GET /api/items/:id?store=kv|sql
   router.get("/:id", async (req: Request, res: Response) => {
     const storeType = getStoreType(req);
-    const access = req.delegatedAccess!;
+    const access = requireAccess(req, res);
+    if (!access) return;
     const { id } = req.params;
 
     try {
@@ -126,7 +143,8 @@ export function createItemsRouter() {
   // PUT /api/items/:id?store=kv|sql
   router.put("/:id", async (req: Request, res: Response) => {
     const storeType = getStoreType(req);
-    const access = req.delegatedAccess!;
+    const access = requireAccess(req, res);
+    if (!access) return;
     const { id } = req.params;
     const input: UpdateItemInput = req.body;
 
@@ -139,7 +157,7 @@ export function createItemsRouter() {
     }
 
     try {
-      const now = new Date().toISOString();
+      const now = toISODateString();
 
       if (storeType === "sql") {
         await ensureTable(access);
@@ -201,7 +219,8 @@ export function createItemsRouter() {
   // DELETE /api/items/:id?store=kv|sql
   router.delete("/:id", async (req: Request, res: Response) => {
     const storeType = getStoreType(req);
-    const access = req.delegatedAccess!;
+    const access = requireAccess(req, res);
+    if (!access) return;
     const { id } = req.params;
 
     try {

@@ -1,4 +1,5 @@
 import type { ApiError } from "@tinyboilerplate/core";
+import { DEFAULT_FETCH_TIMEOUT_MS } from "@tinyboilerplate/core";
 import type { TokenStore, TokenRefreshConfig } from "./tokens.js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -6,12 +7,15 @@ import type { TokenStore, TokenRefreshConfig } from "./tokens.js";
 export interface ApiClientConfig {
   /** If set, auto-refresh tokens on 401 responses. */
   refreshConfig?: TokenRefreshConfig;
+  /** Request timeout in milliseconds (default: 30s). */
+  timeoutMs?: number;
 }
 
 export interface ApiClient {
   get<T>(path: string): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
   put<T>(path: string, body?: unknown): Promise<T>;
+  patch<T>(path: string, body?: unknown): Promise<T>;
   del<T>(path: string): Promise<T>;
 }
 
@@ -26,6 +30,8 @@ export function createApiClient(
   tokenStore: TokenStore,
   config?: ApiClientConfig,
 ): ApiClient {
+  const timeoutMs = config?.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
+
   async function request<T>(path: string, init: RequestInit): Promise<T> {
     const token = tokenStore.getAccessToken();
     if (!token) {
@@ -34,6 +40,7 @@ export function createApiClient(
 
     const res = await fetch(`${backendUrl}${path}`, {
       ...init,
+      signal: init.signal ?? AbortSignal.timeout(timeoutMs),
       headers: {
         ...init.headers,
         Authorization: `Bearer ${token}`,
@@ -46,6 +53,7 @@ export function createApiClient(
       const newToken = tokenStore.getAccessToken();
       const retryRes = await fetch(`${backendUrl}${path}`, {
         ...init,
+        signal: init.signal ?? AbortSignal.timeout(timeoutMs),
         headers: {
           ...init.headers,
           Authorization: `Bearer ${newToken}`,
@@ -53,11 +61,11 @@ export function createApiClient(
       });
 
       if (!retryRes.ok) {
-        const err: ApiError = await retryRes.json().catch((cause) => ({
+        const err: Partial<ApiError> = await retryRes.json().catch(() => ({
           error: `HTTP ${retryRes.status}`,
-          message: retryRes.statusText,
         }));
-        throw new Error(`API error (${retryRes.status}): ${err.message}`, {
+        const detail = err.message ?? err.error ?? retryRes.statusText;
+        throw new Error(`API error (${retryRes.status}): ${detail}`, {
           cause: err,
         });
       }
@@ -67,11 +75,11 @@ export function createApiClient(
     }
 
     if (!res.ok) {
-      const err: ApiError = await res.json().catch((cause) => ({
+      const err: Partial<ApiError> = await res.json().catch(() => ({
         error: `HTTP ${res.status}`,
-        message: res.statusText,
       }));
-      throw new Error(`API error (${res.status}): ${err.message}`, {
+      const detail = err.message ?? err.error ?? res.statusText;
+      throw new Error(`API error (${res.status}): ${detail}`, {
         cause: err,
       });
     }
@@ -94,6 +102,13 @@ export function createApiClient(
     put<T>(path: string, body?: unknown): Promise<T> {
       return request<T>(path, {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    },
+    patch<T>(path: string, body?: unknown): Promise<T> {
+      return request<T>(path, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });

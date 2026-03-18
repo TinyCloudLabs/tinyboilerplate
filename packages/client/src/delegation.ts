@@ -3,7 +3,6 @@ import {
   DEFAULT_DELEGATION_ACTIONS,
   DEFAULT_DELEGATION_EXPIRY_MS,
   DEFAULT_DELEGATION_PATH,
-  DEFAULT_FETCH_TIMEOUT_MS,
   type DelegationResponse,
 } from "@tinyboilerplate/core";
 import type { ApiClient } from "./api.js";

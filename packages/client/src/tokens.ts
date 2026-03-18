@@ -1,5 +1,6 @@
 import { DEFAULT_FETCH_TIMEOUT_MS } from "@tinyboilerplate/core";
 import type { TokenPersistence } from "./persistence.js";
+import type { AuthEvent, AuthEventListener, Unsubscribe } from "./auth-events.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -42,9 +43,41 @@ export interface TokenStoreConfig {
 export class TokenStore {
   private tokens: StoredTokens | null = null;
   private readonly persistence?: TokenPersistence;
+  private readonly listeners = new Set<AuthEventListener>();
 
   constructor(config?: TokenStoreConfig) {
     this.persistence = config?.persistence;
+  }
+
+  // ── Event Subscription ──────────────────────────────────────────────
+
+  /**
+   * Subscribe to auth state changes. Returns an unsubscribe function.
+   *
+   * Events:
+   * - `tokens_set` — tokens were stored (sign-in or refresh)
+   * - `tokens_restored` — tokens loaded from persistence
+   * - `tokens_cleared` — tokens removed (sign-out or session lost)
+   * - `refresh_failed` — token refresh attempt failed (followed by `tokens_cleared`)
+   *
+   * Framework-agnostic — wire into React useState, Vue ref, Svelte store, etc.
+   */
+  onAuthStateChange(listener: AuthEventListener): Unsubscribe {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  /** Emit an event to all registered listeners. Swallows listener errors. */
+  private emit(event: AuthEvent): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch {
+        // Swallow listener errors — one bad listener must not break the store.
+      }
+    }
   }
 
   /** Buffer before actual expiry to trigger refresh (30 seconds). */
@@ -62,6 +95,7 @@ export class TokenStore {
       expiresAt: Date.now() + expiresIn * 1000,
     };
     this.persistence?.save(this.tokens);
+    this.emit({ type: "tokens_set" });
   }
 
   /** Get the current access token, or null if not set. */
@@ -92,6 +126,7 @@ export class TokenStore {
   clear(): void {
     this.tokens = null;
     this.persistence?.clear();
+    this.emit({ type: "tokens_cleared" });
   }
 
   /**
@@ -114,6 +149,7 @@ export class TokenStore {
     }
 
     this.tokens = loaded;
+    this.emit({ type: "tokens_restored" });
     return true;
   }
 
@@ -139,10 +175,12 @@ export class TokenStore {
     });
 
     if (!res.ok) {
-      // Clear tokens on refresh failure — user needs to re-authenticate
-      this.clear();
+      // Emit refresh_failed before clearing (clear emits tokens_cleared)
       const text = await res.text().catch(() => res.statusText);
-      throw new Error(`Token refresh failed: ${text}`);
+      const error = new Error(`Token refresh failed: ${text}`);
+      this.emit({ type: "refresh_failed", error });
+      this.clear();
+      throw error;
     }
 
     const data = await res.json();

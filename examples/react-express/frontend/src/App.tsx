@@ -1,9 +1,11 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
 import {
   openKeySignIn,
   createAndSignIn,
   createApiClient,
+  TokenStore,
+  createLocalStoragePersistence,
   type ApiClient,
 } from "@tinyboilerplate/client";
 
@@ -19,6 +21,14 @@ const TINYCLOUD_HOST =
   import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
 const BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+
+// ── Token store with localStorage persistence ───────────────────────
+// Tokens survive page reloads. Remove the persistence option to revert
+// to in-memory-only behavior.
+
+const tokenStore = new TokenStore({
+  persistence: createLocalStoragePersistence(),
+});
 
 // ── App ─────────────────────────────────────────────────────────────
 
@@ -68,10 +78,25 @@ export function App() {
     }
   }, []);
 
+  // ── Restore session on mount ─────────────────────────────────────
+  // If tokens were persisted from a previous session, restore them.
+  // Note: This only restores the JWT tokens — TinyCloud session (tcw)
+  // still requires a fresh sign-in. A full session restore would need
+  // additional work to reconnect the TinyCloud web SDK.
+
+  useEffect(() => {
+    if (tokenStore.restore()) {
+      console.log("[App] Restored tokens from localStorage");
+      // Tokens are available but TinyCloud session needs re-auth.
+      // In a production app, you might auto-trigger sign-in here.
+    }
+  }, []);
+
   // ── Sign Out ──────────────────────────────────────────────────────
 
   const handleSignOut = useCallback(() => {
     tcw?.signOut?.();
+    tokenStore.clear(); // Clear persisted tokens
     setAddress(null);
     setDid(null);
     setTcw(null);

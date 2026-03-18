@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { JWTPayload, JWTVerifyResult } from "jose";
-import { consoleLogger, type Logger } from "@tinyboilerplate/core";
+import { AuthenticationError, NetworkError, consoleLogger, type Logger } from "@tinyboilerplate/core";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -72,7 +72,7 @@ export function createJWTVerifier(
       : authHeaderOrToken;
 
     if (!token) {
-      throw new Error("No token provided");
+      throw new AuthenticationError("No token provided");
     }
 
     // Try JWT verification first
@@ -83,7 +83,7 @@ export function createJWTVerifier(
 
         const result: JWTVerifyResult = await jwtVerify(token, jwks, verifyOptions);
         const claims = result.payload as JWTClaims;
-        if (!claims.sub) throw new Error("JWT missing 'sub' claim");
+        if (!claims.sub) throw new AuthenticationError("JWT missing 'sub' claim");
         return { claims, token };
       } catch {
         // Fall through to userinfo validation
@@ -93,7 +93,7 @@ export function createJWTVerifier(
     // Opaque token — validate via userinfo endpoint
     const userInfo = await fetchUserInfo(openKeyIssuerUrl, token);
     if (!userInfo.sub) {
-      throw new Error("Token validation failed: no sub in userinfo");
+      throw new AuthenticationError("Token validation failed: no sub in userinfo");
     }
     return {
       claims: { sub: userInfo.sub, iss: openKeyIssuerUrl } as JWTClaims,
@@ -123,8 +123,9 @@ export async function fetchUserInfo(
   if (!res.ok) {
     const raw = await res.text().catch(() => "");
     const sanitized = raw.replace(/[\x00-\x1f]/g, "").slice(0, 256);
-    throw new Error(
+    throw new NetworkError(
       `Failed to fetch user info (${res.status}): ${sanitized || res.statusText}`,
+      { statusCode: res.status },
     );
   }
 

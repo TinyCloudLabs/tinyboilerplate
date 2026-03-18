@@ -1,6 +1,6 @@
 import type { TinyCloudNode } from "@tinycloud/node-sdk";
 import type { StoredDelegation, ISODateString } from "@tinyboilerplate/core";
-import { toISODateString } from "@tinyboilerplate/core";
+import { toISODateString, consoleLogger, type Logger } from "@tinyboilerplate/core";
 import { withSessionRefresh } from "./identity.js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -24,6 +24,13 @@ function isStoredDelegation(value: unknown): value is StoredDelegation {
   );
 }
 
+// ── Delegation Store Options ─────────────────────────────────────────
+
+export interface DelegationStoreOptions {
+  /** Logger instance for diagnostic output. Defaults to console. */
+  logger?: Logger;
+}
+
 // ── Delegation Store ─────────────────────────────────────────────────
 
 /**
@@ -33,7 +40,14 @@ function isStoredDelegation(value: unknown): value is StoredDelegation {
  * Key format: `delegations/{address}` in the backend's KV space.
  */
 export class DelegationStore {
-  constructor(private readonly node: TinyCloudNode) {}
+  private readonly logger: Logger;
+
+  constructor(
+    private readonly node: TinyCloudNode,
+    options?: DelegationStoreOptions,
+  ) {
+    this.logger = options?.logger ?? consoleLogger;
+  }
 
   /**
    * Store a serialized delegation for a user address.
@@ -79,7 +93,7 @@ export class DelegationStore {
       if (typeof raw === "string") raw = JSON.parse(raw); // double-encoded
 
       if (!isStoredDelegation(raw)) {
-        console.error("DelegationStore: stored data failed validation for key", this.keyFor(address));
+        this.logger.error("DelegationStore: stored data failed validation for key", this.keyFor(address));
         return null;
       }
       return raw;

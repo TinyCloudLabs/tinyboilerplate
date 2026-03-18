@@ -10,6 +10,7 @@ export {
 export {
   DelegationStore,
   type DelegationMetadata,
+  type DelegationStoreOptions,
 } from "./delegation-store.js";
 
 export {
@@ -25,3 +26,10 @@ export {
   type UserInfo,
   type JWTVerifierConfig,
 } from "./auth.js";
+
+// Re-export logger primitives from core for convenience
+export {
+  type Logger,
+  consoleLogger,
+  noopLogger,
+} from "@tinyboilerplate/core";

@@ -43,6 +43,12 @@ export {
   type SignOutConfig,
 } from "./sign-out.js";
 
+export {
+  type AuthEvent,
+  type AuthEventListener,
+  type Unsubscribe,
+} from "./auth-events.js";
+
 // Re-export core types used across packages
 export {
   type ISODateString,

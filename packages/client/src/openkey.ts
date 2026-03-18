@@ -36,7 +36,10 @@ class OpenKeyEIP1193Provider {
       case "eth_chainId":
         return "0x1";
       case "personal_sign": {
-        const hexMessage = params![0];
+        if (!params?.[0]) {
+          throw new Error("personal_sign requires a message parameter");
+        }
+        const hexMessage = params[0];
         const message = hexToString(hexMessage);
         const result = await this.openkey.signMessage({
           message,
@@ -54,9 +57,8 @@ class OpenKeyEIP1193Provider {
 
 function hexToString(hex: string): string {
   const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(
-    cleaned.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)),
-  );
+  const matches = cleaned.match(/.{1,2}/g) ?? [];
+  const bytes = new Uint8Array(matches.map((b) => parseInt(b, 16)));
   return new TextDecoder().decode(bytes);
 }
 
@@ -85,7 +87,7 @@ export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResul
   );
 
   // Wrap in ethers Web3Provider for TinyCloudWeb compatibility
-  const web3Provider = new providers.Web3Provider(eip1193 as any);
+  const web3Provider = new providers.Web3Provider(eip1193);
 
   return {
     address: authResult.address,

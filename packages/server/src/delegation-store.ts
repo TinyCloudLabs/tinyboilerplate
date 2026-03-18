@@ -11,6 +11,18 @@ export interface DelegationMetadata {
   path: string;
 }
 
+function isStoredDelegation(value: unknown): value is StoredDelegation {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.serialized === "string" &&
+    typeof v.expiresAt === "string" &&
+    typeof v.grantedAt === "string" &&
+    Array.isArray(v.actions) &&
+    typeof v.path === "string"
+  );
+}
+
 // ── Delegation Store ─────────────────────────────────────────────────
 
 /**
@@ -55,16 +67,21 @@ export class DelegationStore {
       this.node.kv.get(key),
     );
 
-    const response = (result as any)?.data;
+    const response = (result as { data?: { data?: unknown } })?.data;
     if (!response) return null;
 
     try {
       // KV get returns { data: value } — unwrap it
-      let raw = response.data ?? response;
+      let raw: unknown = response.data ?? response;
       // Handle double-serialization (string) or direct object
       if (typeof raw === "string") raw = JSON.parse(raw);
       if (typeof raw === "string") raw = JSON.parse(raw); // double-encoded
-      return raw as StoredDelegation;
+
+      if (!isStoredDelegation(raw)) {
+        console.error("DelegationStore: stored data failed validation for key", this.keyFor(address));
+        return null;
+      }
+      return raw;
     } catch {
       return null;
     }

@@ -40,9 +40,7 @@ export async function signOut(config: SignOutConfig): Promise<Error[]> {
     try {
       await revokeDelegation(config.api);
     } catch (err) {
-      errors.push(
-        new Error("Failed to revoke delegation", { cause: err }),
-      );
+      errors.push(new Error("Failed to revoke delegation", { cause: err }));
     }
   }
 
@@ -51,9 +49,7 @@ export async function signOut(config: SignOutConfig): Promise<Error[]> {
     try {
       config.tcw.signOut?.();
     } catch (err) {
-      errors.push(
-        new Error("Failed to sign out of TinyCloud", { cause: err }),
-      );
+      errors.push(new Error("Failed to sign out of TinyCloud", { cause: err }));
     }
   }
 
@@ -67,9 +63,7 @@ export async function signOut(config: SignOutConfig): Promise<Error[]> {
     try {
       config.openkey.disconnect?.();
     } catch (err) {
-      errors.push(
-        new Error("Failed to disconnect OpenKey", { cause: err }),
-      );
+      errors.push(new Error("Failed to disconnect OpenKey", { cause: err }));
     }
   }
 

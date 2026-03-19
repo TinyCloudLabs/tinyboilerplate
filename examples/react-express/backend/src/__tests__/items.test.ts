@@ -133,9 +133,7 @@ function createApp(delegatedAccess: any) {
   return app;
 }
 
-function startServer(
-  app: express.Express,
-): Promise<{ server: Server; port: number }> {
+function startServer(app: express.Express): Promise<{ server: Server; port: number }> {
   return new Promise((resolve) => {
     const server = app.listen(0, () => {
       const port = (server.address() as any).port;

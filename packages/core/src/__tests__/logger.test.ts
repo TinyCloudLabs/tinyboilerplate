@@ -59,10 +59,18 @@ describe("Logger", () => {
       const calls: Array<{ method: string; args: unknown[] }> = [];
 
       const customLogger: Logger = {
-        debug(msg, ...args) { calls.push({ method: "debug", args: [msg, ...args] }); },
-        info(msg, ...args) { calls.push({ method: "info", args: [msg, ...args] }); },
-        warn(msg, ...args) { calls.push({ method: "warn", args: [msg, ...args] }); },
-        error(msg, ...args) { calls.push({ method: "error", args: [msg, ...args] }); },
+        debug(msg, ...args) {
+          calls.push({ method: "debug", args: [msg, ...args] });
+        },
+        info(msg, ...args) {
+          calls.push({ method: "info", args: [msg, ...args] });
+        },
+        warn(msg, ...args) {
+          calls.push({ method: "warn", args: [msg, ...args] });
+        },
+        error(msg, ...args) {
+          calls.push({ method: "error", args: [msg, ...args] });
+        },
       };
 
       customLogger.debug("debug msg", 1);

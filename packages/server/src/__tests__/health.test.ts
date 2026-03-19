@@ -67,11 +67,12 @@ describe("createHealthCheck", () => {
   });
 
   test("returns healthy when identity is active and JWKS is reachable", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const check = createHealthCheck(makeConfig());
@@ -85,11 +86,12 @@ describe("createHealthCheck", () => {
   });
 
   test("returns healthy with all checks including KV", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const check = createHealthCheck(makeConfig({ checkKV: true }));
@@ -103,11 +105,12 @@ describe("createHealthCheck", () => {
   });
 
   test("returns unhealthy when DID is empty", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const check = createHealthCheck(makeConfig({ did: "" }));
@@ -119,17 +122,16 @@ describe("createHealthCheck", () => {
   });
 
   test("returns unhealthy when node.did is empty", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const mockNode = createMockNode({ did: "" });
-    const check = createHealthCheck(
-      makeConfig({ mockNode, did: "did:pkh:eip155:1:0xABC" }),
-    );
+    const check = createHealthCheck(makeConfig({ mockNode, did: "did:pkh:eip155:1:0xABC" }));
     const result = await check();
 
     expect(result.status).toBe("unhealthy");
@@ -138,9 +140,7 @@ describe("createHealthCheck", () => {
   });
 
   test("returns degraded when JWKS endpoint returns non-200", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response("Not Found", { status: 404 }),
-    ) as any;
+    globalThis.fetch = mock(async () => new Response("Not Found", { status: 404 })) as any;
 
     const check = createHealthCheck(makeConfig());
     const result = await check();
@@ -165,17 +165,16 @@ describe("createHealthCheck", () => {
   });
 
   test("returns degraded when KV check fails", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const mockNode = createMockNode({ kvListFails: true });
-    const check = createHealthCheck(
-      makeConfig({ checkKV: true, mockNode }),
-    );
+    const check = createHealthCheck(makeConfig({ checkKV: true, mockNode }));
     const result = await check();
 
     expect(result.status).toBe("degraded");
@@ -186,11 +185,12 @@ describe("createHealthCheck", () => {
   });
 
   test("KV check is skipped when checkKV is false", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const check = createHealthCheck(makeConfig({ checkKV: false }));
@@ -200,11 +200,12 @@ describe("createHealthCheck", () => {
   });
 
   test("all checks include latencyMs", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    globalThis.fetch = mock(
+      async () =>
+        new Response(JSON.stringify({ keys: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ) as any;
 
     const check = createHealthCheck(makeConfig({ checkKV: true }));
@@ -219,8 +220,8 @@ describe("createHealthCheck", () => {
   });
 
   test("identity failure takes precedence over JWKS failure", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response("Internal Server Error", { status: 500 }),
+    globalThis.fetch = mock(
+      async () => new Response("Internal Server Error", { status: 500 }),
     ) as any;
 
     const check = createHealthCheck(makeConfig({ did: "" }));
@@ -239,9 +240,7 @@ describe("createHealthCheck", () => {
       return new Response(JSON.stringify({ keys: [] }), { status: 200 });
     }) as any;
 
-    const check = createHealthCheck(
-      makeConfig({ openKeyIssuerUrl: "https://auth.example.com" }),
-    );
+    const check = createHealthCheck(makeConfig({ openKeyIssuerUrl: "https://auth.example.com" }));
     await check();
 
     expect(fetchedUrl).toBe("https://auth.example.com/api/auth/jwks");
@@ -262,8 +261,8 @@ describe("createHealthEndpoint", () => {
   });
 
   test("responds 200 for healthy status", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), { status: 200 }),
+    globalThis.fetch = mock(
+      async () => new Response(JSON.stringify({ keys: [] }), { status: 200 }),
     ) as any;
 
     const endpoint = createHealthEndpoint(makeConfig());
@@ -292,8 +291,8 @@ describe("createHealthEndpoint", () => {
   });
 
   test("responds 503 for unhealthy status", async () => {
-    globalThis.fetch = mock(async () =>
-      new Response(JSON.stringify({ keys: [] }), { status: 200 }),
+    globalThis.fetch = mock(
+      async () => new Response(JSON.stringify({ keys: [] }), { status: 200 }),
     ) as any;
 
     const endpoint = createHealthEndpoint(makeConfig({ did: "" }));

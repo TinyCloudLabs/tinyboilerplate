@@ -40,6 +40,7 @@ OpenKey provides OAuth 2.1 PKCE. Frontend gets JWT tokens (access, refresh, id).
 After JWT auth, the user creates a `PortableDelegation` scoping what the backend can do in their TinyCloud space. The backend stores the serialized delegation in its own TC KV store and caches the activated `DelegatedAccess` in memory.
 
 **Request pipeline for data routes:**
+
 ```
 Request → authMiddleware (JWT → req.user) → delegationMiddleware (resolve DelegatedAccess → req.delegatedAccess) → route handler
 ```
@@ -106,36 +107,67 @@ fetchUserInfo(openKeyUrl, accessToken): Promise<{ sub, address?, email? }>
 
 ```typescript
 // Types
-interface Item { id, title, data?, createdAt, updatedAt }
-interface CreateItemInput { title, data? }
-interface UpdateItemInput { title?, data? }
-interface StoredDelegation { serialized, grantedAt, expiresAt, actions, path }
-interface DelegationInfo { status: "active" | "expired" | "none", expiresAt }
-interface ServerInfo { did, status }
-type StoreType = "kv" | "sql"
+interface Item {
+  id;
+  title;
+  data?;
+  createdAt;
+  updatedAt;
+}
+interface CreateItemInput {
+  title;
+  data?;
+}
+interface UpdateItemInput {
+  title?;
+  data?;
+}
+interface StoredDelegation {
+  serialized;
+  grantedAt;
+  expiresAt;
+  actions;
+  path;
+}
+interface DelegationInfo {
+  status: "active" | "expired" | "none";
+  expiresAt;
+}
+interface ServerInfo {
+  did;
+  status;
+}
+type StoreType = "kv" | "sql";
 
 // Constants
-DEFAULT_DELEGATION_ACTIONS = ["tinycloud.kv/get", "tinycloud.kv/put", "tinycloud.kv/del", "tinycloud.kv/list", "tinycloud.sql/read", "tinycloud.sql/write"]
-DEFAULT_DELEGATION_PATH = "items/"
-DEFAULT_DELEGATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
-DELEGATION_CACHE_TTL_MS = 50 * 60 * 1000  // 50 minutes
+DEFAULT_DELEGATION_ACTIONS = [
+  "tinycloud.kv/get",
+  "tinycloud.kv/put",
+  "tinycloud.kv/del",
+  "tinycloud.kv/list",
+  "tinycloud.sql/read",
+  "tinycloud.sql/write",
+];
+DEFAULT_DELEGATION_PATH = "items/";
+DEFAULT_DELEGATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+DELEGATION_CACHE_TTL_MS = 50 * 60 * 1000; // 50 minutes
 ```
 
 ## Example App Structure (react-express)
 
 ### Backend Routes
 
-| Method | Path | Auth | Delegation | Description |
-|--------|------|------|------------|-------------|
-| GET | `/api/server-info` | No | No | Returns `{ did, status }` |
-| POST | `/api/delegations` | JWT | No | Receive + store delegation. Body: `{ serialized }` |
-| GET | `/api/delegations/status` | JWT | No | Check delegation status for authenticated user |
-| DELETE | `/api/delegations` | JWT | No | Revoke delegation for authenticated user |
-| GET | `/api/items?store=kv\|sql` | JWT | Yes | List all items |
-| POST | `/api/items?store=kv\|sql` | JWT | Yes | Create item. Body: `{ title, data? }` |
-| GET | `/api/items/:id?store=kv\|sql` | JWT | Yes | Get single item |
-| PUT | `/api/items/:id?store=kv\|sql` | JWT | Yes | Update item. Body: `{ title?, data? }` |
-| DELETE | `/api/items/:id?store=kv\|sql` | JWT | Yes | Delete item |
+| Method | Path                           | Auth | Delegation | Description                                        |
+| ------ | ------------------------------ | ---- | ---------- | -------------------------------------------------- |
+| GET    | `/api/server-info`             | No   | No         | Returns `{ did, status }`                          |
+| POST   | `/api/delegations`             | JWT  | No         | Receive + store delegation. Body: `{ serialized }` |
+| GET    | `/api/delegations/status`      | JWT  | No         | Check delegation status for authenticated user     |
+| DELETE | `/api/delegations`             | JWT  | No         | Revoke delegation for authenticated user           |
+| GET    | `/api/items?store=kv\|sql`     | JWT  | Yes        | List all items                                     |
+| POST   | `/api/items?store=kv\|sql`     | JWT  | Yes        | Create item. Body: `{ title, data? }`              |
+| GET    | `/api/items/:id?store=kv\|sql` | JWT  | Yes        | Get single item                                    |
+| PUT    | `/api/items/:id?store=kv\|sql` | JWT  | Yes        | Update item. Body: `{ title?, data? }`             |
+| DELETE | `/api/items/:id?store=kv\|sql` | JWT  | Yes        | Delete item                                        |
 
 ### Backend Middleware
 
@@ -151,6 +183,7 @@ DELEGATION_CACHE_TTL_MS = 50 * 60 * 1000  // 50 minutes
 ### Express Type Augmentation
 
 `backend/src/types/index.ts` augments Express Request:
+
 ```typescript
 interface Request {
   user?: { sub: string; address: string };
@@ -161,29 +194,33 @@ interface Request {
 ## Environment Variables
 
 ### Backend
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `BACKEND_PRIVATE_KEY` | (required) | 0x-prefixed Ethereum key. `bun run generate-key` |
-| `TINYCLOUD_HOST` | `https://node.tinycloud.xyz` | |
-| `OPENKEY_ISSUER_URL` | `https://openkey.so` | |
-| `PORT` | `3001` | |
 
-### Frontend (Vite — prefix with VITE_)
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `VITE_OPENKEY_CLIENT_ID` | (required) | Register at openkey.so |
-| `VITE_OPENKEY_HOST` | `https://openkey.so` | |
-| `VITE_TINYCLOUD_HOST` | `https://node.tinycloud.xyz` | |
-| `VITE_BACKEND_URL` | `http://localhost:3001` | |
+| Variable              | Default                      | Notes                                            |
+| --------------------- | ---------------------------- | ------------------------------------------------ |
+| `BACKEND_PRIVATE_KEY` | (required)                   | 0x-prefixed Ethereum key. `bun run generate-key` |
+| `TINYCLOUD_HOST`      | `https://node.tinycloud.xyz` |                                                  |
+| `OPENKEY_ISSUER_URL`  | `https://openkey.so`         |                                                  |
+| `PORT`                | `3001`                       |                                                  |
+
+### Frontend (Vite — prefix with VITE\_)
+
+| Variable                 | Default                      | Notes                  |
+| ------------------------ | ---------------------------- | ---------------------- |
+| `VITE_OPENKEY_CLIENT_ID` | (required)                   | Register at openkey.so |
+| `VITE_OPENKEY_HOST`      | `https://openkey.so`         |                        |
+| `VITE_TINYCLOUD_HOST`    | `https://node.tinycloud.xyz` |                        |
+| `VITE_BACKEND_URL`       | `http://localhost:3001`      |                        |
 
 ## Common Patterns
 
 ### withSessionRefresh
 
 Wraps any async TC operation. If the operation fails with a session/auth error, re-signs-in and retries once:
+
 ```typescript
 await withSessionRefresh(node, () => node.kv.put("key", "value"));
 ```
+
 Used internally by `DelegationStore` for all KV operations.
 
 ### DelegationCache TTL

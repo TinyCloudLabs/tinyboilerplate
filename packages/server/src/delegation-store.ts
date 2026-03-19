@@ -52,11 +52,7 @@ export class DelegationStore {
   /**
    * Store a serialized delegation for a user address.
    */
-  async store(
-    address: string,
-    serialized: string,
-    metadata: DelegationMetadata,
-  ): Promise<void> {
+  async store(address: string, serialized: string, metadata: DelegationMetadata): Promise<void> {
     const key = this.keyFor(address);
     const record: StoredDelegation = {
       serialized,
@@ -66,9 +62,7 @@ export class DelegationStore {
       path: metadata.path,
     };
 
-    await withSessionRefresh(this.node, () =>
-      this.node.kv.put(key, record),
-    );
+    await withSessionRefresh(this.node, () => this.node.kv.put(key, record));
   }
 
   /**
@@ -78,9 +72,7 @@ export class DelegationStore {
   async load(address: string): Promise<StoredDelegation | null> {
     const key = this.keyFor(address);
 
-    const result = await withSessionRefresh(this.node, () =>
-      this.node.kv.get(key),
-    );
+    const result = await withSessionRefresh(this.node, () => this.node.kv.get(key));
 
     const response = (result as { data?: { data?: unknown } })?.data;
     if (!response) return null;
@@ -93,7 +85,10 @@ export class DelegationStore {
       if (typeof raw === "string") raw = JSON.parse(raw); // double-encoded
 
       if (!isStoredDelegation(raw)) {
-        this.logger.error("DelegationStore: stored data failed validation for key", this.keyFor(address));
+        this.logger.error(
+          "DelegationStore: stored data failed validation for key",
+          this.keyFor(address),
+        );
         return null;
       }
       return raw;
@@ -108,9 +103,7 @@ export class DelegationStore {
   async remove(address: string): Promise<void> {
     const key = this.keyFor(address);
 
-    await withSessionRefresh(this.node, () =>
-      this.node.kv.delete(key),
-    );
+    await withSessionRefresh(this.node, () => this.node.kv.delete(key));
   }
 
   /**

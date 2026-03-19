@@ -88,7 +88,7 @@ export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResul
   if (!config?.host) {
     logger.warn(
       "[tinyboilerplate] No OpenKey host specified — defaulting to production (https://openkey.so). " +
-      "Set `host` explicitly to silence this warning.",
+        "Set `host` explicitly to silence this warning.",
     );
   }
 
@@ -112,11 +112,7 @@ export async function openKeySignIn(config?: OpenKeyConfig): Promise<SignInResul
   }
 
   // Create EIP-1193 provider that routes signing through OpenKey
-  const eip1193 = new OpenKeyEIP1193Provider(
-    openkey,
-    authResult.address,
-    authResult.keyId,
-  );
+  const eip1193 = new OpenKeyEIP1193Provider(openkey, authResult.address, authResult.keyId);
 
   // Wrap in ethers Web3Provider for TinyCloudWeb compatibility
   const web3Provider = new providers.Web3Provider(eip1193);

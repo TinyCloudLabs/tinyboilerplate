@@ -1,15 +1,8 @@
 // ── Re-export everything ─────────────────────────────────────────────
 
-export {
-  openKeySignIn,
-  type OpenKeyConfig,
-  type SignInResult,
-} from "./openkey.js";
+export { openKeySignIn, type OpenKeyConfig, type SignInResult } from "./openkey.js";
 
-export {
-  createAndSignIn,
-  type TinyCloudWebConfig,
-} from "./tinycloud.js";
+export { createAndSignIn, type TinyCloudWebConfig } from "./tinycloud.js";
 
 export {
   createDelegation,
@@ -33,22 +26,11 @@ export {
   type TokenPersistence,
 } from "./persistence.js";
 
-export {
-  createApiClient,
-  type ApiClient,
-  type ApiClientConfig,
-} from "./api.js";
+export { createApiClient, type ApiClient, type ApiClientConfig } from "./api.js";
 
-export {
-  signOut,
-  type SignOutConfig,
-} from "./sign-out.js";
+export { signOut, type SignOutConfig } from "./sign-out.js";
 
-export {
-  type AuthEvent,
-  type AuthEventListener,
-  type Unsubscribe,
-} from "./auth-events.js";
+export { type AuthEvent, type AuthEventListener, type Unsubscribe } from "./auth-events.js";
 
 export {
   DelegationMonitor,

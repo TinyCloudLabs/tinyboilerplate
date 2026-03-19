@@ -13,10 +13,7 @@ export {
   type DelegationStoreOptions,
 } from "./delegation-store.js";
 
-export {
-  DelegationCache,
-  type DelegatedAccess,
-} from "./delegation-cache.js";
+export { DelegationCache, type DelegatedAccess } from "./delegation-cache.js";
 
 export {
   createJWTVerifier,
@@ -51,8 +48,4 @@ export {
 } from "./health.js";
 
 // Re-export logger primitives from core for convenience
-export {
-  type Logger,
-  consoleLogger,
-  noopLogger,
-} from "@tinyboilerplate/core";
+export { type Logger, consoleLogger, noopLogger } from "@tinyboilerplate/core";

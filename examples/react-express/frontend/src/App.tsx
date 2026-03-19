@@ -17,14 +17,10 @@ import { ItemsCRUD } from "./components/ItemsCRUD";
 
 // ── Environment ─────────────────────────────────────────────────────
 
-const OPENKEY_HOST =
-  import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
-const OPENKEY_CLIENT_ID =
-  import.meta.env.VITE_OPENKEY_CLIENT_ID || "";
-const TINYCLOUD_HOST =
-  import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
-const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const OPENKEY_HOST = import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
+const OPENKEY_CLIENT_ID = import.meta.env.VITE_OPENKEY_CLIENT_ID || "";
+const TINYCLOUD_HOST = import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
 // ── Token store with localStorage persistence ───────────────────────
 // Tokens survive page reloads. Remove the persistence option to revert
@@ -37,7 +33,6 @@ const tokenStore = new TokenStore({
 // ── App ─────────────────────────────────────────────────────────────
 
 export function App() {
-
   // Auth state
   const [address, setAddress] = useState<string | null>(null);
   const [did, setDid] = useState<string | null>(null);
@@ -58,7 +53,11 @@ export function App() {
 
     try {
       // 1. OpenKey sign-in — single popup, passkey auth
-      const { address: addr, web3Provider, openkey: okInstance } = await openKeySignIn({
+      const {
+        address: addr,
+        web3Provider,
+        openkey: okInstance,
+      } = await openKeySignIn({
         host: OPENKEY_HOST,
       });
 
@@ -177,10 +176,7 @@ export function App() {
           onStatusChange={setDelegationActive}
         />
 
-        <ItemsCRUD
-          api={api}
-          delegationActive={delegationActive}
-        />
+        <ItemsCRUD api={api} delegationActive={delegationActive} />
       </main>
 
       <footer style={styles.footer}>

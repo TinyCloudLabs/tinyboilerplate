@@ -22,9 +22,15 @@ async function api(method: string, path: string, token: string, address: string,
 
   const text = await res.text();
   let data;
-  try { data = JSON.parse(text); } catch { data = text; }
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = text;
+  }
 
-  console.log(`  ${method} ${path} → ${res.status} ${typeof data === 'object' ? JSON.stringify(data).slice(0, 150) : data}`);
+  console.log(
+    `  ${method} ${path} → ${res.status} ${typeof data === "object" ? JSON.stringify(data).slice(0, 150) : data}`,
+  );
   return { status: res.status, data, ok: res.ok };
 }
 
@@ -90,21 +96,37 @@ async function main() {
     console.log("5. Testing KV CRUD via delegation...");
 
     // CREATE
-    const item1 = { id: "e2e-1", title: "Test Item 1", data: "hello", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item1 = {
+      id: "e2e-1",
+      title: "Test Item 1",
+      data: "hello",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     const putRes = await access.kv.put("items/e2e-1", item1);
     console.log(`   PUT items/e2e-1: ok=${putRes.ok}`);
 
-    const item2 = { id: "e2e-2", title: "Test Item 2", data: "world", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item2 = {
+      id: "e2e-2",
+      title: "Test Item 2",
+      data: "world",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     const putRes2 = await access.kv.put("items/e2e-2", item2);
     console.log(`   PUT items/e2e-2: ok=${putRes2.ok}`);
 
     // READ
     const getRes = await access.kv.get("items/e2e-1");
-    console.log(`   GET items/e2e-1: ok=${getRes.ok} data=${getRes.ok ? JSON.stringify((getRes.data as any).data).slice(0, 80) : (getRes as any).error?.message}`);
+    console.log(
+      `   GET items/e2e-1: ok=${getRes.ok} data=${getRes.ok ? JSON.stringify((getRes.data as any).data).slice(0, 80) : (getRes as any).error?.message}`,
+    );
 
     // LIST
     const listRes = await access.kv.list({ prefix: "items/" });
-    console.log(`   LIST items/: ok=${listRes.ok} keys=${listRes.ok ? JSON.stringify(listRes.data.keys) : (listRes as any).error?.message}`);
+    console.log(
+      `   LIST items/: ok=${listRes.ok} keys=${listRes.ok ? JSON.stringify(listRes.data.keys) : (listRes as any).error?.message}`,
+    );
 
     // UPDATE
     const updated = { ...item1, title: "Updated Item 1", updatedAt: new Date().toISOString() };
@@ -120,7 +142,9 @@ async function main() {
     console.log(`   DEL items/e2e-1: ok=${delRes.ok}`);
 
     const listAfterDel = await access.kv.list({ prefix: "items/" });
-    console.log(`   LIST items/ (after delete): keys=${listAfterDel.ok ? JSON.stringify(listAfterDel.data.keys) : "?"}`);
+    console.log(
+      `   LIST items/ (after delete): keys=${listAfterDel.ok ? JSON.stringify(listAfterDel.data.keys) : "?"}`,
+    );
 
     // CLEANUP
     await access.kv.delete("items/e2e-2");
@@ -136,13 +160,20 @@ async function main() {
     // Test rapid sequential operations (simulates user clicking fast)
     console.log("\n7. Testing rapid operations...");
     for (let i = 0; i < 5; i++) {
-      const item = { id: `rapid-${i}`, title: `Rapid ${i}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const item = {
+        id: `rapid-${i}`,
+        title: `Rapid ${i}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
       const r = await access2.kv.put(`items/rapid-${i}`, item);
       process.stdout.write(r.ok ? "." : "X");
     }
     console.log("");
     const rapidList = await access2.kv.list({ prefix: "items/" });
-    console.log(`   LIST after rapid puts: ${rapidList.ok ? rapidList.data.keys.length + " keys" : "FAILED"}`);
+    console.log(
+      `   LIST after rapid puts: ${rapidList.ok ? rapidList.data.keys.length + " keys" : "FAILED"}`,
+    );
 
     // Cleanup rapid items
     for (let i = 0; i < 5; i++) await access2.kv.delete(`items/rapid-${i}`);

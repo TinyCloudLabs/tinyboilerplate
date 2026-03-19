@@ -1,9 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import {
-  authenticateRequest,
-  createAuthMiddleware,
-  AuthError,
-} from "../middleware.js";
+import { authenticateRequest, createAuthMiddleware, AuthError } from "../middleware.js";
 import type {
   AuthMiddlewareConfig,
   AuthenticatedUser,
@@ -25,10 +21,7 @@ function makeClaims(overrides?: Partial<JWTClaims>): JWTClaims {
   };
 }
 
-function makeVerifyResult(
-  claims?: Partial<JWTClaims>,
-  token = "valid-token",
-): VerifyResult {
+function makeVerifyResult(claims?: Partial<JWTClaims>, token = "valid-token"): VerifyResult {
   return { claims: makeClaims(claims), token };
 }
 
@@ -54,9 +47,7 @@ function failVerify(
 }
 
 /** Create a mock request object. */
-function mockReq(
-  headers: Record<string, string | undefined> = {},
-): MiddlewareRequest {
+function mockReq(headers: Record<string, string | undefined> = {}): MiddlewareRequest {
   return { headers } as MiddlewareRequest;
 }
 

@@ -1,7 +1,4 @@
-import {
-  DELEGATION_CACHE_TTL_MS,
-  DEFAULT_DELEGATION_CACHE_MAX_SIZE,
-} from "@tinyboilerplate/core";
+import { DELEGATION_CACHE_TTL_MS, DEFAULT_DELEGATION_CACHE_MAX_SIZE } from "@tinyboilerplate/core";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -10,8 +7,8 @@ import {
  * operating under the user's delegation.
  */
 export interface DelegatedAccess {
-  kv: unknown;   // IKVService from @tinycloud/node-sdk
-  sql: unknown;  // ISQLService from @tinycloud/node-sdk
+  kv: unknown; // IKVService from @tinycloud/node-sdk
+  sql: unknown; // ISQLService from @tinycloud/node-sdk
 }
 
 interface CacheEntry {

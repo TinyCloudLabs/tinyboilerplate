@@ -78,12 +78,7 @@ async function main() {
     }),
   );
 
-  app.use(
-    "/api/items",
-    authMiddleware,
-    delegationMiddleware,
-    createItemsRouter(),
-  );
+  app.use("/api/items", authMiddleware, delegationMiddleware, createItemsRouter());
 
   // 6. Start server
   app.listen(PORT, () => {

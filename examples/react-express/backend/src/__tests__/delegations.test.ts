@@ -8,7 +8,12 @@ const mockDeserializeDelegation = mock((serialized: string) => ({
 }));
 
 const mockUseDelegation = mock(async (_delegation: any) => ({
-  kv: { get: async () => ({}), put: async () => ({}), list: async () => ({}), delete: async () => ({}) },
+  kv: {
+    get: async () => ({}),
+    put: async () => ({}),
+    list: async () => ({}),
+    delete: async () => ({}),
+  },
   sql: { execute: async () => ({}), query: async () => ({}) },
 }));
 
@@ -114,9 +119,7 @@ function createApp(
   return app;
 }
 
-function startServer(
-  app: express.Express,
-): Promise<{ server: Server; port: number }> {
+function startServer(app: express.Express): Promise<{ server: Server; port: number }> {
   return new Promise((resolve) => {
     const server = app.listen(0, () => {
       const port = (server.address() as any).port;
@@ -258,9 +261,7 @@ describe("Delegation Routes", () => {
         body: JSON.stringify({ serialized: "my-delegation-string" }),
       });
 
-      expect(mockDeserializeDelegation).toHaveBeenCalledWith(
-        "my-delegation-string",
-      );
+      expect(mockDeserializeDelegation).toHaveBeenCalledWith("my-delegation-string");
     });
 
     it("calls node.useDelegation to activate", async () => {

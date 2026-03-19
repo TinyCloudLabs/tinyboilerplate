@@ -15,9 +15,7 @@ describe("withSessionRefresh", () => {
   });
 
   test("returns the function result on success", async () => {
-    const result = await withSessionRefresh(mockNode as any, () =>
-      Promise.resolve("ok"),
-    );
+    const result = await withSessionRefresh(mockNode as any, () => Promise.resolve("ok"));
     expect(result).toBe("ok");
     expect(mockNode.signIn).not.toHaveBeenCalled();
   });
@@ -42,9 +40,7 @@ describe("withSessionRefresh", () => {
   test("re-throws non-session errors without retrying", async () => {
     const fn = mock(() => Promise.reject(new Error("network timeout")));
 
-    await expect(withSessionRefresh(mockNode as any, fn)).rejects.toThrow(
-      "network timeout",
-    );
+    await expect(withSessionRefresh(mockNode as any, fn)).rejects.toThrow("network timeout");
 
     expect(fn).toHaveBeenCalledTimes(1);
     expect(mockNode.signIn).not.toHaveBeenCalled();
@@ -176,9 +172,7 @@ describe("withSessionRefresh", () => {
       error.code = "NETWORK_ERROR";
       const fn = mock(() => Promise.reject(error));
 
-      await expect(withSessionRefresh(mockNode as any, fn)).rejects.toThrow(
-        "Something failed",
-      );
+      await expect(withSessionRefresh(mockNode as any, fn)).rejects.toThrow("Something failed");
       expect(mockNode.signIn).not.toHaveBeenCalled();
     });
 
@@ -187,9 +181,7 @@ describe("withSessionRefresh", () => {
       error.status = 404;
       const fn = mock(() => Promise.reject(error));
 
-      await expect(withSessionRefresh(mockNode as any, fn)).rejects.toThrow(
-        "Not found",
-      );
+      await expect(withSessionRefresh(mockNode as any, fn)).rejects.toThrow("Not found");
       expect(mockNode.signIn).not.toHaveBeenCalled();
     });
   });
@@ -225,9 +217,7 @@ describe("isSessionError", () => {
 
   test("returns true for session-related messages", () => {
     expect(isSessionError(new Error("session expired"))).toBe(true);
-    expect(
-      isSessionError(new Error("Not signed in. Call signIn() first.")),
-    ).toBe(true);
+    expect(isSessionError(new Error("Not signed in. Call signIn() first."))).toBe(true);
   });
 
   test("returns true for structured AUTH_EXPIRED code", () => {

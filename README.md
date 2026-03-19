@@ -19,10 +19,10 @@ Full-stack boilerplate for [TinyCloud](https://tinycloud.xyz) + [OpenKey](https:
 
 **Two auth layers:**
 
-| Layer | Mechanism | Purpose |
-|-------|-----------|---------|
-| Authentication | OpenKey JWT (JWKS-verified) | "Who are you?" |
-| Authorization | TinyCloud delegation (PortableDelegation) | "What can you do in this user's space?" |
+| Layer          | Mechanism                                 | Purpose                                 |
+| -------------- | ----------------------------------------- | --------------------------------------- |
+| Authentication | OpenKey JWT (JWKS-verified)               | "Who are you?"                          |
+| Authorization  | TinyCloud delegation (PortableDelegation) | "What can you do in this user's space?" |
 
 ## Quick Start
 
@@ -78,32 +78,32 @@ Shared types and constants used by both client and server.
 
 Framework-agnostic browser helpers.
 
-| Export | Description |
-|--------|-------------|
-| `createOpenKey(config?)` | Create an OpenKey instance |
-| `startOAuthFlow(openkey, oauthConfig)` | Run OAuth PKCE flow, return JWT tokens |
-| `connectWallet(openkey)` | Connect wallet, return EIP-1193 provider |
-| `createTinyCloudWeb(provider, config?)` | Create TinyCloudWeb instance |
-| `signIn(tcw)` | Sign into TinyCloud, sets `tcw.did` and `tcw.spaceId` |
-| `createDelegation(tcw, backendDID, options?)` | Create scoped delegation to backend |
-| `sendDelegation(url, serialized, token)` | POST delegation to backend |
-| `checkDelegationStatus(url, token)` | Check if backend has active delegation |
-| `revokeDelegation(url, token)` | Revoke backend's delegation |
-| `TokenStore` | In-memory JWT storage with auto-refresh |
-| `createApiClient(url, tokenStore, config?)` | Fetch wrapper with Bearer auth + 401 retry |
+| Export                                        | Description                                           |
+| --------------------------------------------- | ----------------------------------------------------- |
+| `createOpenKey(config?)`                      | Create an OpenKey instance                            |
+| `startOAuthFlow(openkey, oauthConfig)`        | Run OAuth PKCE flow, return JWT tokens                |
+| `connectWallet(openkey)`                      | Connect wallet, return EIP-1193 provider              |
+| `createTinyCloudWeb(provider, config?)`       | Create TinyCloudWeb instance                          |
+| `signIn(tcw)`                                 | Sign into TinyCloud, sets `tcw.did` and `tcw.spaceId` |
+| `createDelegation(tcw, backendDID, options?)` | Create scoped delegation to backend                   |
+| `sendDelegation(url, serialized, token)`      | POST delegation to backend                            |
+| `checkDelegationStatus(url, token)`           | Check if backend has active delegation                |
+| `revokeDelegation(url, token)`                | Revoke backend's delegation                           |
+| `TokenStore`                                  | In-memory JWT storage with auto-refresh               |
+| `createApiClient(url, tokenStore, config?)`   | Fetch wrapper with Bearer auth + 401 retry            |
 
 ### `@tinyboilerplate/server`
 
 Framework-agnostic Node.js/Bun helpers.
 
-| Export | Description |
-|--------|-------------|
-| `createBackendIdentity(config)` | Initialize TinyCloudNode, sign in, return `{ node, did }` |
-| `withSessionRefresh(node, fn)` | Retry on session expiry (auto re-sign-in) |
-| `DelegationStore` | Persist delegations in backend's own TC KV store |
-| `DelegationCache` | In-memory cache for `DelegatedAccess` (50-min TTL) |
-| `createJWTVerifier(issuerUrl, config?)` | JWKS-backed JWT verification function |
-| `fetchUserInfo(openKeyUrl, token)` | Fetch user profile from OpenKey userinfo endpoint |
+| Export                                  | Description                                               |
+| --------------------------------------- | --------------------------------------------------------- |
+| `createBackendIdentity(config)`         | Initialize TinyCloudNode, sign in, return `{ node, did }` |
+| `withSessionRefresh(node, fn)`          | Retry on session expiry (auto re-sign-in)                 |
+| `DelegationStore`                       | Persist delegations in backend's own TC KV store          |
+| `DelegationCache`                       | In-memory cache for `DelegatedAccess` (50-min TTL)        |
+| `createJWTVerifier(issuerUrl, config?)` | JWKS-backed JWT verification function                     |
+| `fetchUserInfo(openKeyUrl, token)`      | Fetch user profile from OpenKey userinfo endpoint         |
 
 ## How It Works
 
@@ -167,21 +167,21 @@ The delegation chain is the same regardless of your data model: authenticate (JW
 
 ### Backend
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `BACKEND_PRIVATE_KEY` | Yes | — | Ethereum private key (0x-prefixed). Generate with `bun run generate-key` |
-| `TINYCLOUD_HOST` | No | `https://node.tinycloud.xyz` | TinyCloud node URL |
-| `OPENKEY_ISSUER_URL` | No | `https://openkey.so` | OpenKey issuer for JWT verification |
-| `PORT` | No | `3001` | Backend port |
+| Variable              | Required | Default                      | Description                                                              |
+| --------------------- | -------- | ---------------------------- | ------------------------------------------------------------------------ |
+| `BACKEND_PRIVATE_KEY` | Yes      | —                            | Ethereum private key (0x-prefixed). Generate with `bun run generate-key` |
+| `TINYCLOUD_HOST`      | No       | `https://node.tinycloud.xyz` | TinyCloud node URL                                                       |
+| `OPENKEY_ISSUER_URL`  | No       | `https://openkey.so`         | OpenKey issuer for JWT verification                                      |
+| `PORT`                | No       | `3001`                       | Backend port                                                             |
 
 ### Frontend (Vite)
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `VITE_OPENKEY_CLIENT_ID` | Yes | — | Your OpenKey OAuth client ID |
-| `VITE_OPENKEY_HOST` | No | `https://openkey.so` | OpenKey host |
-| `VITE_TINYCLOUD_HOST` | No | `https://node.tinycloud.xyz` | TinyCloud node URL |
-| `VITE_BACKEND_URL` | No | `http://localhost:3001` | Backend URL |
+| Variable                 | Required | Default                      | Description                  |
+| ------------------------ | -------- | ---------------------------- | ---------------------------- |
+| `VITE_OPENKEY_CLIENT_ID` | Yes      | —                            | Your OpenKey OAuth client ID |
+| `VITE_OPENKEY_HOST`      | No       | `https://openkey.so`         | OpenKey host                 |
+| `VITE_TINYCLOUD_HOST`    | No       | `https://node.tinycloud.xyz` | TinyCloud node URL           |
+| `VITE_BACKEND_URL`       | No       | `http://localhost:3001`      | Backend URL                  |
 
 ## Known Constraints
 

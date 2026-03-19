@@ -1,6 +1,11 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { JWTPayload, JWTVerifyResult } from "jose";
-import { AuthenticationError, NetworkError, consoleLogger, type Logger } from "@tinyboilerplate/core";
+import {
+  AuthenticationError,
+  NetworkError,
+  consoleLogger,
+  type Logger,
+} from "@tinyboilerplate/core";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -41,17 +46,11 @@ export interface JWTVerifierConfig {
  *
  * Tries JWT first, falls back to userinfo if the token isn't a JWT.
  */
-export function createJWTVerifier(
-  openKeyIssuerUrl: string,
-  config?: JWTVerifierConfig,
-) {
-  const jwksUrl = new URL(
-    "/api/auth/jwks",
-    openKeyIssuerUrl,
-  );
+export function createJWTVerifier(openKeyIssuerUrl: string, config?: JWTVerifierConfig) {
+  const jwksUrl = new URL("/api/auth/jwks", openKeyIssuerUrl);
   const jwks = createRemoteJWKSet(jwksUrl, {
-    cacheMaxAge: 600_000,      // Re-fetch JWKS every 10 minutes
-    cooldownDuration: 30_000,  // Wait 30s between fetches on miss
+    cacheMaxAge: 600_000, // Re-fetch JWKS every 10 minutes
+    cooldownDuration: 30_000, // Wait 30s between fetches on miss
   });
 
   const issuer = config?.issuer ?? openKeyIssuerUrl;
@@ -110,10 +109,7 @@ export function createJWTVerifier(
  * Fetch the authenticated user's profile from the OpenKey userinfo endpoint.
  * Requires a valid access token.
  */
-export async function fetchUserInfo(
-  openKeyUrl: string,
-  accessToken: string,
-): Promise<UserInfo> {
+export async function fetchUserInfo(openKeyUrl: string, accessToken: string): Promise<UserInfo> {
   const res = await fetch(`${openKeyUrl}/api/auth/oauth2/userinfo`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,

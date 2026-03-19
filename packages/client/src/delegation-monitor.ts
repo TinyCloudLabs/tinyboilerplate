@@ -92,8 +92,7 @@ export class DelegationMonitor {
     // Stop any previous session
     this.stop();
 
-    this.expiresAt =
-      typeof expiresAt === "string" ? new Date(expiresAt).getTime() : expiresAt;
+    this.expiresAt = typeof expiresAt === "string" ? new Date(expiresAt).getTime() : expiresAt;
 
     this.expiringFired = false;
     this.expiredFired = false;

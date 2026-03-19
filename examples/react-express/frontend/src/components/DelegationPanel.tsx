@@ -49,9 +49,7 @@ export const DelegationPanel: FC<DelegationPanelProps> = ({
         if (!cancelled) setBackendDID(info.did);
       } catch (err) {
         if (!cancelled) {
-          setError(
-            `Failed to reach backend: ${err instanceof Error ? err.message : String(err)}`,
-          );
+          setError(`Failed to reach backend: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     }
@@ -153,8 +151,7 @@ export const DelegationPanel: FC<DelegationPanelProps> = ({
       ) : (
         <>
           <p style={styles.description}>
-            Grant the backend access to read and write items in your TinyCloud
-            space.
+            Grant the backend access to read and write items in your TinyCloud space.
           </p>
 
           {/* Status badge */}

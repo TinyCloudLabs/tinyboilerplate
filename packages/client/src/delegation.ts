@@ -22,9 +22,7 @@ export async function createDelegation(
   backendDID: string,
   options?: DelegationOptions,
 ): Promise<string> {
-  const actions = options?.actions
-    ? [...options.actions]
-    : [...DEFAULT_DELEGATION_ACTIONS];
+  const actions = options?.actions ? [...options.actions] : [...DEFAULT_DELEGATION_ACTIONS];
   const path = options?.path ?? DEFAULT_DELEGATION_PATH;
   const expiryMs = options?.expiryMs ?? DEFAULT_DELEGATION_EXPIRY_MS;
 
@@ -49,16 +47,12 @@ export async function sendDelegation(
 
 // ── Check Delegation Status ──────────────────────────────────────────
 
-export async function checkDelegationStatus(
-  api: ApiClient,
-): Promise<DelegationResponse> {
+export async function checkDelegationStatus(api: ApiClient): Promise<DelegationResponse> {
   return api.get<DelegationResponse>("/api/delegations/status");
 }
 
 // ── Revoke Delegation ────────────────────────────────────────────────
 
-export async function revokeDelegation(
-  api: ApiClient,
-): Promise<void> {
+export async function revokeDelegation(api: ApiClient): Promise<void> {
   await api.del("/api/delegations");
 }

@@ -73,10 +73,8 @@ export function isSessionError(err: unknown): boolean {
 
   // 2. Check for HTTP 401 status
   if (err != null && typeof err === "object") {
-    const status =
-      "status" in err ? (err as any).status : undefined;
-    const statusCode =
-      "statusCode" in err ? (err as any).statusCode : undefined;
+    const status = "status" in err ? (err as any).status : undefined;
+    const statusCode = "statusCode" in err ? (err as any).statusCode : undefined;
     if (status === 401 || statusCode === 401) return true;
   }
 
@@ -94,10 +92,7 @@ export function isSessionError(err: unknown): boolean {
  * Use this around any TinyCloud KV/SQL operation that might fail due
  * to an expired session.
  */
-export async function withSessionRefresh<T>(
-  node: TinyCloudNode,
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function withSessionRefresh<T>(node: TinyCloudNode, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (err: unknown) {

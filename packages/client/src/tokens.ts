@@ -243,10 +243,7 @@ export class TokenStore {
    *
    * If a timer is already running it will be stopped and replaced.
    */
-  startAutoRefresh(
-    refreshConfig: TokenRefreshConfig,
-    options?: AutoRefreshOptions,
-  ): void {
+  startAutoRefresh(refreshConfig: TokenRefreshConfig, options?: AutoRefreshOptions): void {
     // Stop any previously running timer
     this.stopAutoRefresh();
 
@@ -295,8 +292,7 @@ export class TokenStore {
     //      token's lifetime.
     const elapsedFraction = lifetime > 0 ? 1 - remaining / lifetime : 1;
     const needsRefresh =
-      remaining <= opts.minTimeBeforeExpiryMs ||
-      elapsedFraction >= opts.refreshAtLifetimeFraction;
+      remaining <= opts.minTimeBeforeExpiryMs || elapsedFraction >= opts.refreshAtLifetimeFraction;
 
     if (!needsRefresh) return;
 

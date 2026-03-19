@@ -5,8 +5,7 @@ import {
 
 // ── Environment ──────────────────────────────────────────────────────
 
-const OPENKEY_ISSUER_URL =
-  process.env.OPENKEY_ISSUER_URL ?? "https://openkey.so";
+const OPENKEY_ISSUER_URL = process.env.OPENKEY_ISSUER_URL ?? "https://openkey.so";
 
 const OPENKEY_CLIENT_ID = process.env.OPENKEY_CLIENT_ID;
 

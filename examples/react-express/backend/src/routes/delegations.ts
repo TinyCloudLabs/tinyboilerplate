@@ -108,7 +108,9 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
 
     try {
       const stored = await store.load(address);
-      console.log(`[delegations/status] stored=${stored ? "yes" : "no"} expiresAt=${stored?.expiresAt ?? "n/a"}`);
+      console.log(
+        `[delegations/status] stored=${stored ? "yes" : "no"} expiresAt=${stored?.expiresAt ?? "n/a"}`,
+      );
 
       if (!stored) {
         res.json({

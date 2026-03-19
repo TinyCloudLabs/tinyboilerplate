@@ -24,10 +24,18 @@ export interface Logger {
 
 /** Default logger that delegates to console. */
 export const consoleLogger: Logger = {
-  debug(message, ...args) { console.debug(message, ...args); },
-  info(message, ...args) { console.info(message, ...args); },
-  warn(message, ...args) { console.warn(message, ...args); },
-  error(message, ...args) { console.error(message, ...args); },
+  debug(message, ...args) {
+    console.debug(message, ...args);
+  },
+  info(message, ...args) {
+    console.info(message, ...args);
+  },
+  warn(message, ...args) {
+    console.warn(message, ...args);
+  },
+  error(message, ...args) {
+    console.error(message, ...args);
+  },
 };
 
 /** No-op logger that silences all output. */

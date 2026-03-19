@@ -1,11 +1,6 @@
 import { type FC, useCallback, useEffect, useState } from "react";
 import type { ApiClient } from "@tinyboilerplate/client";
-import type {
-  Item,
-  ItemListResponse,
-  ItemResponse,
-  StoreType,
-} from "@tinyboilerplate/core";
+import type { Item, ItemListResponse, ItemResponse, StoreType } from "@tinyboilerplate/core";
 
 interface ItemsCRUDProps {
   api: ApiClient | null;
@@ -39,9 +34,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
     setError(null);
 
     try {
-      const res = await api.get<ItemListResponse>(
-        `/api/items?store=${storeType}`,
-      );
+      const res = await api.get<ItemListResponse>(`/api/items?store=${storeType}`);
       setItems(res.items);
       setLastResponse(res);
     } catch (err) {
@@ -76,10 +69,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
         };
         if (newData.trim()) body.data = newData.trim();
 
-        const res = await api.post<ItemResponse>(
-          `/api/items?store=${storeType}`,
-          body,
-        );
+        const res = await api.post<ItemResponse>(`/api/items?store=${storeType}`, body);
         setLastResponse(res);
         setNewTitle("");
         setNewData("");
@@ -110,10 +100,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
         if (editTitle.trim()) body.title = editTitle.trim();
         if (editData.trim()) body.data = editData.trim();
 
-        const res = await api.put<ItemResponse>(
-          `/api/items/${id}?store=${storeType}`,
-          body,
-        );
+        const res = await api.put<ItemResponse>(`/api/items/${id}?store=${storeType}`, body);
         setLastResponse(res);
         setEditingId(null);
         setEditTitle("");
@@ -180,9 +167,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
       <h2 style={styles.heading}>3. Items (CRUD)</h2>
 
       {!enabled ? (
-        <p style={styles.description}>
-          Grant a delegation to the backend to manage items.
-        </p>
+        <p style={styles.description}>Grant a delegation to the backend to manage items.</p>
       ) : (
         <>
           {/* Store type toggle */}
@@ -208,11 +193,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
             >
               SQL
             </button>
-            <button
-              onClick={fetchItems}
-              disabled={loading}
-              style={styles.refreshButton}
-            >
+            <button onClick={fetchItems} disabled={loading} style={styles.refreshButton}>
               Refresh
             </button>
           </div>
@@ -247,14 +228,10 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
           </form>
 
           {/* Items list */}
-          {loading && items.length === 0 && (
-            <p style={styles.loadingText}>Loading items...</p>
-          )}
+          {loading && items.length === 0 && <p style={styles.loadingText}>Loading items...</p>}
 
           {!loading && items.length === 0 && (
-            <p style={styles.emptyText}>
-              No items yet. Create one above.
-            </p>
+            <p style={styles.emptyText}>No items yet. Create one above.</p>
           )}
 
           <div style={styles.itemList}>
@@ -285,10 +262,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
                       >
                         Save
                       </button>
-                      <button
-                        onClick={cancelEdit}
-                        style={styles.buttonSmallSecondary}
-                      >
+                      <button onClick={cancelEdit} style={styles.buttonSmallSecondary}>
                         Cancel
                       </button>
                     </div>
@@ -298,20 +272,13 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
                   <>
                     <div style={styles.itemContent}>
                       <strong style={styles.itemTitle}>{item.title}</strong>
-                      {item.data && (
-                        <span style={styles.itemData}>{item.data}</span>
-                      )}
+                      {item.data && <span style={styles.itemData}>{item.data}</span>}
                       <span style={styles.itemId}>
-                        {item.id.length > 12
-                          ? `${item.id.slice(0, 8)}...`
-                          : item.id}
+                        {item.id.length > 12 ? `${item.id.slice(0, 8)}...` : item.id}
                       </span>
                     </div>
                     <div style={styles.itemActions}>
-                      <button
-                        onClick={() => startEdit(item)}
-                        style={styles.buttonSmallSecondary}
-                      >
+                      <button onClick={() => startEdit(item)} style={styles.buttonSmallSecondary}>
                         Edit
                       </button>
                       <button
@@ -332,9 +299,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api, delegationActive }) => {
           {lastResponse !== null && (
             <details style={styles.details}>
               <summary style={styles.summary}>Last API Response</summary>
-              <pre style={styles.pre}>
-                {JSON.stringify(lastResponse, null, 2)}
-              </pre>
+              <pre style={styles.pre}>{JSON.stringify(lastResponse, null, 2)}</pre>
             </details>
           )}
         </>

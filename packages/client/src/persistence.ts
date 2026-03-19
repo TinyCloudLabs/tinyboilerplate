@@ -25,10 +25,7 @@ const DEFAULT_STORAGE_KEY = "tinyboilerplate:tokens";
  * Create a Web Storage-backed persistence implementation.
  * Handles errors gracefully (e.g., private browsing, quota exceeded).
  */
-function createWebStoragePersistence(
-  storage: Storage,
-  key: string,
-): TokenPersistence {
+function createWebStoragePersistence(storage: Storage, key: string): TokenPersistence {
   return {
     save(tokens: StoredTokens): void {
       try {
@@ -79,9 +76,7 @@ function createWebStoragePersistence(
  *
  * @param key - Storage key (default: `"tinyboilerplate:tokens"`)
  */
-export function createLocalStoragePersistence(
-  key: string = DEFAULT_STORAGE_KEY,
-): TokenPersistence {
+export function createLocalStoragePersistence(key: string = DEFAULT_STORAGE_KEY): TokenPersistence {
   return createWebStoragePersistence(localStorage, key);
 }
 

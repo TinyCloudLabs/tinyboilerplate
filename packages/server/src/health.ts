@@ -194,9 +194,7 @@ export function createHealthCheck(config: HealthCheckConfig) {
     try {
       // Perform a lightweight KV list on a prefix unlikely to hold data.
       // This validates connectivity without reading meaningful data.
-      await withSessionRefresh(node, () =>
-        node.kv.list({ prefix: "__health__" }),
-      );
+      await withSessionRefresh(node, () => node.kv.list({ prefix: "__health__" }));
 
       return { status: "pass", latencyMs: elapsed(start) };
     } catch (err) {

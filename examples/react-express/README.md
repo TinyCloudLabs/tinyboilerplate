@@ -3,6 +3,7 @@
 A full-stack demo showing OpenKey authentication, TinyCloud delegation, and CRUD operations through a backend that operates on the user's TinyCloud space.
 
 **What this demonstrates:**
+
 - OAuth PKCE sign-in via OpenKey (popup mode)
 - TinyCloud session creation + space auto-provisioning
 - Scoped delegation from user to backend (7-day expiry, items/ path)
@@ -62,10 +63,12 @@ bun run dev
 ```
 
 This starts both:
+
 - **Frontend**: `http://localhost:5173` (Vite dev server)
 - **Backend**: `http://localhost:3001` (Bun with --watch)
 
 You can also run them separately:
+
 ```bash
 bun run dev:frontend   # Just the frontend
 bun run dev:backend    # Just the backend
@@ -75,41 +78,44 @@ bun run dev:backend    # Just the backend
 
 ### Public
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/server-info` | Returns `{ did, status }` for the backend |
+| Method | Path               | Description                               |
+| ------ | ------------------ | ----------------------------------------- |
+| GET    | `/api/server-info` | Returns `{ did, status }` for the backend |
 
 ### Authenticated (JWT required)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/delegations` | Store a delegation. Body: `{ serialized: string }` |
-| GET | `/api/delegations/status` | Check delegation status for current user |
-| DELETE | `/api/delegations` | Revoke delegation for current user |
+| Method | Path                      | Description                                        |
+| ------ | ------------------------- | -------------------------------------------------- |
+| POST   | `/api/delegations`        | Store a delegation. Body: `{ serialized: string }` |
+| GET    | `/api/delegations/status` | Check delegation status for current user           |
+| DELETE | `/api/delegations`        | Revoke delegation for current user                 |
 
 ### Authenticated + Delegated (JWT + active delegation required)
 
 All item routes accept `?store=kv` (default) or `?store=sql`.
 
-| Method | Path | Body | Response |
-|--------|------|------|----------|
-| GET | `/api/items` | — | `{ items: Item[] }` |
-| POST | `/api/items` | `{ title, data? }` | `{ item: Item }` (201) |
-| GET | `/api/items/:id` | — | `{ item: Item }` |
-| PUT | `/api/items/:id` | `{ title?, data? }` | `{ item: Item }` |
-| DELETE | `/api/items/:id` | — | 204 No Content |
+| Method | Path             | Body                | Response               |
+| ------ | ---------------- | ------------------- | ---------------------- |
+| GET    | `/api/items`     | —                   | `{ items: Item[] }`    |
+| POST   | `/api/items`     | `{ title, data? }`  | `{ item: Item }` (201) |
+| GET    | `/api/items/:id` | —                   | `{ item: Item }`       |
+| PUT    | `/api/items/:id` | `{ title?, data? }` | `{ item: Item }`       |
+| DELETE | `/api/items/:id` | —                   | 204 No Content         |
 
 **Error responses** follow `{ error: string, message: string }`.
 
 ## Frontend Panels
 
 ### 1. Authentication
+
 Sign in with OpenKey. This opens a popup for OAuth, connects the wallet, and creates a TinyCloud session. After sign-in, your address and DID are displayed.
 
 ### 2. Delegation
+
 Fetches the backend's DID from `/api/server-info`, then lets you grant or revoke a delegation. The delegation scopes the backend to `items/` with full KV and SQL access for 7 days. Status is polled every 30 seconds.
 
 ### 3. Items (CRUD)
+
 Create, read, update, and delete items. Toggle between KV and SQL storage modes. A collapsible "Last API Response" section shows raw JSON for debugging.
 
 ## How to Modify
@@ -117,6 +123,7 @@ Create, read, update, and delete items. Toggle between KV and SQL storage modes.
 To replace "items" with your own model:
 
 **1. Define your types** in `packages/core/src/index.ts`:
+
 ```typescript
 export interface Task {
   id: string;
@@ -127,12 +134,14 @@ export interface Task {
 ```
 
 **2. Update the delegation path** if needed:
+
 ```typescript
 // packages/core/src/index.ts
 export const DEFAULT_DELEGATION_PATH = "tasks/";
 ```
 
 **3. Add new routes** — copy `backend/src/routes/items.ts`:
+
 ```typescript
 // backend/src/routes/tasks.ts
 export function createTasksRouter() {
@@ -149,6 +158,7 @@ export function createTasksRouter() {
 ```
 
 **4. Mount in** `backend/src/index.ts`:
+
 ```typescript
 app.use("/api/tasks", authMiddleware, delegationMiddleware, createTasksRouter());
 ```

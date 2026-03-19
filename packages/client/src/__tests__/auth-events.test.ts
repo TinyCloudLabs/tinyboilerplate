@@ -122,9 +122,7 @@ describe("TokenStore auth events", () => {
         return new Response("Invalid grant", { status: 400 });
       }) as typeof fetch;
 
-      await expect(store.refresh(refreshConfig)).rejects.toThrow(
-        "Token refresh failed",
-      );
+      await expect(store.refresh(refreshConfig)).rejects.toThrow("Token refresh failed");
 
       expect(events).toHaveLength(2);
       expect(events[0].type).toBe("refresh_failed");
@@ -210,10 +208,7 @@ describe("TokenStore auth events", () => {
     store.setTokens("access", "refresh", 3600);
     store.clear();
 
-    expect(events.map((e) => e.type)).toEqual([
-      "tokens_set",
-      "tokens_cleared",
-    ]);
+    expect(events.map((e) => e.type)).toEqual(["tokens_set", "tokens_cleared"]);
   });
 
   // ── no events without listeners ──────────────────────────────────

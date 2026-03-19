@@ -16,10 +16,7 @@ export interface AuthMiddlewareConfig {
    * Custom function to resolve the user's address from JWT claims and token.
    * Overrides the default resolution strategy (claims.address → userinfo → claims.sub).
    */
-  resolveAddress?: (
-    claims: JWTClaims,
-    token: string,
-  ) => Promise<string> | string;
+  resolveAddress?: (claims: JWTClaims, token: string) => Promise<string> | string;
 }
 
 /**
@@ -72,11 +69,7 @@ export async function authenticateRequest(
   config: AuthMiddlewareConfig,
 ): Promise<AuthenticatedUser> {
   if (!authHeader) {
-    throw new AuthError(
-      401,
-      "missing_token",
-      "Authorization header is required",
-    );
+    throw new AuthError(401, "missing_token", "Authorization header is required");
   }
 
   let verifyResult: VerifyResult;
@@ -84,7 +77,9 @@ export async function authenticateRequest(
     verifyResult = await config.verify(authHeader);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    throw new AuthError(401, "invalid_token", `Token verification failed: ${message}`, { cause: err });
+    throw new AuthError(401, "invalid_token", `Token verification failed: ${message}`, {
+      cause: err,
+    });
   }
 
   const { claims, token } = verifyResult;
@@ -157,11 +152,7 @@ export type NextFunction = (err?: unknown) => void;
  * ```
  */
 export function createAuthMiddleware(config: AuthMiddlewareConfig) {
-  return async (
-    req: MiddlewareRequest,
-    res: MiddlewareResponse,
-    next: NextFunction,
-  ) => {
+  return async (req: MiddlewareRequest, res: MiddlewareResponse, next: NextFunction) => {
     try {
       const authHeader = req.headers.authorization as string | undefined;
       const user = await authenticateRequest(authHeader, config);

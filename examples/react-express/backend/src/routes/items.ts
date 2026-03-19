@@ -43,9 +43,7 @@ export function createItemsRouter() {
           return;
         }
         const keys = listResult.data.keys ?? [];
-        const results = await Promise.all(
-          keys.map((key) => access.kv.get(key))
-        );
+        const results = await Promise.all(keys.map((key) => access.kv.get(key)));
         const items: Item[] = results
           .filter((r) => r.ok && (r.data as any)?.data)
           .map((r) => {
@@ -165,10 +163,7 @@ export function createItemsRouter() {
         await ensureTable(access);
 
         // Check if exists
-        const existing = await access.sql.query(
-          `SELECT id FROM items WHERE id = ?`,
-          [id],
-        );
+        const existing = await access.sql.query(`SELECT id FROM items WHERE id = ?`, [id]);
         if ((existing.data ?? []).length === 0) {
           res.status(404).json({
             error: "not_found",
@@ -190,10 +185,10 @@ export function createItemsRouter() {
         setClauses.push(`updated_at = ?`);
         setParams.push(now);
 
-        await access.sql.execute(
-          `UPDATE items SET ${setClauses.join(", ")} WHERE id = ?`,
-          [...setParams, id],
-        );
+        await access.sql.execute(`UPDATE items SET ${setClauses.join(", ")} WHERE id = ?`, [
+          ...setParams,
+          id,
+        ]);
 
         // Fetch the updated item
         const result = await access.sql.query(
@@ -241,10 +236,7 @@ export function createItemsRouter() {
         await ensureTable(access);
 
         // Check if exists
-        const existing = await access.sql.query(
-          `SELECT id FROM items WHERE id = ?`,
-          [id],
-        );
+        const existing = await access.sql.query(`SELECT id FROM items WHERE id = ?`, [id]);
         if ((existing.data ?? []).length === 0) {
           res.status(404).json({
             error: "not_found",
@@ -253,10 +245,7 @@ export function createItemsRouter() {
           return;
         }
 
-        await access.sql.execute(
-          `DELETE FROM items WHERE id = ?`,
-          [id],
-        );
+        await access.sql.execute(`DELETE FROM items WHERE id = ?`, [id]);
       } else {
         // KV: check existence, then delete
         const result = await access.kv.get(`items/${id}`);

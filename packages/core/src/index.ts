@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 // ── Errors ──────────────────────────────────────────────────────────
 
 export {
@@ -266,3 +268,43 @@ export const DEFAULT_PAGE_LIMIT = 50;
 
 /** Maximum allowed page size for paginated list responses */
 export const MAX_PAGE_LIMIT = 200;
+
+// ── Validation Schemas ──────────────────────────────────────────────
+
+/** Schema for creating a new item. */
+export const CreateItemSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(500, "Title must be 500 characters or less"),
+  data: z.string().optional(),
+});
+
+/** Schema for updating an existing item. At least one field must be provided. */
+export const UpdateItemSchema = z
+  .object({
+    title: z
+      .string()
+      .min(1, "Title must not be empty")
+      .max(500, "Title must be 500 characters or less")
+      .optional(),
+    data: z.string().optional(),
+  })
+  .refine((data) => data.title !== undefined || data.data !== undefined, {
+    message: "At least one field (title or data) must be provided",
+  });
+
+/** Schema for the `?store=` query parameter. Defaults to "kv". */
+export const StoreQuerySchema = z.object({
+  store: z.enum(["kv", "sql"]).default("kv"),
+});
+
+/** Schema for route params containing an item ID. */
+export const ItemIdParamSchema = z.object({
+  id: z.string().min(1, "Item ID is required"),
+});
+
+/** Schema for creating a delegation. */
+export const CreateDelegationSchema = z.object({
+  serialized: z.string().min(1, "Serialized delegation is required"),
+});

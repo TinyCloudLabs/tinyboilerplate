@@ -3,6 +3,8 @@ import type { Request, Response } from "express";
 import type { TinyCloudNode } from "@tinycloud/node-sdk";
 import { deserializeDelegation } from "@tinycloud/node-sdk";
 import type { DelegationStore, DelegationCache } from "@tinyboilerplate/server";
+import { CreateDelegationSchema } from "@tinyboilerplate/core";
+import { validate } from "../middleware/validation.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -24,17 +26,9 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
   router.use(authMiddleware as any);
 
   // ── POST /api/delegations — receive + store delegation ─────────
-  router.post("/", async (req: Request, res: Response) => {
+  router.post("/", validate({ body: CreateDelegationSchema }), async (req: Request, res: Response) => {
     const { address } = req.user!;
     const { serialized } = req.body;
-
-    if (!serialized || typeof serialized !== "string") {
-      res.status(400).json({
-        error: "invalid_body",
-        message: "Request body must include a 'serialized' string field",
-      });
-      return;
-    }
 
     try {
       // Deserialize and validate the delegation

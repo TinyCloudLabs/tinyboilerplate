@@ -1,8 +1,9 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import type { Item, CreateItemInput, UpdateItemInput, StoreType } from "@tinyboilerplate/core";
-import { toISODateString } from "@tinyboilerplate/core";
+import { toISODateString, CreateItemSchema, UpdateItemSchema, StoreQuerySchema, ItemIdParamSchema } from "@tinyboilerplate/core";
 import type { DelegatedAccess } from "@tinyboilerplate/server";
+import { validate } from "../middleware/validation.js";
 
 // ── Items Router ─────────────────────────────────────────────────────
 
@@ -22,8 +23,8 @@ export function createItemsRouter() {
   const router = Router();
 
   // GET /api/items?store=kv|sql
-  router.get("/", async (req: Request, res: Response) => {
-    const storeType = getStoreType(req);
+  router.get("/", validate({ query: StoreQuerySchema }), async (req: Request, res: Response) => {
+    const storeType = req.query.store as StoreType;
     const access = requireAccess(req, res);
     if (!access) return;
 
@@ -58,19 +59,11 @@ export function createItemsRouter() {
   });
 
   // POST /api/items?store=kv|sql
-  router.post("/", async (req: Request, res: Response) => {
-    const storeType = getStoreType(req);
+  router.post("/", validate({ body: CreateItemSchema, query: StoreQuerySchema }), async (req: Request, res: Response) => {
+    const storeType = req.query.store as StoreType;
     const access = requireAccess(req, res);
     if (!access) return;
     const input: CreateItemInput = req.body;
-
-    if (!input.title || typeof input.title !== "string") {
-      res.status(400).json({
-        error: "invalid_body",
-        message: "Request body must include a 'title' string field",
-      });
-      return;
-    }
 
     const now = toISODateString();
     const item: Item = {
@@ -100,8 +93,8 @@ export function createItemsRouter() {
   });
 
   // GET /api/items/:id?store=kv|sql
-  router.get("/:id", async (req: Request, res: Response) => {
-    const storeType = getStoreType(req);
+  router.get("/:id", validate({ params: ItemIdParamSchema, query: StoreQuerySchema }), async (req: Request, res: Response) => {
+    const storeType = req.query.store as StoreType;
     const access = requireAccess(req, res);
     if (!access) return;
     const { id } = req.params;
@@ -141,20 +134,12 @@ export function createItemsRouter() {
   });
 
   // PUT /api/items/:id?store=kv|sql
-  router.put("/:id", async (req: Request, res: Response) => {
-    const storeType = getStoreType(req);
+  router.put("/:id", validate({ body: UpdateItemSchema, params: ItemIdParamSchema, query: StoreQuerySchema }), async (req: Request, res: Response) => {
+    const storeType = req.query.store as StoreType;
     const access = requireAccess(req, res);
     if (!access) return;
     const { id } = req.params;
     const input: UpdateItemInput = req.body;
-
-    if (!input.title && !input.data && input.data !== "") {
-      res.status(400).json({
-        error: "invalid_body",
-        message: "Request body must include at least 'title' or 'data'",
-      });
-      return;
-    }
 
     try {
       const now = toISODateString();
@@ -225,8 +210,8 @@ export function createItemsRouter() {
   });
 
   // DELETE /api/items/:id?store=kv|sql
-  router.delete("/:id", async (req: Request, res: Response) => {
-    const storeType = getStoreType(req);
+  router.delete("/:id", validate({ params: ItemIdParamSchema, query: StoreQuerySchema }), async (req: Request, res: Response) => {
+    const storeType = req.query.store as StoreType;
     const access = requireAccess(req, res);
     if (!access) return;
     const { id } = req.params;
@@ -270,11 +255,6 @@ export function createItemsRouter() {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-function getStoreType(req: Request): StoreType {
-  const store = req.query.store as string | undefined;
-  return store === "sql" ? "sql" : "kv";
-}
 
 /**
  * SQL table initialization flag — ensures CREATE TABLE runs at most

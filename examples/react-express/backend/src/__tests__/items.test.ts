@@ -212,7 +212,8 @@ describe("Items CRUD (KV store)", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("invalid_body");
+    expect(body.error).toBe("validation_error");
+    expect(body.details).toBeDefined();
   });
 
   it("POST /api/items returns 400 with non-string title", async () => {
@@ -224,7 +225,8 @@ describe("Items CRUD (KV store)", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("invalid_body");
+    expect(body.error).toBe("validation_error");
+    expect(body.details).toBeDefined();
   });
 
   it("GET /api/items/:id returns a created item", async () => {
@@ -301,7 +303,8 @@ describe("Items CRUD (KV store)", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("invalid_body");
+    expect(body.error).toBe("validation_error");
+    expect(body.details).toBeDefined();
   });
 
   it("PUT /api/items/:id returns 404 for nonexistent item", async () => {

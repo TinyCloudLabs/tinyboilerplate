@@ -307,7 +307,8 @@ describe("Delegation Routes", () => {
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toBe("invalid_body");
+      expect(body.error).toBe("validation_error");
+      expect(body.details).toBeDefined();
     });
 
     it("returns 400 with non-string serialized field", async () => {
@@ -319,7 +320,8 @@ describe("Delegation Routes", () => {
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toBe("invalid_body");
+      expect(body.error).toBe("validation_error");
+      expect(body.details).toBeDefined();
     });
 
     it("returns 400 when deserializeDelegation throws", async () => {

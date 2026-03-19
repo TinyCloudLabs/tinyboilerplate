@@ -11,15 +11,20 @@ function createMockKV() {
 
   return {
     _store: store,
-    get: async (key: string) => ({ data: store.get(key) ?? null }),
+    get: async (key: string) => {
+      const value = store.get(key);
+      if (value === undefined) return { ok: false, data: null };
+      return { ok: true, data: { data: value } };
+    },
     put: async (key: string, value: string) => {
       store.set(key, value);
-      return {};
+      return { ok: true };
     },
-    list: async (prefix: string) => ({
-      data: [...store.entries()]
-        .filter(([k]) => k.startsWith(prefix))
-        .map(([key, value]) => ({ key, value })),
+    list: async (opts: { prefix: string }) => ({
+      ok: true,
+      data: {
+        keys: [...store.keys()].filter((k) => k.startsWith(opts.prefix)),
+      },
     }),
     delete: async (key: string) => {
       store.delete(key);
@@ -36,7 +41,7 @@ function createMockSQL() {
 
   return {
     _getRows: () => rows,
-    execute: async (sql: string) => {
+    execute: async (sql: string, params?: any[]) => {
       const trimmed = sql.trim();
 
       // CREATE TABLE
@@ -45,58 +50,51 @@ function createMockSQL() {
         return {};
       }
 
-      // INSERT INTO items (id, title, data, created_at, updated_at) VALUES (...)
-      const insertMatch = trimmed.match(
-        /INSERT INTO items \(id, title, data, created_at, updated_at\) VALUES \('([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)',\s*'([^']*)'\)/i,
-      );
-      if (insertMatch) {
+      // INSERT INTO items (id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)
+      if (trimmed.toUpperCase().startsWith("INSERT") && params) {
         rows.push({
-          id: insertMatch[1],
-          title: insertMatch[2],
-          data: insertMatch[3],
-          created_at: insertMatch[4],
-          updated_at: insertMatch[5],
+          id: String(params[0]),
+          title: String(params[1]),
+          data: String(params[2]),
+          created_at: String(params[3]),
+          updated_at: String(params[4]),
         });
         return {};
       }
 
-      // UPDATE items SET ... WHERE id = '...'
-      if (trimmed.toUpperCase().startsWith("UPDATE")) {
-        const whereMatch = trimmed.match(/WHERE id = '([^']*)'/i);
-        if (whereMatch) {
-          const id = whereMatch[1];
-          const row = rows.find((r) => r.id === id);
-          if (row) {
-            const titleMatch = trimmed.match(/title = '([^']*)'/i);
-            const dataMatch = trimmed.match(/data = '([^']*)'/i);
-            const updatedMatch = trimmed.match(/updated_at = '([^']*)'/i);
-            if (titleMatch) row.title = titleMatch[1];
-            if (dataMatch) row.data = dataMatch[1];
-            if (updatedMatch) row.updated_at = updatedMatch[1];
-          }
+      // UPDATE items SET ... WHERE id = ?
+      if (trimmed.toUpperCase().startsWith("UPDATE") && params) {
+        // Last param is the id (from WHERE clause)
+        const id = String(params[params.length - 1]);
+        const row = rows.find((r) => r.id === id);
+        if (row) {
+          // Parse which SET clauses are present and match to params
+          const setClause = trimmed.match(/SET\s+(.*?)\s+WHERE/i)?.[1] ?? "";
+          const fields = setClause.split(",").map((s) => s.trim().split(/\s*=\s*/)[0]);
+          fields.forEach((field, i) => {
+            if (field === "title") row.title = String(params[i]);
+            else if (field === "data") row.data = String(params[i]);
+            else if (field === "updated_at") row.updated_at = String(params[i]);
+          });
         }
         return {};
       }
 
-      // DELETE FROM items WHERE id = '...'
-      if (trimmed.toUpperCase().startsWith("DELETE")) {
-        const whereMatch = trimmed.match(/WHERE id = '([^']*)'/i);
-        if (whereMatch) {
-          const id = whereMatch[1];
-          rows = rows.filter((r) => r.id !== id);
-        }
+      // DELETE FROM items WHERE id = ?
+      if (trimmed.toUpperCase().startsWith("DELETE") && params) {
+        const id = String(params[0]);
+        rows = rows.filter((r) => r.id !== id);
         return {};
       }
 
       return {};
     },
-    query: async (sql: string) => {
+    query: async (sql: string, params?: any[]) => {
       const trimmed = sql.trim();
 
-      // SELECT ... FROM items WHERE id = '...'
-      const whereMatch = trimmed.match(/WHERE id = '([^']*)'/i);
-      if (whereMatch) {
-        const id = whereMatch[1];
+      // SELECT ... FROM items WHERE id = ?
+      if (trimmed.toUpperCase().includes("WHERE") && params) {
+        const id = String(params[0]);
         const matched = rows.filter((r) => r.id === id);
         return { data: matched };
       }
@@ -480,6 +478,25 @@ describe("Items CRUD (SQL store)", () => {
       method: "DELETE",
     });
     expect(res.status).toBe(404);
+  });
+
+  it("POST /api/items?store=sql handles special characters safely", async () => {
+    const maliciousTitle = "Robert'); DROP TABLE items; --";
+    const res = await fetch(`${baseUrl}/api/items?store=sql`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: maliciousTitle }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.item.title).toBe(maliciousTitle);
+
+    // Verify the item can be retrieved with special characters intact
+    const getRes = await fetch(`${baseUrl}/api/items/${body.item.id}?store=sql`);
+    expect(getRes.status).toBe(200);
+    const getBody = await getRes.json();
+    expect(getBody.item.title).toBe(maliciousTitle);
   });
 
   it("SQL and KV stores are independent", async () => {

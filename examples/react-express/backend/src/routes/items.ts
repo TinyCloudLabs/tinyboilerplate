@@ -87,7 +87,8 @@ export function createItemsRouter() {
       if (storeType === "sql") {
         await ensureTable(access);
         await access.sql.execute(
-          `INSERT INTO items (id, title, data, created_at, updated_at) VALUES ('${escape(item.id)}', '${escape(item.title)}', '${escape(item.data ?? "")}', '${escape(item.createdAt)}', '${escape(item.updatedAt)}')`,
+          `INSERT INTO items (id, title, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+          [item.id, item.title, item.data ?? "", item.createdAt, item.updatedAt],
         );
       } else {
         const putResult = await access.kv.put(`items/${item.id}`, item);
@@ -111,7 +112,8 @@ export function createItemsRouter() {
       if (storeType === "sql") {
         await ensureTable(access);
         const result = await access.sql.query(
-          `SELECT id, title, data, created_at, updated_at FROM items WHERE id = '${escape(id)}'`,
+          `SELECT id, title, data, created_at, updated_at FROM items WHERE id = ?`,
+          [id],
         );
         const rows = result.data ?? [];
         if (rows.length === 0) {
@@ -164,7 +166,8 @@ export function createItemsRouter() {
 
         // Check if exists
         const existing = await access.sql.query(
-          `SELECT id FROM items WHERE id = '${escape(id)}'`,
+          `SELECT id FROM items WHERE id = ?`,
+          [id],
         );
         if ((existing.data ?? []).length === 0) {
           res.status(404).json({
@@ -175,17 +178,27 @@ export function createItemsRouter() {
         }
 
         const setClauses: string[] = [];
-        if (input.title !== undefined) setClauses.push(`title = '${escape(input.title)}'`);
-        if (input.data !== undefined) setClauses.push(`data = '${escape(input.data)}'`);
-        setClauses.push(`updated_at = '${escape(now)}'`);
+        const setParams: (string | null)[] = [];
+        if (input.title !== undefined) {
+          setClauses.push(`title = ?`);
+          setParams.push(input.title);
+        }
+        if (input.data !== undefined) {
+          setClauses.push(`data = ?`);
+          setParams.push(input.data);
+        }
+        setClauses.push(`updated_at = ?`);
+        setParams.push(now);
 
         await access.sql.execute(
-          `UPDATE items SET ${setClauses.join(", ")} WHERE id = '${escape(id)}'`,
+          `UPDATE items SET ${setClauses.join(", ")} WHERE id = ?`,
+          [...setParams, id],
         );
 
         // Fetch the updated item
         const result = await access.sql.query(
-          `SELECT id, title, data, created_at, updated_at FROM items WHERE id = '${escape(id)}'`,
+          `SELECT id, title, data, created_at, updated_at FROM items WHERE id = ?`,
+          [id],
         );
         res.json({ item: rowToItem(result.data![0]) });
       } else {
@@ -229,7 +242,8 @@ export function createItemsRouter() {
 
         // Check if exists
         const existing = await access.sql.query(
-          `SELECT id FROM items WHERE id = '${escape(id)}'`,
+          `SELECT id FROM items WHERE id = ?`,
+          [id],
         );
         if ((existing.data ?? []).length === 0) {
           res.status(404).json({
@@ -240,7 +254,8 @@ export function createItemsRouter() {
         }
 
         await access.sql.execute(
-          `DELETE FROM items WHERE id = '${escape(id)}'`,
+          `DELETE FROM items WHERE id = ?`,
+          [id],
         );
       } else {
         // KV: check existence, then delete
@@ -270,11 +285,6 @@ export function createItemsRouter() {
 function getStoreType(req: Request): StoreType {
   const store = req.query.store as string | undefined;
   return store === "sql" ? "sql" : "kv";
-}
-
-/** Minimal SQL string escaping (single quotes) */
-function escape(value: string): string {
-  return value.replace(/'/g, "''");
 }
 
 /**

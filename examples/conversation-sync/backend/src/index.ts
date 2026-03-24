@@ -19,6 +19,7 @@ import { createAuthMiddleware } from "./middleware/auth.js";
 import { createDelegationMiddleware } from "./middleware/delegation.js";
 import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
+import { createConfigRouter } from "./routes/config.js";
 
 
 // ── Environment ──────────────────────────────────────────────────────
@@ -94,6 +95,15 @@ async function main() {
       cache: delegationCache,
       authMiddleware,
       openKeyIssuerUrl: OPENKEY_ISSUER_URL,
+    }),
+  );
+
+  // Config routes (Fireflies API key management)
+  app.use(
+    "/api/config",
+    createConfigRouter({
+      authMiddleware,
+      delegationMiddleware,
     }),
   );
 

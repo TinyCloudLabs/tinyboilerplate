@@ -20,6 +20,7 @@ import { createDelegationMiddleware } from "./middleware/delegation.js";
 import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
 import { createConfigRouter } from "./routes/config.js";
+import { createFirefliesRouter } from "./routes/fireflies.js";
 
 
 // ── Environment ──────────────────────────────────────────────────────
@@ -107,7 +108,14 @@ async function main() {
     }),
   );
 
-  // TODO: Mount conversation-sync routes here
+  // Fireflies proxy routes (connection test)
+  app.use(
+    "/api/fireflies",
+    createFirefliesRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
 
   // 7. OpenAPI docs
   const __dirname = dirname(fileURLToPath(import.meta.url));

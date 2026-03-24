@@ -16,6 +16,7 @@ import {
 import { AuthPanel } from "./components/AuthPanel";
 import { SetupWizard } from "./components/SetupWizard";
 import { SyncControl } from "./components/SyncControl";
+import { ConversationList } from "./components/ConversationList";
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   // Token store (persists across re-renders, auto-loads from localStorage)
   const tokenStoreRef = useRef(new TokenStore());
@@ -232,8 +235,13 @@ export function App() {
 
         {isSignedIn && hasKey === true && (
           <>
-            <SyncControl api={api} onSyncComplete={() => { /* ConversationList refresh will go here */ }} />
-            {/* ConversationList, ConversationDetail go here */}
+            <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
+            <ConversationList
+              api={api}
+              onSelectConversation={setSelectedConversationId}
+              refreshKey={refreshKey}
+            />
+            {/* ConversationDetail goes here — will use selectedConversationId */}
           </>
         )}
       </main>

@@ -28,14 +28,22 @@ export function createFirefliesRouter(config: FirefliesRoutesConfig) {
 
   // ── GET /api/fireflies/user — connection test ───────────────────
   router.get("/user", async (req: Request, res: Response) => {
+<<<<<<< HEAD
     const keyResult = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
     const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
+=======
+    const apiKey = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
+>>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
 
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
+<<<<<<< HEAD
         message:
           "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+=======
+        message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+>>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
       });
       return;
     }

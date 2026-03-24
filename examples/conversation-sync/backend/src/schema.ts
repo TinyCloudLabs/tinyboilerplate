@@ -8,11 +8,6 @@ export const DATABASE_NAME = "conversations";
  * Each statement is executed separately since TinyCloud SQL
  * handles one statement per execute() call.
  */
-/**
- * TinyCloud's SQLite authorizer restricts CREATE INDEX, UNIQUE constraints,
- * and REFERENCES. Keep schema simple — PRIMARY KEY only (like react-express items table).
- * Dedup is handled at the application level via pre-fetch source_id check.
- */
 const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS conversation (
     id              TEXT PRIMARY KEY,
@@ -26,15 +21,20 @@ const SCHEMA_STATEMENTS = [
     summary         TEXT,
     metadata        TEXT,
     created_at      TEXT NOT NULL,
-    updated_at      TEXT NOT NULL
+    updated_at      TEXT NOT NULL,
+    UNIQUE(source, source_id)
   )`,
   `CREATE TABLE IF NOT EXISTS participant (
     id              TEXT PRIMARY KEY,
-    conversation_id TEXT NOT NULL,
+    conversation_id TEXT NOT NULL REFERENCES conversation(id) ON DELETE CASCADE,
     name            TEXT NOT NULL,
     email           TEXT,
     speaker_label   TEXT
   )`,
+  `CREATE INDEX IF NOT EXISTS idx_convo_source ON conversation(source, source_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_convo_started ON conversation(started_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_participant_convo ON participant(conversation_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_participant_email ON participant(email)`,
 ];
 
 /**
@@ -53,24 +53,9 @@ export async function ensureSchema(access: DelegatedAccess): Promise<void> {
   for (const sql of SCHEMA_STATEMENTS) {
     const result = await access.sql.execute(sql);
     if (!result.ok) {
-      const msg = (result as any).error?.message ?? "unknown error";
-      // If table already exists, that's fine — skip
-      if (msg.includes("already exists")) {
-        console.log(`[schema] Table already exists, skipping: ${msg}`);
-        continue;
-      }
-      // "not authorized" on CREATE TABLE IF NOT EXISTS likely means
-      // the table already exists and the authorizer blocks redundant DDL
-      if (msg.includes("not authorized")) {
-        // Verify by trying a SELECT — if it works, table exists
-        const check = await access.sql.query("SELECT 1 FROM conversation LIMIT 1");
-        if (check.ok) {
-          console.log("[schema] Tables exist (verified via SELECT), skipping DDL");
-          schemaInitialized.set(access, true);
-          return;
-        }
-      }
-      throw new Error(`Failed to initialize conversations schema: ${msg}`);
+      throw new Error(
+        `Failed to initialize conversations schema: ${(result as any).error.message}`,
+      );
     }
   }
 

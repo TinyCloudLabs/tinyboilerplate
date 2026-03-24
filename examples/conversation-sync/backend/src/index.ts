@@ -21,6 +21,7 @@ import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
 import { createConfigRouter } from "./routes/config.js";
 import { createFirefliesRouter } from "./routes/fireflies.js";
+import { createSyncRouter } from "./routes/sync.js";
 
 
 // ── Environment ──────────────────────────────────────────────────────
@@ -112,6 +113,15 @@ async function main() {
   app.use(
     "/api/fireflies",
     createFirefliesRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
+
+  // Sync routes (Fireflies transcript sync with pre-fetch dedup)
+  app.use(
+    "/api/sync",
+    createSyncRouter({
       authMiddleware,
       delegationMiddleware,
     }),

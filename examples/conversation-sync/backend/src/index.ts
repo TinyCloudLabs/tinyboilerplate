@@ -27,6 +27,7 @@ import { createConfigRouter } from "./routes/config.js";
 import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
 =======
@@ -35,6 +36,9 @@ import { createFirefliesRouter } from "./routes/fireflies.js";
 >>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+import { createConversationsRouter } from "./routes/conversations.js";
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
 
 >>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 
@@ -215,6 +219,9 @@ async function main() {
   );
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
   // Conversations routes (read-only list and detail)
   app.use(
     "/api/conversations",
@@ -223,6 +230,7 @@ async function main() {
       delegationMiddleware,
     }),
   );
+<<<<<<< HEAD
 =======
     }),
   );
@@ -243,6 +251,9 @@ async function main() {
 
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
   // 7. OpenAPI docs
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const spec = loadYaml(readFileSync(resolve(__dirname, "../openapi.yaml"), "utf-8")) as object;

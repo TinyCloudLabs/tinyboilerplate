@@ -1,15 +1,24 @@
+<<<<<<< HEAD
 import { describe, it, expect, afterEach } from "bun:test";
+=======
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
 import express from "express";
 import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
 import { createConversationsRouter } from "../routes/conversations.js";
 
+<<<<<<< HEAD
 // ── Mock KV Store (matches real SDK: returns Result objects) ─────────
+=======
+// ── Mock KV Store ────────────────────────────────────────────────────
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
 
 function createMockKV() {
   const data = new Map<string, string>();
   return {
     _data: data,
+<<<<<<< HEAD
     get: async (key: string) => {
       const val = data.get(key);
       if (val === undefined) return { ok: true, data: { data: null } };
@@ -94,6 +103,60 @@ function createMockSQL(config: MockSQLConfig = {}) {
   };
 
   return { _calls: calls, _config: config, query, execute };
+=======
+    get: async (key: string) => data.get(key) ?? null,
+    put: async (key: string, value: string) => { data.set(key, value); },
+    delete: async (key: string) => { data.delete(key); },
+  };
+}
+
+// ── Mock SQL ─────────────────────────────────────────────────────────
+
+interface MockSQLConfig {
+  conversationRows?: any[];
+  totalCount?: number;
+  participantRows?: any[];
+  detailRow?: any;
+}
+
+function createMockSQL(config: MockSQLConfig = {}) {
+  const calls: Array<{ sql: string; params?: any[] }> = [];
+
+  return {
+    _calls: calls,
+    _config: config,
+    execute: async (sql: string, params?: any[]) => {
+      calls.push({ sql, params });
+
+      // Schema CREATE statements
+      if (sql.trim().startsWith("CREATE")) {
+        return { ok: true };
+      }
+
+      // List conversations query (has participant_count subquery) — check before COUNT
+      if (sql.includes("participant_count") && sql.includes("ORDER BY")) {
+        return { ok: true, rows: config.conversationRows ?? [] };
+      }
+
+      // COUNT query for total (standalone COUNT, not subquery)
+      if (sql.includes("COUNT(*)") && sql.includes("AS total")) {
+        return { ok: true, rows: [{ total: config.totalCount ?? 0 }] };
+      }
+
+      // Single conversation by id
+      if (sql.includes("FROM conversation") && sql.includes("WHERE") && sql.includes("id = ?")) {
+        return { ok: true, rows: config.detailRow ? [config.detailRow] : [] };
+      }
+
+      // Participants by conversation_id
+      if (sql.includes("FROM participant") && sql.includes("conversation_id = ?")) {
+        return { ok: true, rows: config.participantRows ?? [] };
+      }
+
+      return { ok: true, rows: [] };
+    },
+  };
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
 }
 
 // ── Test Helpers ─────────────────────────────────────────────────────
@@ -204,10 +267,18 @@ describe("Conversations Routes — GET /api/conversations", () => {
 
     await fetch(`http://localhost:${port}/api/conversations`);
 
+<<<<<<< HEAD
+=======
+    // Find the list query and check params
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
     const listCall = mockSQL._calls.find(
       (c) => c.sql.includes("ORDER BY") && c.sql.includes("LIMIT"),
     );
     expect(listCall).toBeDefined();
+<<<<<<< HEAD
+=======
+    // Last two params should be limit=20, offset=0
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
     const params = listCall!.params!;
     expect(params[params.length - 2]).toBe(20);
     expect(params[params.length - 1]).toBe(0);
@@ -255,10 +326,16 @@ describe("Conversations Routes — GET /api/conversations", () => {
 
     await fetch(`http://localhost:${port}/api/conversations`);
 
+<<<<<<< HEAD
     // First SQL calls should be CREATE TABLE statements (via execute)
     const firstCall = mockSQL._calls[0];
     expect(firstCall.sql.trim().startsWith("CREATE")).toBe(true);
     expect(firstCall.method).toBe("execute");
+=======
+    // First SQL calls should be CREATE TABLE/INDEX statements
+    const firstCall = mockSQL._calls[0];
+    expect(firstCall.sql.trim().startsWith("CREATE")).toBe(true);
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
   });
 });
 
@@ -276,6 +353,10 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
 
   it("returns conversation with participants and transcript", async () => {
     mockKV = createMockKV();
+<<<<<<< HEAD
+=======
+    // Put transcript blob in KV
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
     const transcript = [{ speaker_name: "Alice", text: "Hello", start_time: 0.5, end_time: 2.1 }];
     mockKV._data.set("/app.conversations/transcript/conv-1", JSON.stringify(transcript));
 
@@ -290,10 +371,14 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
         ended_at: "2026-03-20T10:30:00Z",
         duration_secs: 1800,
         summary: "Team discussed sprint goals",
+<<<<<<< HEAD
         metadata: JSON.stringify({
           audio_url: "https://audio.example.com/ff-123.mp3",
           organizer_email: "roman@example.com",
         }),
+=======
+        metadata: JSON.stringify({ audio_url: "https://audio.example.com/ff-123.mp3", organizer_email: "roman@example.com" }),
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
         created_at: "2026-03-20T12:00:00Z",
         updated_at: "2026-03-20T12:00:00Z",
       },
@@ -312,6 +397,10 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
     expect(body.conversation.id).toBe("conv-1");
     expect(body.conversation.title).toBe("Sprint Planning");
     expect(body.conversation.source_id).toBe("ff-123");
+<<<<<<< HEAD
+=======
+    // metadata should be parsed JSON object
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
     expect(body.conversation.metadata).toEqual({
       audio_url: "https://audio.example.com/ff-123.mp3",
       organizer_email: "roman@example.com",
@@ -337,6 +426,10 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
 
   it("returns null transcript when KV blob is missing", async () => {
     mockKV = createMockKV();
+<<<<<<< HEAD
+=======
+    // No transcript in KV
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
 
     mockSQL = createMockSQL({
       detailRow: {
@@ -391,6 +484,10 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
 
     await fetch(`http://localhost:${port}/api/conversations/conv-abc`);
 
+<<<<<<< HEAD
+=======
+    // Check SQL was called with the right id
+>>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
     const selectCall = mockSQL._calls.find(
       (c) => c.sql.includes("FROM conversation") && c.sql.includes("id = ?"),
     );

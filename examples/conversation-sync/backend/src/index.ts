@@ -22,10 +22,14 @@ import { createDelegationMiddleware } from "./middleware/delegation.js";
 import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
 import { createConfigRouter } from "./routes/config.js";
+<<<<<<< HEAD
 import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
+=======
+
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -169,12 +173,17 @@ async function main() {
     }),
   );
 
+<<<<<<< HEAD
   // Config routes (Fireflies API key + webhook config)
+=======
+  // Config routes (Fireflies API key management)
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
   app.use(
     "/api/config",
     createConfigRouter({
       authMiddleware,
       delegationMiddleware,
+<<<<<<< HEAD
       backendKV,
       frontendUrl: FRONTEND_URL,
     }),
@@ -206,6 +215,12 @@ async function main() {
       delegationMiddleware,
     }),
   );
+=======
+    }),
+  );
+
+  // TODO: Mount conversation-sync routes here
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 
   // 7. OpenAPI docs
   const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -11,6 +11,7 @@ function createMockKV() {
 
   return {
     _data: data,
+<<<<<<< HEAD
     get: async (key: string) => {
       const val = data.get(key);
       if (val === undefined) return { ok: true, data: { data: null } };
@@ -23,6 +24,14 @@ function createMockKV() {
     delete: async (key: string) => {
       data.delete(key);
       return { ok: true };
+=======
+    get: async (key: string) => data.get(key) ?? null,
+    put: async (key: string, value: string) => {
+      data.set(key, value);
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
     },
   };
 }

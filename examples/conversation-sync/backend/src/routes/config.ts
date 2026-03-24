@@ -3,6 +3,7 @@ import type { Request, Response, RequestHandler } from "express";
 
 // ── Types ────────────────────────────────────────────────────────────
 
+<<<<<<< HEAD
 interface BackendKV {
   get(key: string): Promise<{ ok: boolean; data: { data: string | null } }>;
   put(key: string, value: string): Promise<{ ok: boolean }>;
@@ -13,18 +14,27 @@ interface ConfigRoutesConfig {
   delegationMiddleware: RequestHandler;
   backendKV?: BackendKV;
   frontendUrl?: string;
+=======
+interface ConfigRoutesConfig {
+  authMiddleware: RequestHandler;
+  delegationMiddleware: RequestHandler;
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 }
 
 // ── Constants ────────────────────────────────────────────────────────
 
 const FIREFLIES_KEY_PATH = "/app.conversations/config/fireflies-key";
+<<<<<<< HEAD
 const WEBHOOK_SECRET_PATH = "/app.webhooks/config/fireflies-secret";
 const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
 const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
+=======
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 
 // ── Config Routes ────────────────────────────────────────────────────
 
 export function createConfigRouter(config: ConfigRoutesConfig) {
+<<<<<<< HEAD
   const { authMiddleware, delegationMiddleware, backendKV } = config;
   const router = Router();
 
@@ -35,6 +45,17 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
 
   // ── PUT /api/config/fireflies-key — store API key ───────────────
   router.put("/fireflies-key", delegationMiddleware, async (req: Request, res: Response) => {
+=======
+  const { authMiddleware, delegationMiddleware } = config;
+  const router = Router();
+
+  // All config routes require auth + delegation
+  router.use(authMiddleware);
+  router.use(delegationMiddleware);
+
+  // ── PUT /api/config/fireflies-key — store API key ───────────────
+  router.put("/fireflies-key", async (req: Request, res: Response) => {
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
     const { apiKey } = req.body;
 
     if (!apiKey || typeof apiKey !== "string") {
@@ -58,7 +79,11 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
   });
 
   // ── DELETE /api/config/fireflies-key — remove API key ───────────
+<<<<<<< HEAD
   router.delete("/fireflies-key", delegationMiddleware, async (req: Request, res: Response) => {
+=======
+  router.delete("/fireflies-key", async (req: Request, res: Response) => {
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
     try {
       await req.delegatedAccess!.kv.delete(FIREFLIES_KEY_PATH);
       res.json({ ok: true });
@@ -72,10 +97,17 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
   });
 
   // ── GET /api/config/fireflies-key/exists — check existence ──────
+<<<<<<< HEAD
   router.get("/fireflies-key/exists", delegationMiddleware, async (req: Request, res: Response) => {
     try {
       const result = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
       res.json({ exists: result.ok && result.data.data != null });
+=======
+  router.get("/fireflies-key/exists", async (req: Request, res: Response) => {
+    try {
+      const value = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
+      res.json({ exists: value != null });
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
     } catch (err) {
       console.error("[config] failed to check fireflies key:", err);
       res.status(500).json({
@@ -85,6 +117,7 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
     }
   });
 
+<<<<<<< HEAD
   // ── Webhook config routes (auth only, uses backend KV) ───────────
 
   if (backendKV) {
@@ -149,5 +182,7 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
     });
   }
 
+=======
+>>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
   return router;
 }

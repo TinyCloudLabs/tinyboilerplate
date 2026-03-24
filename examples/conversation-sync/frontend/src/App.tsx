@@ -17,6 +17,7 @@ import { AuthPanel } from "./components/AuthPanel";
 import { SetupWizard } from "./components/SetupWizard";
 import { SyncControl } from "./components/SyncControl";
 import { ConversationList } from "./components/ConversationList";
+import { ConversationDetail } from "./components/ConversationDetail";
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -233,7 +234,15 @@ export function App() {
           <SetupWizard api={api} onComplete={() => setHasKey(true)} />
         )}
 
-        {isSignedIn && hasKey === true && (
+        {isSignedIn && hasKey === true && selectedConversationId && (
+          <ConversationDetail
+            api={api}
+            conversationId={selectedConversationId}
+            onBack={() => setSelectedConversationId(null)}
+          />
+        )}
+
+        {isSignedIn && hasKey === true && !selectedConversationId && (
           <>
             <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
             <ConversationList
@@ -241,7 +250,6 @@ export function App() {
               onSelectConversation={setSelectedConversationId}
               refreshKey={refreshKey}
             />
-            {/* ConversationDetail goes here — will use selectedConversationId */}
           </>
         )}
       </main>

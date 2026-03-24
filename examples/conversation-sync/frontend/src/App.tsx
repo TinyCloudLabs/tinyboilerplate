@@ -20,6 +20,7 @@ import { SetupWizard } from "./components/SetupWizard";
 import { SyncControl } from "./components/SyncControl";
 import { ConversationList } from "./components/ConversationList";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { ConversationDetail } from "./components/ConversationDetail";
 =======
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
@@ -28,6 +29,9 @@ import { SyncControl } from "./components/SyncControl";
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
 =======
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+import { ConversationDetail } from "./components/ConversationDetail";
+>>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -278,6 +282,7 @@ export function App() {
           <SetupWizard api={api} onComplete={() => setHasKey(true)} />
         )}
 
+<<<<<<< HEAD
         {isSignedIn && hasKey === true && (
 <<<<<<< HEAD
           <section style={styles.mainView}>
@@ -288,6 +293,17 @@ export function App() {
           </section>
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
 =======
+=======
+        {isSignedIn && hasKey === true && selectedConversationId && (
+          <ConversationDetail
+            api={api}
+            conversationId={selectedConversationId}
+            onBack={() => setSelectedConversationId(null)}
+          />
+        )}
+
+        {isSignedIn && hasKey === true && !selectedConversationId && (
+>>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
           <>
             <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
             <ConversationList
@@ -295,7 +311,6 @@ export function App() {
               onSelectConversation={setSelectedConversationId}
               refreshKey={refreshKey}
             />
-            {/* ConversationDetail goes here — will use selectedConversationId */}
           </>
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
         )}

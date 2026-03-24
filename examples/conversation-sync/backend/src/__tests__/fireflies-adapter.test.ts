@@ -10,7 +10,11 @@ function makeFullTranscript(overrides?: Partial<FullTranscript>): FullTranscript
     id: "ff-abc-123",
     title: "Team standup",
     date: 1700000000000, // 2023-11-14T22:13:20.000Z
+<<<<<<< HEAD
     duration: 30, // 30 minutes (Fireflies API returns minutes)
+=======
+    duration: 1800, // 30 minutes
+>>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
     organizer_email: "roman@tinycloud.xyz",
     transcript_url: "https://app.fireflies.ai/view/ff-abc-123",
     speakers: [
@@ -81,9 +85,19 @@ describe("normalizeFireflies", () => {
     expect(result.conversation.title).toBe("Team standup");
     expect(result.conversation.source).toBe("fireflies");
     expect(result.conversation.source_id).toBe("ff-abc-123");
+<<<<<<< HEAD
     expect(result.conversation.source_url).toBe("https://app.fireflies.ai/view/ff-abc-123");
     expect(result.conversation.duration_secs).toBe(1800);
     expect(result.conversation.summary).toBe("Daily standup covering sprint progress.");
+=======
+    expect(result.conversation.source_url).toBe(
+      "https://app.fireflies.ai/view/ff-abc-123",
+    );
+    expect(result.conversation.duration_secs).toBe(1800);
+    expect(result.conversation.summary).toBe(
+      "Daily standup covering sprint progress.",
+    );
+>>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
   });
 
   it("converts started_at from epoch ms to ISO 8601", () => {
@@ -93,11 +107,19 @@ describe("normalizeFireflies", () => {
     expect(result.conversation.started_at).toBe("2023-11-14T22:13:20.000Z");
   });
 
+<<<<<<< HEAD
   it("computes ended_at as started_at + duration (minutes → seconds)", () => {
     // date = 1700000000000 (2023-11-14T22:13:20.000Z), duration = 30 min
     // ended_at = 1700000000000 + (30 * 60 * 1000) = 1700001800000
     // 2023-11-14T22:43:20.000Z
     const raw = makeFullTranscript({ date: 1700000000000, duration: 30 });
+=======
+  it("computes ended_at as started_at + duration", () => {
+    // date = 1700000000000 (2023-11-14T22:13:20.000Z), duration = 1800s
+    // ended_at = 1700000000000 + (1800 * 1000) = 1700001800000
+    // 2023-11-14T22:43:20.000Z
+    const raw = makeFullTranscript({ date: 1700000000000, duration: 1800 });
+>>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
     const result = normalizeFireflies(raw);
 
     expect(result.conversation.ended_at).toBe("2023-11-14T22:43:20.000Z");
@@ -108,7 +130,13 @@ describe("normalizeFireflies", () => {
     raw.summary.overview = "A discussion about quarterly goals.";
     const result = normalizeFireflies(raw);
 
+<<<<<<< HEAD
     expect(result.conversation.summary).toBe("A discussion about quarterly goals.");
+=======
+    expect(result.conversation.summary).toBe(
+      "A discussion about quarterly goals.",
+    );
+>>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
   });
 
   it("metadata includes audio_url, organizer_email, keywords, meeting_type", () => {
@@ -172,7 +200,13 @@ describe("normalizeFireflies", () => {
     });
     const result = normalizeFireflies(raw);
 
+<<<<<<< HEAD
     const unknown = result.participants.find((p) => p.name === "Unknown Speaker");
+=======
+    const unknown = result.participants.find(
+      (p) => p.name === "Unknown Speaker",
+    );
+>>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
     expect(unknown?.email).toBeNull();
   });
 
@@ -217,7 +251,14 @@ describe("normalizeFireflies", () => {
     }
 
     // All IDs should be unique
+<<<<<<< HEAD
     const allIds = [result.conversation.id, ...result.participants.map((p) => p.id)];
+=======
+    const allIds = [
+      result.conversation.id,
+      ...result.participants.map((p) => p.id),
+    ];
+>>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
     const uniqueIds = new Set(allIds);
     expect(uniqueIds.size).toBe(allIds.length);
   });

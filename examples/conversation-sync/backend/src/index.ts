@@ -22,6 +22,7 @@ import { createDelegationRouter } from "./routes/delegations.js";
 import { createConfigRouter } from "./routes/config.js";
 import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
+import { createConversationsRouter } from "./routes/conversations.js";
 
 
 // ── Environment ──────────────────────────────────────────────────────
@@ -122,6 +123,15 @@ async function main() {
   app.use(
     "/api/sync",
     createSyncRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
+
+  // Conversations routes (read-only list and detail)
+  app.use(
+    "/api/conversations",
+    createConversationsRouter({
       authMiddleware,
       delegationMiddleware,
     }),

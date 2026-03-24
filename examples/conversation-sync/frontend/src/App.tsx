@@ -19,12 +19,15 @@ import { SetupWizard } from "./components/SetupWizard";
 <<<<<<< HEAD
 import { SyncControl } from "./components/SyncControl";
 import { ConversationList } from "./components/ConversationList";
+<<<<<<< HEAD
 import { ConversationDetail } from "./components/ConversationDetail";
 =======
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
 =======
 import { SyncControl } from "./components/SyncControl";
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+=======
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -49,7 +52,12 @@ export function App() {
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
 =======
   const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
+<<<<<<< HEAD
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
   const tokenStoreRef = useRef(new TokenStore());
   const restoreAttemptedRef = useRef(false);
@@ -281,8 +289,13 @@ export function App() {
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
 =======
           <>
-            <SyncControl api={api} onSyncComplete={() => { /* ConversationList refresh will go here */ }} />
-            {/* ConversationList, ConversationDetail go here */}
+            <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
+            <ConversationList
+              api={api}
+              onSelectConversation={setSelectedConversationId}
+              refreshKey={refreshKey}
+            />
+            {/* ConversationDetail goes here — will use selectedConversationId */}
           </>
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
         )}

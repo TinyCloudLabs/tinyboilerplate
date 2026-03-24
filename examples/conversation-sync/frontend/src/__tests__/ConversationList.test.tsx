@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+<<<<<<< HEAD
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+=======
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 import { ConversationList } from "../components/ConversationList";
 import type { ApiClient } from "@tinyboilerplate/client";
 
@@ -21,8 +31,12 @@ const CONVERSATIONS = [
     source_url: "https://app.fireflies.ai/view/01ABC",
     started_at: "2026-03-20T14:00:00Z",
     duration_secs: 1800,
+<<<<<<< HEAD
     summary:
       "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
+=======
+    summary: "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     created_at: "2026-03-20T15:00:00Z",
     participant_count: 4,
   },
@@ -70,7 +84,13 @@ describe("ConversationList", () => {
     });
     api = mockApi({ get: getMock });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -78,7 +98,13 @@ describe("ConversationList", () => {
       expect(screen.getByText("Quick Standup")).toBeInTheDocument();
     });
 
+<<<<<<< HEAD
     expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=0");
+=======
+    expect(getMock).toHaveBeenCalledWith(
+      "/api/conversations?limit=20&offset=0",
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   });
 
   it("shows loading state while fetching", async () => {
@@ -90,6 +116,7 @@ describe("ConversationList", () => {
     );
     api = mockApi({ get: getMock });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     expect(screen.getByText("Loading conversations")).toBeInTheDocument();
@@ -97,6 +124,17 @@ describe("ConversationList", () => {
     resolveGet({ conversations: [], total: 0 });
     await waitFor(() => {
       expect(screen.queryByText("Loading conversations")).not.toBeInTheDocument();
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+
+    resolveGet({ conversations: [], total: 0 });
+    await waitFor(() => {
+      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     });
   });
 
@@ -105,12 +143,25 @@ describe("ConversationList", () => {
       get: vi.fn().mockResolvedValue({ conversations: [], total: 0 }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
       expect(
         screen.getByText(/sync your first meetings from fireflies above/i),
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/no conversations yet/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/click sync to import from fireflies/i),
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
       ).toBeInTheDocument();
     });
   });
@@ -123,7 +174,13 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("30 min")).toBeInTheDocument(); // 1800s
@@ -140,7 +197,13 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("4 participants")).toBeInTheDocument();
@@ -149,7 +212,11 @@ describe("ConversationList", () => {
     });
   });
 
+<<<<<<< HEAD
   it("truncates and cleans summary text", async () => {
+=======
+  it("truncates summary to ~100 chars", async () => {
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     const longSummary = "A".repeat(150);
     api = mockApi({
       get: vi.fn().mockResolvedValue({
@@ -158,12 +225,23 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       // cleanSummary uses max=120, so truncated text + ellipsis
       const summaryEl = screen.getByText(/A+\u2026$/);
       expect(summaryEl.textContent!.length).toBeLessThanOrEqual(120);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+
+    await waitFor(() => {
+      // Should show truncated text with ellipsis
+      const summaryEl = screen.getByText(/A+…$/);
+      expect(summaryEl.textContent!.length).toBeLessThanOrEqual(104); // 100 + "…" + some tolerance
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     });
   });
 
@@ -175,7 +253,13 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("Quick Standup")).toBeInTheDocument();
@@ -192,7 +276,13 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -211,10 +301,21 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /load more/i })).toBeInTheDocument();
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /load more/i }),
+      ).toBeInTheDocument();
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     });
   });
 
@@ -226,13 +327,25 @@ describe("ConversationList", () => {
       }),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
     });
 
+<<<<<<< HEAD
     expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+=======
+    expect(
+      screen.queryByRole("button", { name: /load more/i }),
+    ).not.toBeInTheDocument();
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   });
 
   it("loads next page when Load More is clicked", async () => {
@@ -260,7 +373,13 @@ describe("ConversationList", () => {
       });
     api = mockApi({ get: getMock });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -273,7 +392,13 @@ describe("ConversationList", () => {
     });
 
     // Should have fetched with offset=3 (first page had 3 items)
+<<<<<<< HEAD
     expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=3");
+=======
+    expect(getMock).toHaveBeenCalledWith(
+      "/api/conversations?limit=20&offset=3",
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     // All 4 conversations should be visible
     expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -285,13 +410,20 @@ describe("ConversationList", () => {
       get: vi.fn().mockRejectedValue(new Error("Network error")),
     });
 
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+=======
+    render(
+      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
+    );
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 
     await waitFor(() => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
     });
   });
 
+<<<<<<< HEAD
   it("shows conversation count header", async () => {
     api = mockApi({
       get: vi.fn().mockResolvedValue({
@@ -307,6 +439,8 @@ describe("ConversationList", () => {
     });
   });
 
+=======
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   it("refreshes when refreshKey changes", async () => {
     const getMock = vi
       .fn()
@@ -315,13 +449,27 @@ describe("ConversationList", () => {
         total: 3,
       })
       .mockResolvedValueOnce({
+<<<<<<< HEAD
         conversations: [{ ...CONVERSATIONS[0], title: "Updated Sprint Planning" }],
+=======
+        conversations: [
+          { ...CONVERSATIONS[0], title: "Updated Sprint Planning" },
+        ],
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
         total: 1,
       });
     api = mockApi({ get: getMock });
 
     const { rerender } = render(
+<<<<<<< HEAD
       <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={0} />,
+=======
+      <ConversationList
+        api={api}
+        onSelectConversation={onSelectConversation}
+        refreshKey={0}
+      />,
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     );
 
     await waitFor(() => {
@@ -329,11 +477,25 @@ describe("ConversationList", () => {
     });
 
     rerender(
+<<<<<<< HEAD
       <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={1} />,
     );
 
     await waitFor(() => {
       expect(screen.getByText("Updated Sprint Planning")).toBeInTheDocument();
+=======
+      <ConversationList
+        api={api}
+        onSelectConversation={onSelectConversation}
+        refreshKey={1}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Updated Sprint Planning"),
+      ).toBeInTheDocument();
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
     });
 
     expect(getMock).toHaveBeenCalledTimes(2);

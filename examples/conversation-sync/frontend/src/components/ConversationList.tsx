@@ -27,6 +27,7 @@ interface ConversationListProps {
 const PAGE_SIZE = 20;
 
 function formatDuration(secs: number): string {
+<<<<<<< HEAD
   if (secs >= 3600) return `${Math.round(secs / 3600)} hr`;
   return `${Math.round(secs / 60)} min`;
 }
@@ -44,6 +45,24 @@ function cleanSummary(str: string, max: number): string {
     .replace(/\s{2,}/g, " ") // collapse whitespace
     .trim();
   return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
+=======
+  if (secs >= 3600) {
+    const hours = Math.round(secs / 3600);
+    return `${hours} hr`;
+  }
+  const minutes = Math.round(secs / 60);
+  return `${minutes} min`;
+}
+
+function formatDate(isoString: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function truncateSummary(summary: string, maxLen = 100): string {
+  if (summary.length <= maxLen) return summary;
+  return summary.slice(0, maxLen) + "\u2026";
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 }
 
 export const ConversationList: FC<ConversationListProps> = ({
@@ -77,6 +96,10 @@ export const ConversationList: FC<ConversationListProps> = ({
     [api],
   );
 
+<<<<<<< HEAD
+=======
+  // Initial fetch + refresh on refreshKey change
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   useEffect(() => {
     setLoading(true);
     setConversations([]);
@@ -90,6 +113,7 @@ export const ConversationList: FC<ConversationListProps> = ({
   };
 
   if (loading) {
+<<<<<<< HEAD
     return (
       <div style={s.loadingCard}>
         <div style={s.loadingDots}>
@@ -109,13 +133,28 @@ export const ConversationList: FC<ConversationListProps> = ({
         {error}
       </div>
     );
+=======
+    return <p style={styles.info}>Loading conversations...</p>;
+  }
+
+  if (error) {
+    return <div style={styles.error}>{error}</div>;
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   }
 
   if (conversations.length === 0) {
     return (
+<<<<<<< HEAD
       <div style={s.emptyCard}>
         <p style={s.emptyTitle}>No conversations yet</p>
         <p style={s.emptySub}>Sync your first meetings from Fireflies above.</p>
+=======
+      <div style={styles.empty}>
+        <p style={styles.emptyTitle}>No conversations yet.</p>
+        <p style={styles.emptySubtitle}>
+          Click Sync to import from Fireflies.
+        </p>
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
       </div>
     );
   }
@@ -123,6 +162,7 @@ export const ConversationList: FC<ConversationListProps> = ({
   const hasMore = conversations.length < total;
 
   return (
+<<<<<<< HEAD
     <section style={s.card}>
       <div style={s.headerRow}>
         <span style={s.countLabel}>
@@ -145,17 +185,49 @@ export const ConversationList: FC<ConversationListProps> = ({
               </span>
             </div>
             {c.summary && <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>}
+=======
+    <section>
+      <ul style={styles.list}>
+        {conversations.map((c) => (
+          <li
+            key={c.id}
+            style={styles.row}
+            onClick={() => onSelectConversation(c.id)}
+          >
+            <div style={styles.rowHeader}>
+              <span style={styles.title}>{c.title}</span>
+              <span style={styles.date}>{formatDate(c.started_at)}</span>
+            </div>
+            <div style={styles.meta}>
+              <span>{formatDuration(c.duration_secs)}</span>
+              <span>{c.participant_count} participants</span>
+            </div>
+            {c.summary && (
+              <p style={styles.summary}>{truncateSummary(c.summary)}</p>
+            )}
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
           </li>
         ))}
       </ul>
 
       {hasMore && (
         <button
+<<<<<<< HEAD
           style={{ ...s.loadMore, ...(loadingMore ? s.loadMoreDisabled : {}) }}
           disabled={loadingMore}
           onClick={handleLoadMore}
         >
           {loadingMore ? "Loading\u2026" : "Load More"}
+=======
+          style={{
+            ...styles.loadMore,
+            ...(loadingMore ? styles.loadMoreDisabled : {}),
+          }}
+          disabled={loadingMore}
+          onClick={handleLoadMore}
+        >
+          {loadingMore ? "Loading..." : "Load More"}
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
         </button>
       )}
     </section>
@@ -164,6 +236,7 @@ export const ConversationList: FC<ConversationListProps> = ({
 
 // ── Styles ──────────────────────────────────────────────────────────
 
+<<<<<<< HEAD
 const FONT = "'Outfit', -apple-system, sans-serif";
 const MONO = "'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -185,6 +258,36 @@ const s: Record<string, React.CSSProperties> = {
     color: "#9ca3af",
     letterSpacing: "0.03em",
     textTransform: "uppercase" as const,
+=======
+const styles: Record<string, React.CSSProperties> = {
+  info: {
+    fontSize: 14,
+    color: "#555",
+    textAlign: "center",
+    padding: 20,
+  },
+  error: {
+    fontSize: 13,
+    color: "#b91c1c",
+    background: "#fef2f2",
+    padding: "8px 12px",
+    border: "1px solid #fecaca",
+    borderRadius: 6,
+  },
+  empty: {
+    textAlign: "center",
+    padding: "32px 16px",
+    color: "#666",
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    margin: "0 0 4px",
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    margin: 0,
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   },
   list: {
     listStyle: "none",
@@ -192,6 +295,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: 0,
   },
   row: {
+<<<<<<< HEAD
     padding: "14px 20px",
     borderBottom: "1px solid #f3f4f6",
     cursor: "pointer",
@@ -328,5 +432,55 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 700,
     flexShrink: 0,
+=======
+    padding: "12px 16px",
+    borderBottom: "1px solid #e5e7eb",
+    cursor: "pointer",
+  },
+  rowHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "#1a1a1a",
+  },
+  date: {
+    fontSize: 13,
+    color: "#888",
+  },
+  meta: {
+    display: "flex",
+    gap: 12,
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 4,
+  },
+  summary: {
+    fontSize: 13,
+    color: "#777",
+    margin: "4px 0 0",
+    lineHeight: 1.4,
+  },
+  loadMore: {
+    display: "block",
+    width: "100%",
+    padding: "10px 0",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#2563eb",
+    background: "transparent",
+    border: "1px solid #e0e0e0",
+    borderRadius: 6,
+    cursor: "pointer",
+    marginTop: 8,
+  },
+  loadMoreDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+>>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   },
 };

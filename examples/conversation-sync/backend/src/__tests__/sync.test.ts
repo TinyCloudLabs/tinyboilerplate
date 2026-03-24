@@ -3,6 +3,7 @@ import express from "express";
 import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
 import { createSyncRouter } from "../routes/sync.js";
+<<<<<<< HEAD
 import type {
   TranscriptSummary,
   FullTranscript,
@@ -11,11 +12,17 @@ import type {
 } from "../services/fireflies-client.js";
 
 // ── Mock KV Store (matches real SDK: returns Result objects) ─────────
+=======
+import type { TranscriptSummary, FullTranscript } from "../services/fireflies-client.js";
+
+// ── Mock KV Store ────────────────────────────────────────────────────
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 
 function createMockKV() {
   const data = new Map<string, string>();
   return {
     _data: data,
+<<<<<<< HEAD
     get: async (key: string) => {
       const val = data.get(key);
       if (val === undefined) return { ok: true, data: { data: null } };
@@ -36,10 +43,23 @@ function createMockKV() {
 
 function createMockSQL() {
   const calls: Array<{ method: string; sql: string; params?: any[] }> = [];
+=======
+    get: async (key: string) => data.get(key) ?? null,
+    put: async (key: string, value: string) => { data.set(key, value); },
+    delete: async (key: string) => { data.delete(key); },
+  };
+}
+
+// ── Mock SQL ─────────────────────────────────────────────────────────
+
+function createMockSQL() {
+  const calls: Array<{ sql: string; params?: any[] }> = [];
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
   let dedupRows: Array<{ source_id: string }> = [];
 
   return {
     _calls: calls,
+<<<<<<< HEAD
     _setDedupRows(rows: Array<{ source_id: string }>) {
       dedupRows = rows;
     },
@@ -66,32 +86,59 @@ function createMockSQL() {
     },
     execute: async (sql: string, params?: any[]) => {
       calls.push({ method: "execute", sql, params });
+=======
+    _setDedupRows(rows: Array<{ source_id: string }>) { dedupRows = rows; },
+    execute: async (sql: string, params?: any[]) => {
+      calls.push({ sql, params });
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 
       // Schema CREATE statements
       if (sql.trim().startsWith("CREATE")) {
         return { ok: true };
       }
 
+<<<<<<< HEAD
       // INSERT statements
       if (sql.trim().startsWith("INSERT")) {
         return { ok: true, data: { changes: 1 } };
       }
 
       return { ok: true, data: { changes: 0 } };
+=======
+      // Dedup SELECT query
+      if (sql.includes("SELECT source_id FROM conversation")) {
+        return { ok: true, rows: dedupRows };
+      }
+
+      // INSERT statements
+      if (sql.trim().startsWith("INSERT")) {
+        return { ok: true };
+      }
+
+      return { ok: true, rows: [] };
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
     },
   };
 }
 
 // ── Mock Fireflies Client Factory ────────────────────────────────────
 
+<<<<<<< HEAD
 function createMockTranscriptSummary(
   overrides: Partial<TranscriptSummary> = {},
 ): TranscriptSummary {
+=======
+function createMockTranscriptSummary(overrides: Partial<TranscriptSummary> = {}): TranscriptSummary {
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
   return {
     id: overrides.id ?? "ff-1",
     title: overrides.title ?? "Test Meeting",
     date: overrides.date ?? 1711000000000,
+<<<<<<< HEAD
     duration: overrides.duration ?? 60,
+=======
+    duration: overrides.duration ?? 3600,
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
     organizer_email: overrides.organizer_email ?? "test@example.com",
     transcript_url: overrides.transcript_url ?? "https://app.fireflies.ai/view/ff-1",
   };
@@ -102,7 +149,11 @@ function createMockFullTranscript(overrides: Partial<FullTranscript> = {}): Full
     id: overrides.id ?? "ff-1",
     title: overrides.title ?? "Test Meeting",
     date: overrides.date ?? 1711000000000,
+<<<<<<< HEAD
     duration: overrides.duration ?? 60,
+=======
+    duration: overrides.duration ?? 3600,
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
     organizer_email: overrides.organizer_email ?? "test@example.com",
     transcript_url: overrides.transcript_url ?? "https://app.fireflies.ai/view/ff-1",
     speakers: overrides.speakers ?? [
@@ -145,6 +196,7 @@ function createMockFullTranscript(overrides: Partial<FullTranscript> = {}): Full
 
 function createMockClientFactory() {
   let listResult: TranscriptSummary[] = [];
+<<<<<<< HEAD
   /** For paginated listing: array of batches, each batch returned per call */
   let listBatches: TranscriptSummary[][] | null = null;
   let listCallIndex = 0;
@@ -210,6 +262,19 @@ function createMockClientFactory() {
           options?.onProgress?.({ batch: 1, totalSoFar: listResult.length });
           return { transcripts: listResult, batchCount: 1, earlyExit: false };
         },
+=======
+  let getResults = new Map<string, FullTranscript | Error>();
+  let lastApiKey: string | null = null;
+
+  return {
+    setListResult(transcripts: TranscriptSummary[]) { listResult = transcripts; },
+    setGetResult(id: string, result: FullTranscript | Error) { getResults.set(id, result); },
+    getLastApiKey() { return lastApiKey; },
+    factory(apiKey: string) {
+      lastApiKey = apiKey;
+      return {
+        listTranscripts: async (_limit?: number) => listResult,
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
         getTranscript: async (id: string) => {
           const result = getResults.get(id);
           if (result instanceof Error) throw result;
@@ -249,7 +314,10 @@ function createApp(
       authMiddleware: mockAuthMiddleware,
       delegationMiddleware: mockDelegationMiddleware,
       createClient: clientFactory.factory,
+<<<<<<< HEAD
       syncDelayMs: 0,
+=======
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
     }),
   );
   return app;
@@ -270,6 +338,7 @@ function closeServer(server: Server): Promise<void> {
   });
 }
 
+<<<<<<< HEAD
 // ── SSE parsing helper ──────────────────────────────────────────────
 
 interface ParsedSSEEvent {
@@ -298,6 +367,8 @@ function parseSSEText(text: string): ParsedSSEEvent[] {
   return events;
 }
 
+=======
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("Sync Routes — POST /api/sync/fireflies", () => {
@@ -330,6 +401,7 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
       createMockTranscriptSummary({ id: "ff-3", title: "Meeting 3" }),
     ];
     clientFactory.setListResult(summaries);
+<<<<<<< HEAD
     clientFactory.setGetResult(
       "ff-1",
       createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
@@ -342,6 +414,11 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
       "ff-3",
       createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
     );
+=======
+    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
+    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
+    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 
     // No existing transcripts in SQL
     mockSQL._setDedupRows([]);
@@ -377,6 +454,7 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
     ];
     clientFactory.setListResult(summaries);
     // Only set up getTranscript for ff-2 and ff-3 — ff-1 should not be fetched
+<<<<<<< HEAD
     clientFactory.setGetResult(
       "ff-2",
       createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
@@ -385,6 +463,10 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
       "ff-3",
       createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
     );
+=======
+    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
+    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 
     // ff-1 already exists in DB
     mockSQL._setDedupRows([{ source_id: "ff-1" }]);
@@ -447,6 +529,7 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
     ];
     clientFactory.setListResult(summaries);
 
+<<<<<<< HEAD
     clientFactory.setGetResult(
       "ff-1",
       createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
@@ -456,6 +539,11 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
       "ff-3",
       createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
     );
+=======
+    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
+    clientFactory.setGetResult("ff-2", new Error("Fireflies API timeout"));
+    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 
     mockSQL._setDedupRows([]);
 
@@ -607,10 +695,14 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
 
     // Find conversation INSERT calls
     const conversationInserts = mockSQL._calls.filter(
+<<<<<<< HEAD
       (c) =>
         c.sql.includes("INSERT") &&
         c.sql.includes("conversation") &&
         !c.sql.includes("participant"),
+=======
+      (c) => c.sql.includes("INSERT") && c.sql.includes("conversation") && !c.sql.includes("participant"),
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
     );
     expect(conversationInserts.length).toBeGreaterThanOrEqual(1);
 
@@ -639,10 +731,14 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
 
     // Find the conversation INSERT and check its params contain stringified metadata
     const conversationInsert = mockSQL._calls.find(
+<<<<<<< HEAD
       (c) =>
         c.sql.includes("INSERT") &&
         c.sql.includes("conversation") &&
         !c.sql.includes("participant"),
+=======
+      (c) => c.sql.includes("INSERT") && c.sql.includes("conversation") && !c.sql.includes("participant"),
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
     );
     expect(conversationInsert).toBeDefined();
 
@@ -720,6 +816,7 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
     });
   });
 });
+<<<<<<< HEAD
 
 // ── SSE Streaming Sync Tests ─────────────────────────────────────────
 
@@ -1138,3 +1235,5 @@ describe("Sync Routes — SSE pagination integration (75 meetings)", () => {
     expect(lastProgress.data.failed).toBe(3);
   });
 });
+=======
+>>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)

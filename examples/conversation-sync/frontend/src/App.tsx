@@ -15,9 +15,12 @@ import {
 
 import { AuthPanel } from "./components/AuthPanel";
 import { SetupWizard } from "./components/SetupWizard";
+<<<<<<< HEAD
 import { SyncControl } from "./components/SyncControl";
 import { ConversationList } from "./components/ConversationList";
 import { ConversationDetail } from "./components/ConversationDetail";
+=======
+>>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -35,10 +38,14 @@ export function App() {
   const [api, setApi] = useState<ApiClient | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
+=======
+  const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
+>>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
 
   const tokenStoreRef = useRef(new TokenStore());
   const restoreAttemptedRef = useRef(false);
@@ -81,6 +88,11 @@ export function App() {
     })();
   }, []);
 
+<<<<<<< HEAD
+=======
+  // ── Check Fireflies Key ────────────────────────────────────────────
+
+>>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
   useEffect(() => {
     if (!api) {
       setHasKey(null);
@@ -92,6 +104,7 @@ export function App() {
       .catch(() => setHasKey(false));
   }, [api]);
 
+<<<<<<< HEAD
   useEffect(() => {
     if (!api || hasKey !== true) return;
     api
@@ -120,6 +133,8 @@ export function App() {
       .catch((err) => console.error("[backfill]", err));
   }, [api, hasKey]);
 
+=======
+>>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
   // ── Sign In ───────────────────────────────────────────────────────
 
   const handleSignIn = useCallback(async () => {
@@ -203,6 +218,7 @@ export function App() {
         />
 
         {isSignedIn && hasKey === false && (
+<<<<<<< HEAD
           <SetupWizard api={api} onComplete={() => setHasKey(true)} backendUrl={BACKEND_URL} />
         )}
 
@@ -246,6 +262,18 @@ export function App() {
               Disconnect Fireflies
             </button>
           </>
+=======
+          <SetupWizard api={api} onComplete={() => setHasKey(true)} />
+        )}
+
+        {isSignedIn && hasKey === true && (
+          <section style={styles.mainView}>
+            <p style={{ color: "#555", fontSize: 14 }}>
+              {/* SyncControl, ConversationList, ConversationDetail go here */}
+              Fireflies connected. Ready to sync.
+            </p>
+          </section>
+>>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
         )}
       </main>
 
@@ -339,6 +367,12 @@ const s: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: 0,
     textAlign: "center" as const,
+  },
+  mainView: {
+    border: "1px solid #e0e0e0",
+    borderRadius: 8,
+    padding: 20,
+    background: "#fafafa",
   },
   footer: {
     fontFamily: FONT,

@@ -1,0 +1,292 @@
+# Keep in sync with:
+#   - examples/conversation-sync/backend/src/routes/ (endpoints)
+
+openapi: 3.1.0
+info:
+  title: Conversation Sync API
+  version: 0.1.0
+  description: |
+    Conversation Sync — sync meeting transcripts to your TinyCloud space.
+
+    **Two-layer auth:**
+    1. Bearer JWT from OpenKey (OAuth 2.1 PKCE + passkeys)
+    2. TinyCloud PortableDelegation granting scoped backend access
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+
+# ── Security ────────────────────────────────────────────────────────
+
+security:
+  - bearerAuth: []
+
+# ── Paths ───────────────────────────────────────────────────────────
+
+paths:
+  /api/server-info:
+    get:
+      operationId: getServerInfo
+      summary: Get backend DID and status
+      description: Returns the backend's DID for delegation creation. No auth required.
+      security: []
+      tags: [Server]
+      responses:
+        "200":
+          description: Backend info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerInfo"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /api/delegations:
+    post:
+      operationId: sendDelegation
+      summary: Submit a delegation to the backend
+      description: |
+        Receive a serialized PortableDelegation, verify it, and store it.
+        The delegation is activated immediately and cached.
+      tags: [Delegations]
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serialized]
+              properties:
+                serialized:
+                  type: string
+                  description: Serialized PortableDelegation string
+      responses:
+        "200":
+          description: Delegation stored and activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationResponse"
+        "400":
+          description: Invalid body or delegation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                invalidBody:
+                  value:
+                    error: invalid_body
+                    message: "Request body must include a 'serialized' string field"
+                invalidDelegation:
+                  value:
+                    error: invalid_delegation
+                    message: Failed to process delegation
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/CsrfRejected"
+        "429":
+          $ref: "#/components/responses/DelegationRateLimited"
+
+    delete:
+      operationId: revokeDelegation
+      summary: Revoke the current delegation
+      description: Removes the stored delegation and evicts the cache entry.
+      tags: [Delegations]
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200":
+          description: Delegation revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationResponse"
+              example:
+                status: none
+                expiresAt: null
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/CsrfRejected"
+        "429":
+          $ref: "#/components/responses/DelegationRateLimited"
+        "500":
+          description: Revocation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/delegations/status:
+    get:
+      operationId: getDelegationStatus
+      summary: Check delegation status
+      description: |
+        Returns whether an active delegation exists for the authenticated user.
+        Auto-cleans expired delegations.
+      tags: [Delegations]
+      responses:
+        "200":
+          description: Delegation status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationResponse"
+              examples:
+                active:
+                  value:
+                    status: active
+                    expiresAt: "2026-03-28T12:00:00.000Z"
+                expired:
+                  value:
+                    status: expired
+                    expiresAt: "2026-03-20T12:00:00.000Z"
+                none:
+                  value:
+                    status: none
+                    expiresAt: null
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/DelegationRateLimited"
+
+  # TODO: Conversation sync endpoints will be added here
+
+# ── Components ──────────────────────────────────────────────────────
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OpenKey JWT access token (OAuth 2.1 PKCE)
+
+  parameters:
+    CsrfHeader:
+      name: X-Requested-With
+      in: header
+      required: true
+      description: CSRF protection header (required for state-changing methods)
+      schema:
+        type: string
+        default: TinyBoilerplate
+
+  schemas:
+    DelegationResponse:
+      type: object
+      required: [status, expiresAt]
+      properties:
+        status:
+          type: string
+          enum: [active, expired, none]
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ServerInfo:
+      type: object
+      required: [did, status]
+      properties:
+        did:
+          type: string
+          description: "Backend DID (e.g. did:pkh:eip155:1:0x...)"
+        status:
+          type: string
+
+    ApiError:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+        message:
+          type: string
+          description: Human-readable error description
+
+  responses:
+    Unauthenticated:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: missing_token
+            message: Authorization header is required
+
+    CsrfRejected:
+      description: Missing or invalid X-Requested-With header
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: csrf_rejected
+            message: Missing or invalid X-Requested-With header
+
+    NoDelegation:
+      description: No active delegation for this user
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: no_delegation
+            message: Delegation required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: not_found
+            message: Resource not found
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: rate_limited
+            message: Too many requests
+
+    DelegationRateLimited:
+      description: Too many delegation requests (10 per 15 minutes)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: rate_limited
+            message: Too many delegation requests
+
+    StoreError:
+      description: Storage operation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: store_error
+            message: Failed to list items
+
+    GatewayTimeout:
+      description: TinyCloud operation timed out
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error: gateway_timeout
+            message: TinyCloud operation timed out

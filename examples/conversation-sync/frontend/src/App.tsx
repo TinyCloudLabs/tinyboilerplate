@@ -14,6 +14,7 @@ import {
 } from "@tinyboilerplate/client";
 
 import { AuthPanel } from "./components/AuthPanel";
+import { SetupWizard } from "./components/SetupWizard";
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ export function App() {
   const [api, setApi] = useState<ApiClient | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
 
   // Token store (persists across re-renders, auto-loads from localStorage)
   const tokenStoreRef = useRef(new TokenStore());
@@ -89,6 +91,19 @@ export function App() {
       }
     })();
   }, []);
+
+  // ── Check Fireflies Key ────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!api) {
+      setHasKey(null);
+      return;
+    }
+    api
+      .get<{ exists: boolean }>("/api/config/fireflies-key/exists")
+      .then((res) => setHasKey(res.exists))
+      .catch(() => setHasKey(false));
+  }, [api]);
 
   // ── Sign In ───────────────────────────────────────────────────────
 
@@ -185,6 +200,7 @@ export function App() {
     setTcw(null);
     setApi(null);
     setAuthError(null);
+    setHasKey(null);
   }, [tcw]);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -209,7 +225,18 @@ export function App() {
           onSignOut={handleSignOut}
         />
 
-        {/* TODO: Conversation sync UI goes here */}
+        {isSignedIn && hasKey === false && (
+          <SetupWizard api={api} onComplete={() => setHasKey(true)} />
+        )}
+
+        {isSignedIn && hasKey === true && (
+          <section style={styles.mainView}>
+            <p style={{ color: "#555", fontSize: 14 }}>
+              {/* SyncControl, ConversationList, ConversationDetail go here */}
+              Fireflies connected. Ready to sync.
+            </p>
+          </section>
+        )}
       </main>
 
       <footer style={styles.footer}>
@@ -258,6 +285,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 24,
+  },
+  mainView: {
+    border: "1px solid #e0e0e0",
+    borderRadius: 8,
+    padding: 20,
+    background: "#fafafa",
   },
   footer: {
     textAlign: "center",

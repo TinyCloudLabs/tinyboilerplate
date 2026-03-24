@@ -1,0 +1,232 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { SetupWizard } from "../components/SetupWizard";
+import type { ApiClient } from "@tinyboilerplate/client";
+
+function mockApi(overrides: Partial<ApiClient> = {}): ApiClient {
+  return {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    del: vi.fn(),
+    ...overrides,
+  };
+}
+
+describe("SetupWizard", () => {
+  let api: ApiClient;
+  let onComplete: ReturnType<typeof vi.fn>;
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    api = mockApi();
+    onComplete = vi.fn();
+  });
+
+  // Step 1: Welcome
+  it("renders welcome step initially", () => {
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    expect(
+      screen.getByText(/connect your fireflies\.ai account/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+  });
+
+  // Step 2: Instructions
+  it("advances to instructions step on Next click", () => {
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByText(/app\.fireflies\.ai/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /fireflies integrations/i }),
+    ).toHaveAttribute(
+      "href",
+      "https://app.fireflies.ai/integrations",
+    );
+  });
+
+  // Step 3: Input
+  it("advances to input step and shows API key field", () => {
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    // Step 1 → 2
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    // Step 2 → 3
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(
+      screen.getByPlaceholderText(/paste your api key/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /save/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("disables Save button when API key input is empty", () => {
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  });
+
+  it("calls PUT /api/config/fireflies-key on Save and advances to test step", async () => {
+    const putMock = vi.fn().mockResolvedValue({ ok: true });
+    const getMock = vi
+      .fn()
+      .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+    api = mockApi({ put: putMock, get: getMock });
+
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    // Navigate to input step
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    // Type key and save
+    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
+      target: { value: "test-api-key-123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(putMock).toHaveBeenCalledWith("/api/config/fireflies-key", {
+        apiKey: "test-api-key-123",
+      });
+    });
+  });
+
+  // Step 4: Test connection
+  it("shows connected user info on successful connection test", async () => {
+    const putMock = vi.fn().mockResolvedValue({ ok: true });
+    const getMock = vi
+      .fn()
+      .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+    api = mockApi({ put: putMock, get: getMock });
+
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
+      target: { value: "test-api-key-123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/connected as roman/i)).toBeInTheDocument();
+      expect(screen.getByText(/roman@example\.com/i)).toBeInTheDocument();
+    });
+
+    expect(getMock).toHaveBeenCalledWith("/api/fireflies/user");
+  });
+
+  it("shows error and re-enter option on failed connection test", async () => {
+    const putMock = vi.fn().mockResolvedValue({ ok: true });
+    const getMock = vi.fn().mockRejectedValue(new Error("Invalid API key"));
+    api = mockApi({ put: putMock, get: getMock });
+
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
+      target: { value: "bad-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid api key/i)).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("button", { name: /try again/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("goes back to input step on Try Again after failed test", async () => {
+    const putMock = vi.fn().mockResolvedValue({ ok: true });
+    const getMock = vi.fn().mockRejectedValue(new Error("Invalid API key"));
+    api = mockApi({ put: putMock, get: getMock });
+
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
+      target: { value: "bad-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /try again/i }),
+      ).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+
+    // Should be back on input step
+    expect(
+      screen.getByPlaceholderText(/paste your api key/i),
+    ).toBeInTheDocument();
+  });
+
+  // Step 5: Done
+  it("shows done step with Sync Now button on successful test", async () => {
+    const putMock = vi.fn().mockResolvedValue({ ok: true });
+    const getMock = vi
+      .fn()
+      .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+    api = mockApi({ put: putMock, get: getMock });
+
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
+      target: { value: "test-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/connected as roman/i)).toBeInTheDocument();
+    });
+
+    // Advance to done step
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    expect(screen.getByText(/you're all set/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /sync now/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onComplete when Sync Now is clicked", async () => {
+    const putMock = vi.fn().mockResolvedValue({ ok: true });
+    const getMock = vi
+      .fn()
+      .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+    api = mockApi({ put: putMock, get: getMock });
+
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
+      target: { value: "test-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/connected as roman/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  // Back navigation
+  it("supports Back button on instructions step", () => {
+    render(<SetupWizard api={api} onComplete={onComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByText(/app\.fireflies\.ai/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /back/i }));
+    expect(
+      screen.getByText(/connect your fireflies\.ai account/i),
+    ).toBeInTheDocument();
+  });
+});

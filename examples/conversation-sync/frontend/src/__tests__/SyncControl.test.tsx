@@ -1,0 +1,245 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+  act,
+} from "@testing-library/react";
+import { SyncControl } from "../components/SyncControl";
+import type { ApiClient } from "@tinyboilerplate/client";
+
+function mockApi(overrides: Partial<ApiClient> = {}): ApiClient {
+  return {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    del: vi.fn(),
+    ...overrides,
+  };
+}
+
+function createMockStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => store.set(key, value),
+    removeItem: (key: string) => store.delete(key),
+    clear: () => store.clear(),
+    get length() {
+      return store.size;
+    },
+    key: (index: number) => [...store.keys()][index] ?? null,
+  };
+}
+
+describe("SyncControl", () => {
+  let api: ApiClient;
+  let onSyncComplete: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    api = mockApi();
+    onSyncComplete = vi.fn();
+    vi.stubGlobal("localStorage", createMockStorage());
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("renders Sync Now button and limit selector", () => {
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    expect(
+      screen.getByRole("button", { name: /sync now/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("has limit options 10, 20, 50 with 20 as default", () => {
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    expect(select.value).toBe("20");
+    const options = screen.getAllByRole("option");
+    expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual([
+      "10",
+      "20",
+      "50",
+    ]);
+  });
+
+  it("calls POST /api/sync/fireflies with selected limit on click", async () => {
+    const postMock = vi
+      .fn()
+      .mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "50" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => {
+      expect(postMock).toHaveBeenCalledWith("/api/sync/fireflies", {
+        limit: 50,
+      });
+    });
+  });
+
+  it("shows syncing message during sync", async () => {
+    let resolveSync!: (v: any) => void;
+    const postMock = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveSync = resolve;
+      }),
+    );
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    expect(screen.getByText(/syncing conversations/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /syncing/i })).toBeDisabled();
+
+    // Resolve to clean up
+    await act(async () => {
+      resolveSync({ synced: 0, skipped: 0, failed: 0, errors: [] });
+    });
+  });
+
+  it("shows success message on completed sync", async () => {
+    const postMock = vi
+      .fn()
+      .mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/synced 5 conversations/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/3 already up to date/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows partial failure message with details", async () => {
+    const postMock = vi.fn().mockResolvedValue({
+      synced: 3,
+      skipped: 1,
+      failed: 2,
+      errors: ["abc123: timeout", "def456: rate limit"],
+    });
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/synced 3/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/abc123: timeout/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows timeout message after 60 seconds", async () => {
+    vi.useFakeTimers();
+    const postMock = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(
+      screen.getByText(/sync is taking longer than expected/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/try again with a smaller batch/i),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onSyncComplete after successful sync", async () => {
+    const postMock = vi
+      .fn()
+      .mockResolvedValue({ synced: 2, skipped: 0, failed: 0, errors: [] });
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => {
+      expect(onSyncComplete).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("does not call onSyncComplete on full failure", async () => {
+    const postMock = vi
+      .fn()
+      .mockRejectedValue(new Error("Server error"));
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/server error/i)).toBeInTheDocument();
+    });
+    expect(onSyncComplete).not.toHaveBeenCalled();
+  });
+
+  it("stores last sync timestamp in localStorage on success", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-24T15:00:00Z"));
+    const postMock = vi.fn().mockImplementation(
+      () => Promise.resolve({ synced: 1, skipped: 0, failed: 0, errors: [] }),
+    );
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    // Advance timers to allow microtasks + setTimeout in waitFor to resolve
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(localStorage.getItem("lastSyncTimestamp")).toBe(
+      "2026-03-24T15:00:00.000Z",
+    );
+  });
+
+  it("displays last synced time from localStorage", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-24T15:10:00Z"));
+    localStorage.setItem(
+      "lastSyncTimestamp",
+      new Date("2026-03-24T15:00:00Z").toISOString(),
+    );
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    expect(screen.getByText(/last synced: 10 minutes ago/i)).toBeInTheDocument();
+  });
+
+  it("shows error message on API error", async () => {
+    const postMock = vi
+      .fn()
+      .mockRejectedValue(new Error("Network failure"));
+    api = mockApi({ post: postMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/network failure/i)).toBeInTheDocument();
+    });
+  });
+});

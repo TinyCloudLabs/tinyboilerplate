@@ -15,6 +15,7 @@ import {
 
 import { AuthPanel } from "./components/AuthPanel";
 import { SetupWizard } from "./components/SetupWizard";
+import { SyncControl } from "./components/SyncControl";
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -230,12 +231,10 @@ export function App() {
         )}
 
         {isSignedIn && hasKey === true && (
-          <section style={styles.mainView}>
-            <p style={{ color: "#555", fontSize: 14 }}>
-              {/* SyncControl, ConversationList, ConversationDetail go here */}
-              Fireflies connected. Ready to sync.
-            </p>
-          </section>
+          <>
+            <SyncControl api={api} onSyncComplete={() => { /* ConversationList refresh will go here */ }} />
+            {/* ConversationList, ConversationDetail go here */}
+          </>
         )}
       </main>
 

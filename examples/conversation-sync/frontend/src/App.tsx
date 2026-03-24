@@ -16,11 +16,15 @@ import {
 import { AuthPanel } from "./components/AuthPanel";
 import { SetupWizard } from "./components/SetupWizard";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { SyncControl } from "./components/SyncControl";
 import { ConversationList } from "./components/ConversationList";
 import { ConversationDetail } from "./components/ConversationDetail";
 =======
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+import { SyncControl } from "./components/SyncControl";
+>>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
 
 // ── Environment ─────────────────────────────────────────────────────
 
@@ -267,6 +271,7 @@ export function App() {
         )}
 
         {isSignedIn && hasKey === true && (
+<<<<<<< HEAD
           <section style={styles.mainView}>
             <p style={{ color: "#555", fontSize: 14 }}>
               {/* SyncControl, ConversationList, ConversationDetail go here */}
@@ -274,6 +279,12 @@ export function App() {
             </p>
           </section>
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+          <>
+            <SyncControl api={api} onSyncComplete={() => { /* ConversationList refresh will go here */ }} />
+            {/* ConversationList, ConversationDetail go here */}
+          </>
+>>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
         )}
       </main>
 

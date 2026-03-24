@@ -1,7 +1,7 @@
 import { type FC, useCallback, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
 
-const EXAMPLE_QUERIES = [
+const SQL_EXAMPLE_QUERIES = [
   {
     label: "Create table",
     sql: "CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY, title TEXT NOT NULL, data TEXT DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
@@ -28,12 +28,39 @@ const EXAMPLE_QUERIES = [
   },
 ];
 
+const DUCKDB_EXAMPLE_QUERIES = [
+  {
+    label: "Create table",
+    sql: "CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY, title TEXT NOT NULL, data TEXT DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
+  },
+  {
+    label: "Insert row",
+    sql: "INSERT INTO items VALUES ('1', 'Hello', 'world', current_timestamp::TEXT, current_timestamp::TEXT)",
+  },
+  {
+    label: "Select all",
+    sql: "SELECT id, title, data, created_at, updated_at FROM items",
+  },
+  {
+    label: "Search",
+    sql: "SELECT id, title, data FROM items WHERE title ILIKE '%Hello%'",
+  },
+  {
+    label: "Update row",
+    sql: "UPDATE items SET title = 'Updated', updated_at = current_timestamp::TEXT WHERE id = '1'",
+  },
+  {
+    label: "Delete row",
+    sql: "DELETE FROM items WHERE id = '1'",
+  },
+];
+
 interface DirectStorageProps {
   tcw: TinyCloudWeb | null;
 }
 
 export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
-  const [mode, setMode] = useState<"kv" | "sql">("kv");
+  const [mode, setMode] = useState<"kv" | "sql" | "duckdb">("kv");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<unknown>(null);
@@ -185,6 +212,44 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
     }
   }, [tcw, sqlInput]);
 
+  // ── DuckDB handlers ───────────────────────────────────────────────
+
+  const handleDuckdbQuery = useCallback(async () => {
+    if (!tcw || !sqlInput.trim()) return;
+    setLoading(true);
+    setError(null);
+    setSqlResult(null);
+    try {
+      const result = await tcw.duckdb.query(sqlInput.trim());
+      if (!result.ok) {
+        setError(`DuckDB query failed: ${result.error.message}`);
+        return;
+      }
+      setSqlResult({ type: "query", ...result.data });
+      setLastResult(result.data);
+    } finally {
+      setLoading(false);
+    }
+  }, [tcw, sqlInput]);
+
+  const handleDuckdbExecute = useCallback(async () => {
+    if (!tcw || !sqlInput.trim()) return;
+    setLoading(true);
+    setError(null);
+    setSqlResult(null);
+    try {
+      const result = await tcw.duckdb.execute(sqlInput.trim());
+      if (!result.ok) {
+        setError(`DuckDB execute failed: ${result.error.message}`);
+        return;
+      }
+      setSqlResult({ type: "execute", ...result.data });
+      setLastResult(result.data);
+    } finally {
+      setLoading(false);
+    }
+  }, [tcw, sqlInput]);
+
   // ── Render ────────────────────────────────────────────────────────
 
   return (
@@ -222,6 +287,7 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
               onClick={() => {
                 setMode("sql");
                 setError(null);
+                setSqlResult(null);
                 setKvSelectedKey(null);
                 setKvValue(null);
               }}
@@ -232,9 +298,24 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
             >
               SQL
             </button>
+            <button
+              onClick={() => {
+                setMode("duckdb");
+                setError(null);
+                setSqlResult(null);
+                setKvSelectedKey(null);
+                setKvValue(null);
+              }}
+              style={{
+                ...styles.toggleButton,
+                ...(mode === "duckdb" ? styles.toggleActive : {}),
+              }}
+            >
+              DuckDB
+            </button>
           </div>
 
-          {mode === "kv" ? (
+          {mode === "kv" && (
             <>
               {/* List keys */}
               <div style={styles.kvListRow}>
@@ -319,12 +400,14 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
                 </button>
               </form>
             </>
-          ) : (
+          )}
+
+          {(mode === "sql" || mode === "duckdb") && (
             <>
               {/* Example queries */}
               <div style={styles.exampleRow}>
                 <span style={styles.exampleLabel}>Examples:</span>
-                {EXAMPLE_QUERIES.map((ex) => (
+                {(mode === "duckdb" ? DUCKDB_EXAMPLE_QUERIES : SQL_EXAMPLE_QUERIES).map((ex) => (
                   <button
                     key={ex.label}
                     onClick={() => setSqlInput(ex.sql)}
@@ -336,9 +419,13 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
                 ))}
               </div>
 
-              {/* SQL input */}
+              {/* SQL/DuckDB input */}
               <textarea
-                placeholder="Enter SQL (e.g. SELECT * FROM items)"
+                placeholder={
+                  mode === "duckdb"
+                    ? "Enter DuckDB SQL (e.g. SELECT * FROM items)"
+                    : "Enter SQL (e.g. SELECT * FROM items)"
+                }
                 value={sqlInput}
                 onChange={(e) => setSqlInput(e.target.value)}
                 style={styles.sqlTextarea}
@@ -346,7 +433,7 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
               />
               <div style={styles.sqlButtons}>
                 <button
-                  onClick={handleSqlQuery}
+                  onClick={mode === "duckdb" ? handleDuckdbQuery : handleSqlQuery}
                   disabled={loading || !sqlInput.trim()}
                   style={{
                     ...styles.button,
@@ -356,7 +443,7 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
                   Query (SELECT)
                 </button>
                 <button
-                  onClick={handleSqlExecute}
+                  onClick={mode === "duckdb" ? handleDuckdbExecute : handleSqlExecute}
                   disabled={loading || !sqlInput.trim()}
                   style={{
                     ...styles.buttonSecondary,
@@ -367,7 +454,7 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
                 </button>
               </div>
 
-              {/* SQL results */}
+              {/* Query results */}
               {sqlResult?.type === "query" && sqlResult.columns && (
                 <div style={styles.tableWrapper}>
                   <table style={styles.table}>
@@ -400,7 +487,9 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
 
               {sqlResult?.type === "execute" && (
                 <p style={styles.executeResult}>
-                  {sqlResult.changes} row(s) affected. Last insert ID: {sqlResult.lastInsertRowId}
+                  {sqlResult.changes} row(s) affected.
+                  {sqlResult.lastInsertRowId != null &&
+                    ` Last insert ID: ${sqlResult.lastInsertRowId}`}
                 </p>
               )}
             </>

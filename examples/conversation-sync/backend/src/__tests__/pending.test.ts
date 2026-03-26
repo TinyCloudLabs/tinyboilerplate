@@ -87,7 +87,14 @@ describe("GET /api/webhooks/fireflies/pending", () => {
   let mockAccess: ReturnType<typeof createMockAccess>;
   let syncFn: ReturnType<typeof mock>;
 
+<<<<<<< HEAD
   function createApp(overrides?: { authMiddleware?: any; delegationMiddleware?: any }) {
+=======
+  function createApp(overrides?: {
+    authMiddleware?: any;
+    delegationMiddleware?: any;
+  }) {
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
     const delegationMiddleware =
       overrides?.delegationMiddleware ??
       ((req: Request, _res: Response, next: NextFunction) => {
@@ -293,7 +300,14 @@ describe("DELETE /api/webhooks/fireflies/pending", () => {
   let backendKV: ReturnType<typeof createMockBackendKV>;
   let mockAccess: ReturnType<typeof createMockAccess>;
 
+<<<<<<< HEAD
   function createApp(overrides?: { authMiddleware?: any; delegationMiddleware?: any }) {
+=======
+  function createApp(overrides?: {
+    authMiddleware?: any;
+    delegationMiddleware?: any;
+  }) {
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
     const delegationMiddleware =
       overrides?.delegationMiddleware ??
       ((req: Request, _res: Response, next: NextFunction) => {
@@ -368,7 +382,14 @@ describe("DELETE /api/webhooks/fireflies/pending", () => {
   });
 
   it("clears all pending items and returns count", async () => {
+<<<<<<< HEAD
     backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("m1", "m2", "m3")));
+=======
+    backendKV._data.set(
+      PENDING_KV_KEY,
+      JSON.stringify(pendingItems("m1", "m2", "m3")),
+    );
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
 
     const res = await deletePending();
     expect(res.status).toBe(200);
@@ -377,7 +398,14 @@ describe("DELETE /api/webhooks/fireflies/pending", () => {
   });
 
   it("empties the pending queue in KV", async () => {
+<<<<<<< HEAD
     backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("m1", "m2")));
+=======
+    backendKV._data.set(
+      PENDING_KV_KEY,
+      JSON.stringify(pendingItems("m1", "m2")),
+    );
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
 
     await deletePending();
 

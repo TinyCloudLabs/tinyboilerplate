@@ -1,9 +1,13 @@
 import { Router, raw as expressRaw } from "express";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import type { Request, Response, RequestHandler } from "express";
 =======
 import type { Request, Response } from "express";
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+=======
+import type { Request, Response, RequestHandler } from "express";
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
 import type { DelegatedAccess } from "@tinyboilerplate/server";
 import { verifyFirefliesSignature } from "../services/webhook-verify.js";
 import { syncSingleTranscript, type SyncSingleResult } from "../services/sync-pipeline.js";
@@ -21,10 +25,14 @@ interface WebhookRoutesConfig {
   backendKV: BackendKV;
   tryGetDelegatedAccess: () => Promise<DelegatedAccess | null>;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
   /** Auth middleware for pending endpoints (not needed for POST webhook) */
   authMiddleware?: RequestHandler;
   /** Delegation middleware for pending endpoints */
   delegationMiddleware?: RequestHandler;
+<<<<<<< HEAD
   /** Override for testing */
   syncFn?: (
     meetingId: string,
@@ -32,6 +40,8 @@ interface WebhookRoutesConfig {
     client: Pick<FirefliesClient, "getTranscript">,
   ) => Promise<SyncSingleResult>;
 =======
+=======
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
   /** Override for testing */
   syncFn?: (meetingId: string, access: DelegatedAccess, client: Pick<FirefliesClient, "getTranscript">) => Promise<SyncSingleResult>;
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
@@ -293,6 +303,9 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
   );
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
   // ── Pending queue endpoints (require auth + delegation) ──────────
 
   if (config.authMiddleware && config.delegationMiddleware) {
@@ -300,6 +313,7 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
     const delegation = config.delegationMiddleware;
 
     // GET /fireflies/pending — process all pending items
+<<<<<<< HEAD
     router.get("/fireflies/pending", auth, delegation, async (req: Request, res: Response) => {
       const access = req.delegatedAccess!;
 
@@ -360,12 +374,87 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
 
 =======
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+=======
+    router.get(
+      "/fireflies/pending",
+      auth,
+      delegation,
+      async (req: Request, res: Response) => {
+        const access = req.delegatedAccess!;
+
+        // 1. Read pending queue
+        const pending = await readPendingQueue(backendKV);
+        if (pending.length === 0) {
+          res.json({ processed: [], skipped: [], errors: [] });
+          return;
+        }
+
+        // 2. Get Fireflies API key from user's KV
+        const apiKeyResult = await access.kv.get(FIREFLIES_KEY_PATH);
+        const apiKey =
+          apiKeyResult.ok && apiKeyResult.data.data
+            ? String(apiKeyResult.data.data)
+            : null;
+
+        if (!apiKey) {
+          res.status(400).json({
+            error: "no_api_key",
+            message: "Fireflies API key not configured",
+          });
+          return;
+        }
+
+        // 3. Process each pending item
+        await ensureSchema(access);
+        const client = makeClient(apiKey);
+
+        const processed: SyncSingleResult[] = [];
+        const skipped: SyncSingleResult[] = [];
+        const errors: SyncSingleResult[] = [];
+        const remaining: PendingItem[] = [];
+
+        for (const item of pending) {
+          const result = await doSync(item.meetingId, access, client);
+          if (result.status === "created") {
+            processed.push(result);
+          } else if (result.status === "skipped") {
+            skipped.push(result);
+          } else {
+            errors.push(result);
+            remaining.push(item);
+          }
+        }
+
+        // 4. Update queue — only failed items remain
+        await backendKV.put(PENDING_KV_KEY, JSON.stringify(remaining));
+
+        res.json({ processed, skipped, errors });
+      },
+    );
+
+    // DELETE /fireflies/pending — clear all pending items
+    router.delete(
+      "/fireflies/pending",
+      auth,
+      delegation,
+      async (_req: Request, res: Response) => {
+        const pending = await readPendingQueue(backendKV);
+        await backendKV.put(PENDING_KV_KEY, JSON.stringify([]));
+        res.json({ cleared: pending.length });
+      },
+    );
+  }
+
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
   return router;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
 interface PendingItem {
   meetingId: string;
   receivedAt: string;
@@ -382,6 +471,7 @@ async function readPendingQueue(backendKV: BackendKV): Promise<PendingItem[]> {
   }
 }
 
+<<<<<<< HEAD
 async function updateSummary(
   meetingId: string,
   access: DelegatedAccess,
@@ -427,6 +517,8 @@ async function updateSummary(
 
 =======
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+=======
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
 async function storePending(backendKV: BackendKV, meetingId: string) {
   const existingResult = await backendKV.get(PENDING_KV_KEY);
   let pending: Array<{ meetingId: string; receivedAt: string }> = [];

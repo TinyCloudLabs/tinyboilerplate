@@ -159,6 +159,7 @@ async function main() {
 
   // Webhook routes — mounted before express.json() so raw body is preserved for HMAC verification
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Auth + delegation middleware passed for pending queue endpoints (GET/DELETE)
   app.use(
     "/api/webhooks",
@@ -173,6 +174,17 @@ async function main() {
     "/api/webhooks",
     createWebhookRouter({ backendKV, tryGetDelegatedAccess }),
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+=======
+  // Auth + delegation middleware passed for pending queue endpoints (GET/DELETE)
+  app.use(
+    "/api/webhooks",
+    createWebhookRouter({
+      backendKV,
+      tryGetDelegatedAccess,
+      authMiddleware: authMiddleware as any,
+      delegationMiddleware: delegationMiddleware as any,
+    }),
+>>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
   );
 
   app.use(express.json());

@@ -22,6 +22,10 @@ describe("OpenAPI spec", () => {
     expect(paths).toContain("/api/server-info");
     expect(paths).toContain("/api/delegations");
     expect(paths).toContain("/api/delegations/status");
+    expect(paths).toContain("/api/webhooks/fireflies");
+    expect(paths).toContain("/api/webhooks/fireflies/pending");
+    expect(paths).toContain("/api/config/webhook-secret");
+    expect(paths).toContain("/api/config/webhook-status");
   });
 
   test("server-info has GET operation with no security", () => {
@@ -43,6 +47,35 @@ describe("OpenAPI spec", () => {
     expect(schemas).toContain("DelegationResponse");
     expect(schemas).toContain("ServerInfo");
     expect(schemas).toContain("ApiError");
+    expect(schemas).toContain("WebhookProcessed");
+    expect(schemas).toContain("WebhookPending");
+    expect(schemas).toContain("WebhookIgnored");
+    expect(schemas).toContain("SyncResult");
+    expect(schemas).toContain("PendingProcessResult");
+    expect(schemas).toContain("WebhookStatus");
+  });
+
+  test("webhook POST endpoint has no security (public, HMAC-verified)", () => {
+    const webhook = (spec.paths as Record<string, Record<string, unknown>>)["/api/webhooks/fireflies"];
+    const post = webhook.post as Record<string, unknown>;
+    expect(post).toBeDefined();
+    expect(post.security).toEqual([]);
+  });
+
+  test("webhook pending has GET and DELETE operations", () => {
+    const pending = (spec.paths as Record<string, Record<string, unknown>>)["/api/webhooks/fireflies/pending"];
+    expect(pending.get).toBeDefined();
+    expect(pending.delete).toBeDefined();
+  });
+
+  test("webhook-secret has PUT operation", () => {
+    const secret = (spec.paths as Record<string, Record<string, unknown>>)["/api/config/webhook-secret"];
+    expect(secret.put).toBeDefined();
+  });
+
+  test("webhook-status has GET operation", () => {
+    const status = (spec.paths as Record<string, Record<string, unknown>>)["/api/config/webhook-status"];
+    expect(status.get).toBeDefined();
   });
 
   test("defines Bearer JWT security scheme", () => {

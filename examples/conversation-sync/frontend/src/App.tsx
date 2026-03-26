@@ -231,7 +231,7 @@ export function App() {
         />
 
         {isSignedIn && hasKey === false && (
-          <SetupWizard api={api} onComplete={() => setHasKey(true)} />
+          <SetupWizard api={api} onComplete={() => setHasKey(true)} backendUrl={BACKEND_URL} />
         )}
 
         {isSignedIn && hasKey === true && selectedConversationId && (
@@ -245,6 +245,15 @@ export function App() {
         {isSignedIn && hasKey === true && !selectedConversationId && (
           <>
             <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
+            <button
+              style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "4px 0" }}
+              onClick={async () => {
+                await api.del("/api/config/fireflies-key");
+                setHasKey(false);
+              }}
+            >
+              Disconnect Fireflies
+            </button>
             <ConversationList
               api={api}
               onSelectConversation={setSelectedConversationId}

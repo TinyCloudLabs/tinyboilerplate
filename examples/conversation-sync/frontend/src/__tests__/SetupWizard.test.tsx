@@ -166,15 +166,22 @@ describe("SetupWizard", () => {
     ).toBeInTheDocument();
   });
 
-  // Step 5: Done
-  it("shows done step with Sync Now button on successful test", async () => {
+  // Step 5: Webhook configuration
+  // Helper: navigate to webhook step (through successful connection test)
+  async function navigateToWebhook() {
     const putMock = vi.fn().mockResolvedValue({ ok: true });
     const getMock = vi
       .fn()
       .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
     api = mockApi({ put: putMock, get: getMock });
 
-    render(<SetupWizard api={api} onComplete={onComplete} />);
+    render(
+      <SetupWizard
+        api={api}
+        onComplete={onComplete}
+        backendUrl="http://localhost:3001"
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
@@ -186,8 +193,118 @@ describe("SetupWizard", () => {
       expect(screen.getByText(/connected as roman/i)).toBeInTheDocument();
     });
 
-    // Advance to done step
+    // Continue → webhook step
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+    return { putMock, getMock };
+  }
+
+  it("advances to webhook step after successful connection test", async () => {
+    await navigateToWebhook();
+    expect(screen.getByText(/webhook setup/i)).toBeInTheDocument();
+  });
+
+  it("displays webhook URL with backend URL", async () => {
+    await navigateToWebhook();
+    expect(
+      screen.getByText("http://localhost:3001/api/webhooks/fireflies"),
+    ).toBeInTheDocument();
+  });
+
+  it("has a copy URL button that copies to clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    });
+
+    await navigateToWebhook();
+    fireEvent.click(screen.getByRole("button", { name: /copy url/i }));
+
+    expect(writeText).toHaveBeenCalledWith(
+      "http://localhost:3001/api/webhooks/fireflies",
+    );
+  });
+
+  it("shows webhook secret input field", async () => {
+    await navigateToWebhook();
+    expect(
+      screen.getByPlaceholderText(/webhook secret/i),
+    ).toBeInTheDocument();
+  });
+
+  it("generates a random secret on button click", async () => {
+    await navigateToWebhook();
+    fireEvent.click(screen.getByRole("button", { name: /generate random/i }));
+
+    const input = screen.getByPlaceholderText(
+      /webhook secret/i,
+    ) as HTMLInputElement;
+    expect(input.value.length).toBeGreaterThanOrEqual(16);
+  });
+
+  it("saves webhook secret via PUT /api/config/webhook-secret", async () => {
+    const { putMock } = await navigateToWebhook();
+    putMock.mockClear();
+    putMock.mockResolvedValue({ ok: true });
+
+    fireEvent.change(screen.getByPlaceholderText(/webhook secret/i), {
+      target: { value: "my-secret-value-1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save secret/i }));
+
+    await waitFor(() => {
+      expect(putMock).toHaveBeenCalledWith("/api/config/webhook-secret", {
+        secret: "my-secret-value-1234",
+      });
+    });
+  });
+
+  it("shows success message after saving secret", async () => {
+    const { putMock } = await navigateToWebhook();
+    putMock.mockClear();
+    putMock.mockResolvedValue({ ok: true });
+
+    fireEvent.change(screen.getByPlaceholderText(/webhook secret/i), {
+      target: { value: "my-secret-value-1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save secret/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/secret saved/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows error message on failed secret save", async () => {
+    const { putMock } = await navigateToWebhook();
+    putMock.mockClear();
+    putMock.mockRejectedValue(new Error("Store failed"));
+
+    fireEvent.change(screen.getByPlaceholderText(/webhook secret/i), {
+      target: { value: "my-secret-value-1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save secret/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/store failed/i)).toBeInTheDocument();
+    });
+  });
+
+  it("skip button advances to done step", async () => {
+    await navigateToWebhook();
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+
+    expect(screen.getByText(/you're all set/i)).toBeInTheDocument();
+  });
+
+  it("shows Fireflies dashboard instructions", async () => {
+    await navigateToWebhook();
+    expect(screen.getByText(/fireflies dashboard/i)).toBeInTheDocument();
+  });
+
+  // Step 6: Done (navigates through webhook via Skip)
+  it("shows done step with Sync Now button after skipping webhook", async () => {
+    await navigateToWebhook();
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
 
     expect(screen.getByText(/you're all set/i)).toBeInTheDocument();
     expect(
@@ -196,24 +313,8 @@ describe("SetupWizard", () => {
   });
 
   it("calls onComplete when Sync Now is clicked", async () => {
-    const putMock = vi.fn().mockResolvedValue({ ok: true });
-    const getMock = vi
-      .fn()
-      .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
-    api = mockApi({ put: putMock, get: getMock });
-
-    render(<SetupWizard api={api} onComplete={onComplete} />);
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
-      target: { value: "test-key" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/connected as roman/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await navigateToWebhook();
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
 
     expect(onComplete).toHaveBeenCalledOnce();

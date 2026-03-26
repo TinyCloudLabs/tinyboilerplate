@@ -8,6 +8,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { apiReference } from "@scalar/express-api-reference";
 import { load as loadYaml } from "js-yaml";
+import { deserializeDelegation } from "@tinycloud/node-sdk";
 import {
   createBackendIdentity,
   DelegationStore,
@@ -24,6 +25,7 @@ import { createConfigRouter } from "./routes/config.js";
 import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
 import { createConversationsRouter } from "./routes/conversations.js";
+import { createWebhookRouter } from "./routes/webhooks.js";
 
 
 // ── Environment ──────────────────────────────────────────────────────
@@ -62,9 +64,52 @@ async function main() {
     cache: delegationCache,
   });
 
-  // 4. Set up Express
+  // 4. Backend KV accessor (for webhook config stored in backend's own space)
+  const backendKV = {
+    get: (key: string) => withSessionRefresh(node, () => node.kv.get(key)),
+    put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
+  };
+
+  // Resolve delegated access for webhook processing (single-user mode)
+  const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
+  const tryGetDelegatedAccess = async () => {
+    const subResult = await backendKV.get(WEBHOOK_USER_SUB_PATH);
+    const sub = subResult.ok && (subResult as any).data?.data
+      ? String((subResult as any).data.data)
+      : null;
+    if (!sub) return null;
+
+    // Check cache first
+    let access = delegationCache.get(sub);
+    if (access) return access;
+
+    // Load from persistent store
+    const stored = await delegationStore.load(sub);
+    if (!stored) return null;
+    if (new Date(stored.expiresAt).getTime() <= Date.now()) return null;
+
+    // Activate delegation
+    try {
+      const delegation = deserializeDelegation(stored.serialized);
+      access = await node.useDelegation(delegation);
+      delegationCache.set(sub, access);
+      return access;
+    } catch (err) {
+      console.error("[webhook] failed to activate delegation:", err);
+      return null;
+    }
+  };
+
+  // 5. Set up Express
   const app = express();
   app.use(cors({ origin: FRONTEND_URL }));
+
+  // Webhook routes — mounted before express.json() so raw body is preserved for HMAC verification
+  app.use(
+    "/api/webhooks",
+    createWebhookRouter({ backendKV, tryGetDelegatedAccess }),
+  );
+
   app.use(express.json());
   app.use(createCsrfMiddleware());
 
@@ -101,12 +146,6 @@ async function main() {
       openKeyIssuerUrl: OPENKEY_ISSUER_URL,
     }),
   );
-
-  // Backend KV accessor (for webhook config stored in backend's own space)
-  const backendKV = {
-    get: (key: string) => withSessionRefresh(node, () => node.kv.get(key)),
-    put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
-  };
 
   // Config routes (Fireflies API key + webhook config)
   app.use(

@@ -19,6 +19,7 @@ interface ConfigRoutesConfig {
 
 const FIREFLIES_KEY_PATH = "/app.conversations/config/fireflies-key";
 const WEBHOOK_SECRET_PATH = "/app.webhooks/config/fireflies-secret";
+const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
 const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
 
 // ── Config Routes ────────────────────────────────────────────────────
@@ -101,6 +102,10 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
 
       try {
         await backendKV.put(WEBHOOK_SECRET_PATH, secret);
+        // Store user sub so webhook handler can look up their delegation
+        if (req.user?.sub) {
+          await backendKV.put(WEBHOOK_USER_SUB_PATH, req.user.sub);
+        }
         res.json({ ok: true });
       } catch (err) {
         console.error("[config] failed to store webhook secret:", err);

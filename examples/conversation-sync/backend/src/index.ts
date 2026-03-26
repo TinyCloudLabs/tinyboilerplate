@@ -185,16 +185,29 @@ async function main() {
   );
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Config routes (Fireflies API key + webhook config)
 =======
   // Config routes (Fireflies API key management)
 >>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
+=======
+  // Backend KV accessor (for webhook config stored in backend's own space)
+  const backendKV = {
+    get: (key: string) => withSessionRefresh(node, () => node.kv.get(key)),
+    put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
+  };
+
+  // Config routes (Fireflies API key + webhook config)
+>>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
   app.use(
     "/api/config",
     createConfigRouter({
       authMiddleware,
       delegationMiddleware,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
       backendKV,
       frontendUrl: FRONTEND_URL,
     }),

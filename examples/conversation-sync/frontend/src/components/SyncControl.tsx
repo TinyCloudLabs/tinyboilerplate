@@ -11,6 +11,12 @@ interface SyncResult {
   errors: string[];
 }
 
+interface WebhookStatus {
+  configured: boolean;
+  pendingCount: number;
+  webhookUrl: string;
+}
+
 interface SyncControlProps {
   api: ApiClient;
   onSyncComplete: () => void;
@@ -36,6 +42,15 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
   const [lastSync, setLastSync] = useState<string | null>(
     () => localStorage.getItem(LAST_SYNC_KEY),
   );
+  const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null);
+
+  // ── Fetch webhook status on mount ──────────────────────────────────
+  useEffect(() => {
+    api
+      .get<WebhookStatus>("/api/config/webhook-status")
+      .then((status) => setWebhookStatus(status))
+      .catch(() => {});
+  }, [api]);
 
   // Refresh "X minutes ago" display
   useEffect(() => {
@@ -43,6 +58,25 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
     const id = setInterval(() => setLastSync(localStorage.getItem(LAST_SYNC_KEY)), 60_000);
     return () => clearInterval(id);
   }, [lastSync]);
+
+  const handleClearAndResync = useCallback(async () => {
+    setSyncing(true);
+    setResult(null);
+    setError(null);
+    try {
+      await api.del("/api/sync/conversations");
+      const data = await api.post<SyncResult>("/api/sync/fireflies", { limit });
+      setResult(data);
+      const ts = new Date().toISOString();
+      localStorage.setItem(LAST_SYNC_KEY, ts);
+      setLastSync(ts);
+      onSyncComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncing(false);
+    }
+  }, [api, limit, onSyncComplete]);
 
   const handleSync = useCallback(async () => {
     setSyncing(true);
@@ -93,6 +127,17 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
         >
           {syncing ? "Syncing..." : "Sync Now"}
         </button>
+        <button
+          style={{
+            ...styles.button,
+            background: "#dc2626",
+            ...(syncing ? styles.buttonDisabled : {}),
+          }}
+          disabled={syncing}
+          onClick={handleClearAndResync}
+        >
+          Clear & Re-sync
+        </button>
       </div>
 
       {syncing && !timedOut && (
@@ -126,6 +171,19 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
 
       {lastSync && (
         <p style={styles.lastSync}>Last synced: {formatTimeAgo(lastSync)}</p>
+      )}
+
+      {webhookStatus && (
+        <div style={styles.webhookStatus}>
+          <span style={webhookStatus.configured ? styles.webhookActive : styles.webhookInactive}>
+            {webhookStatus.configured ? "Webhook active" : "Webhook not configured"}
+          </span>
+          {webhookStatus.pendingCount > 0 && (
+            <span style={styles.pendingCount}>
+              {webhookStatus.pendingCount} transcripts waiting
+            </span>
+          )}
+        </div>
       )}
     </section>
   );
@@ -204,5 +262,21 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#888",
     marginTop: 8,
     marginBottom: 0,
+  },
+  webhookStatus: {
+    display: "flex",
+    gap: 12,
+    alignItems: "center",
+    marginTop: 8,
+    fontSize: 12,
+  },
+  webhookActive: {
+    color: "#166534",
+  },
+  webhookInactive: {
+    color: "#888",
+  },
+  pendingCount: {
+    color: "#92400e",
   },
 };

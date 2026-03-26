@@ -39,6 +39,7 @@ export function App() {
   const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [pendingBanner, setPendingBanner] = useState<string | null>(null);
 
   // Token store (persists across re-renders, auto-loads from localStorage)
   const tokenStoreRef = useRef(new TokenStore());
@@ -109,6 +110,29 @@ export function App() {
       .then((res) => setHasKey(res.exists))
       .catch(() => setHasKey(false));
   }, [api]);
+
+  // ── Auto-process pending webhook items ─────────────────────────────
+
+  useEffect(() => {
+    if (!api || hasKey !== true) return;
+
+    api
+      .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
+        "/api/webhooks/fireflies/pending",
+      )
+      .then((result) => {
+        const count = result.processed?.length ?? 0;
+        if (count > 0) {
+          setPendingBanner(
+            `Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`,
+          );
+          setRefreshKey((k) => k + 1);
+        }
+      })
+      .catch((err) => {
+        console.error("[pending] Failed to process pending webhooks:", err);
+      });
+  }, [api, hasKey]);
 
   // ── Sign In ───────────────────────────────────────────────────────
 
@@ -242,6 +266,18 @@ export function App() {
           />
         )}
 
+        {pendingBanner && (
+          <div style={styles.pendingBanner}>
+            {pendingBanner}
+            <button
+              style={styles.bannerDismiss}
+              onClick={() => setPendingBanner(null)}
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
         {isSignedIn && hasKey === true && !selectedConversationId && (
           <>
             <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
@@ -315,6 +351,25 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     padding: 20,
     background: "#fafafa",
+  },
+  pendingBanner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 14px",
+    background: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    borderRadius: 6,
+    fontSize: 14,
+    color: "#166534",
+  },
+  bannerDismiss: {
+    background: "none",
+    border: "none",
+    fontSize: 18,
+    color: "#166534",
+    cursor: "pointer",
+    padding: "0 4px",
   },
   footer: {
     textAlign: "center",

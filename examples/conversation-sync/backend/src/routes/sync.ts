@@ -2,12 +2,17 @@ import { Router } from "express";
 import type { Request, Response, RequestHandler } from "express";
 import { FirefliesClient } from "../services/fireflies-client.js";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { ensureSchema } from "../schema.js";
 import { syncSingleTranscript } from "../services/sync-pipeline.js";
 =======
 import { normalizeFireflies } from "../adapters/fireflies.js";
 import { ensureSchema } from "../schema.js";
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+import { ensureSchema } from "../schema.js";
+import { syncSingleTranscript } from "../services/sync-pipeline.js";
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -61,6 +66,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 
     // 1. Read Fireflies API key from KV
 <<<<<<< HEAD
+<<<<<<< HEAD
     const keyResult = await access.kv.get(FIREFLIES_KEY_PATH);
     const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
     if (!apiKey) {
@@ -70,6 +76,10 @@ export function createSyncRouter(config: SyncRoutesConfig) {
           "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
 =======
     const apiKey = await access.kv.get(FIREFLIES_KEY_PATH);
+=======
+    const keyResult = await access.kv.get(FIREFLIES_KEY_PATH);
+    const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
@@ -96,12 +106,16 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       // 4. List transcripts (lightweight)
       const summaries = await client.listTranscripts(limit);
 <<<<<<< HEAD
+<<<<<<< HEAD
       console.log(
         `[sync] Fireflies returned ${summaries.length} transcripts:`,
         summaries.map((s) => ({ id: s.id, title: s.title })),
       );
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+      console.log(`[sync] Fireflies returned ${summaries.length} transcripts:`, summaries.map(s => ({ id: s.id, title: s.title })));
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
 
       if (summaries.length === 0) {
         res.json({
@@ -119,6 +133,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       const placeholders = sourceIds.map(() => "?").join(", ");
       const dedupQuery = `SELECT source_id FROM conversation WHERE source = 'fireflies' AND source_id IN (${placeholders})`;
 <<<<<<< HEAD
+<<<<<<< HEAD
       const dedupResult = await access.sql.query(dedupQuery, sourceIds);
 
       const existingIds = new Set<string>();
@@ -135,6 +150,16 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         for (const row of dedupResult.rows) {
           existingIds.add((row as any).source_id);
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+      const dedupResult = await access.sql.query(dedupQuery, sourceIds);
+
+      const existingIds = new Set<string>();
+      if (dedupResult.ok && dedupResult.data.rows) {
+        // TinyCloud SQL rows are arrays — source_id is the only selected column (index 0)
+        for (const row of dedupResult.data.rows) {
+          const val = Array.isArray(row) ? row[0] : (row as any).source_id;
+          if (val) existingIds.add(String(val));
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
         }
       }
 
@@ -149,6 +174,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       const conversations: Array<{ id: string; title: string; started_at: string }> = [];
 
       for (const summary of newSummaries) {
+<<<<<<< HEAD
 <<<<<<< HEAD
         const result = await syncSingleTranscript(summary.id, access, client);
         if (result.status === "created") {
@@ -211,18 +237,25 @@ export function createSyncRouter(config: SyncRoutesConfig) {
           const kvKey = `/app.conversations/transcript/${normalized.conversation.id}`;
           await access.kv.put(kvKey, JSON.stringify(normalized.transcript));
 
+=======
+        const result = await syncSingleTranscript(summary.id, access, client);
+        if (result.status === "created") {
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
           synced++;
           conversations.push({
-            id: normalized.conversation.id,
-            title: normalized.conversation.title ?? "",
-            started_at: normalized.conversation.started_at ?? "",
+            id: result.conversationId!,
+            title: result.title ?? summary.title ?? "",
+            started_at: result.startedAt ?? "",
           });
-        } catch (err) {
+        } else if (result.status === "error") {
           failed++;
-          const message = err instanceof Error ? err.message : String(err);
-          errors.push(`${summary.id}: ${message}`);
+          errors.push(`${summary.id}: ${result.error}`);
         }
+<<<<<<< HEAD
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+        // 'skipped' shouldn't happen here due to batch dedup, but handle gracefully
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
       }
 
       res.json({
@@ -242,6 +275,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     }
   });
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   // ── GET /api/sync/fireflies/stream — SSE paginated sync with progress ──
   router.get("/fireflies/stream", async (req: Request, res: Response) => {
@@ -480,6 +514,8 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     }
   });
 
+=======
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
   // ── DELETE /api/sync/conversations — clear all data for re-sync ──
   router.delete("/conversations", async (req: Request, res: Response) => {
     const access = req.delegatedAccess!;
@@ -495,7 +531,10 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     }
   });
 
+<<<<<<< HEAD
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+>>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
   return router;
 }

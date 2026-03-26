@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { Request, Response, RequestHandler } from "express";
 import { FirefliesClient } from "../services/fireflies-client.js";
-import { normalizeFireflies } from "../adapters/fireflies.js";
 import { ensureSchema } from "../schema.js";
+import { syncSingleTranscript } from "../services/sync-pipeline.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -35,7 +35,8 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     const access = req.delegatedAccess!;
 
     // 1. Read Fireflies API key from KV
-    const apiKey = await access.kv.get(FIREFLIES_KEY_PATH);
+    const keyResult = await access.kv.get(FIREFLIES_KEY_PATH);
+    const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
@@ -60,6 +61,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 
       // 4. List transcripts (lightweight)
       const summaries = await client.listTranscripts(limit);
+      console.log(`[sync] Fireflies returned ${summaries.length} transcripts:`, summaries.map(s => ({ id: s.id, title: s.title })));
 
       if (summaries.length === 0) {
         res.json({
@@ -76,12 +78,14 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       const sourceIds = summaries.map((s) => s.id);
       const placeholders = sourceIds.map(() => "?").join(", ");
       const dedupQuery = `SELECT source_id FROM conversation WHERE source = 'fireflies' AND source_id IN (${placeholders})`;
-      const dedupResult = await access.sql.execute(dedupQuery, sourceIds);
+      const dedupResult = await access.sql.query(dedupQuery, sourceIds);
 
       const existingIds = new Set<string>();
-      if (dedupResult.ok && dedupResult.rows) {
-        for (const row of dedupResult.rows) {
-          existingIds.add((row as any).source_id);
+      if (dedupResult.ok && dedupResult.data.rows) {
+        // TinyCloud SQL rows are arrays — source_id is the only selected column (index 0)
+        for (const row of dedupResult.data.rows) {
+          const val = Array.isArray(row) ? row[0] : (row as any).source_id;
+          if (val) existingIds.add(String(val));
         }
       }
 
@@ -96,64 +100,19 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       const conversations: Array<{ id: string; title: string; started_at: string }> = [];
 
       for (const summary of newSummaries) {
-        try {
-          // Fetch full transcript
-          const fullTranscript = await client.getTranscript(summary.id);
-
-          // Normalize
-          const normalized = normalizeFireflies(fullTranscript);
-
-          // INSERT conversation
-          const now = new Date().toISOString();
-          const metadataJson = JSON.stringify(normalized.conversation.metadata);
-
-          await access.sql.execute(
-            `INSERT OR IGNORE INTO conversation (id, title, source, source_id, source_url, started_at, ended_at, duration_secs, summary, metadata, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              normalized.conversation.id,
-              normalized.conversation.title,
-              normalized.conversation.source,
-              normalized.conversation.source_id,
-              normalized.conversation.source_url,
-              normalized.conversation.started_at,
-              normalized.conversation.ended_at,
-              normalized.conversation.duration_secs,
-              normalized.conversation.summary,
-              metadataJson,
-              now,
-              now,
-            ],
-          );
-
-          // INSERT participants
-          for (const participant of normalized.participants) {
-            await access.sql.execute(
-              `INSERT OR IGNORE INTO participant (id, conversation_id, name, email, speaker_label) VALUES (?, ?, ?, ?, ?)`,
-              [
-                participant.id,
-                normalized.conversation.id,
-                participant.name,
-                participant.email,
-                participant.speaker_label,
-              ],
-            );
-          }
-
-          // Write transcript sentences blob to KV
-          const kvKey = `/app.conversations/transcript/${normalized.conversation.id}`;
-          await access.kv.put(kvKey, JSON.stringify(normalized.transcript));
-
+        const result = await syncSingleTranscript(summary.id, access, client);
+        if (result.status === "created") {
           synced++;
           conversations.push({
-            id: normalized.conversation.id,
-            title: normalized.conversation.title ?? "",
-            started_at: normalized.conversation.started_at ?? "",
+            id: result.conversationId!,
+            title: result.title ?? summary.title ?? "",
+            started_at: result.startedAt ?? "",
           });
-        } catch (err) {
+        } else if (result.status === "error") {
           failed++;
-          const message = err instanceof Error ? err.message : String(err);
-          errors.push(`${summary.id}: ${message}`);
+          errors.push(`${summary.id}: ${result.error}`);
         }
+        // 'skipped' shouldn't happen here due to batch dedup, but handle gracefully
       }
 
       res.json({
@@ -170,6 +129,21 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         error: "sync_failed",
         message: `Sync failed: ${message}`,
       });
+    }
+  });
+
+  // ── DELETE /api/sync/conversations — clear all data for re-sync ──
+  router.delete("/conversations", async (req: Request, res: Response) => {
+    const access = req.delegatedAccess!;
+    try {
+      await ensureSchema(access);
+      await access.sql.execute(`DELETE FROM participant`);
+      await access.sql.execute(`DELETE FROM conversation`);
+      res.json({ ok: true, message: "All conversations cleared. Re-sync to repopulate." });
+    } catch (err) {
+      console.error("[sync] clear failed:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: "clear_failed", message });
     }
   });
 

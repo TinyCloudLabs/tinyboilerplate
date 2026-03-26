@@ -235,6 +235,9 @@ export function App() {
 
         {isSignedIn && hasKey === false && (
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 64c2d6d (TC-1315: Add Setup Wizard Step 3 for webhook configuration)
           <SetupWizard api={api} onComplete={() => setHasKey(true)} backendUrl={BACKEND_URL} />
         )}
 
@@ -306,6 +309,15 @@ export function App() {
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
           <>
             <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
+            <button
+              style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "4px 0" }}
+              onClick={async () => {
+                await api.del("/api/config/fireflies-key");
+                setHasKey(false);
+              }}
+            >
+              Disconnect Fireflies
+            </button>
             <ConversationList
               api={api}
               onSelectConversation={setSelectedConversationId}

@@ -3,27 +3,37 @@ import type { Request, Response, RequestHandler } from "express";
 
 // ── Types ────────────────────────────────────────────────────────────
 
+interface BackendKV {
+  get(key: string): Promise<{ ok: boolean; data: { data: string | null } }>;
+  put(key: string, value: string): Promise<{ ok: boolean }>;
+}
+
 interface ConfigRoutesConfig {
   authMiddleware: RequestHandler;
   delegationMiddleware: RequestHandler;
+  backendKV?: BackendKV;
+  frontendUrl?: string;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
 
 const FIREFLIES_KEY_PATH = "/app.conversations/config/fireflies-key";
+const WEBHOOK_SECRET_PATH = "/app.webhooks/config/fireflies-secret";
+const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
 
 // ── Config Routes ────────────────────────────────────────────────────
 
 export function createConfigRouter(config: ConfigRoutesConfig) {
-  const { authMiddleware, delegationMiddleware } = config;
+  const { authMiddleware, delegationMiddleware, backendKV, frontendUrl } = config;
   const router = Router();
 
-  // All config routes require auth + delegation
+  // All config routes require auth
   router.use(authMiddleware);
-  router.use(delegationMiddleware);
+
+  // ── Fireflies API key routes (auth + delegation) ──────────────────
 
   // ── PUT /api/config/fireflies-key — store API key ───────────────
-  router.put("/fireflies-key", async (req: Request, res: Response) => {
+  router.put("/fireflies-key", delegationMiddleware, async (req: Request, res: Response) => {
     const { apiKey } = req.body;
 
     if (!apiKey || typeof apiKey !== "string") {
@@ -47,7 +57,7 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
   });
 
   // ── DELETE /api/config/fireflies-key — remove API key ───────────
-  router.delete("/fireflies-key", async (req: Request, res: Response) => {
+  router.delete("/fireflies-key", delegationMiddleware, async (req: Request, res: Response) => {
     try {
       await req.delegatedAccess!.kv.delete(FIREFLIES_KEY_PATH);
       res.json({ ok: true });
@@ -61,10 +71,10 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
   });
 
   // ── GET /api/config/fireflies-key/exists — check existence ──────
-  router.get("/fireflies-key/exists", async (req: Request, res: Response) => {
+  router.get("/fireflies-key/exists", delegationMiddleware, async (req: Request, res: Response) => {
     try {
-      const value = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
-      res.json({ exists: value != null });
+      const result = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
+      res.json({ exists: result.ok && result.data.data != null });
     } catch (err) {
       console.error("[config] failed to check fireflies key:", err);
       res.status(500).json({
@@ -73,6 +83,67 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
       });
     }
   });
+
+  // ── Webhook config routes (auth only, uses backend KV) ───────────
+
+  if (backendKV) {
+    // ── PUT /api/config/webhook-secret — store webhook secret ─────
+    router.put("/webhook-secret", async (req: Request, res: Response) => {
+      const { secret } = req.body;
+
+      if (!secret || typeof secret !== "string") {
+        res.status(400).json({
+          error: "invalid_body",
+          message: "Request body must include a non-empty 'secret' string field",
+        });
+        return;
+      }
+
+      try {
+        await backendKV.put(WEBHOOK_SECRET_PATH, secret);
+        res.json({ ok: true });
+      } catch (err) {
+        console.error("[config] failed to store webhook secret:", err);
+        res.status(500).json({
+          error: "store_failed",
+          message: "Failed to store webhook secret",
+        });
+      }
+    });
+
+    // ── GET /api/config/webhook-status — webhook configuration status
+    router.get("/webhook-status", async (req: Request, res: Response) => {
+      try {
+        // Check if secret is configured
+        const secretResult = await backendKV.get(WEBHOOK_SECRET_PATH);
+        const configured = secretResult.ok && secretResult.data.data != null;
+
+        // Count pending webhooks
+        let pendingCount = 0;
+        const pendingResult = await backendKV.get(WEBHOOK_PENDING_PATH);
+        if (pendingResult.ok && pendingResult.data.data != null) {
+          try {
+            const pending = JSON.parse(pendingResult.data.data);
+            pendingCount = Array.isArray(pending) ? pending.length : 0;
+          } catch {
+            // Invalid JSON — treat as 0 pending
+          }
+        }
+
+        // Derive webhook URL
+        const baseUrl = frontendUrl || `${req.protocol}://${req.get("host")}`;
+        const webhookUrl = `${baseUrl}/api/webhooks/fireflies`;
+
+        res.json({ configured, pendingCount, webhookUrl });
+      } catch (err) {
+        console.error("[config] failed to get webhook status:", err);
+        res.status(500).json({
+          error: "status_failed",
+          message: "Failed to get webhook status",
+        });
+      }
+    });
+  }
 
   return router;
 }

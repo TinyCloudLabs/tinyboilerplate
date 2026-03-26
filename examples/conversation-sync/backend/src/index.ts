@@ -13,6 +13,7 @@ import {
   DelegationStore,
   DelegationCache,
   createCsrfMiddleware,
+  withSessionRefresh,
 } from "@tinyboilerplate/server";
 
 import { createAuthMiddleware } from "./middleware/auth.js";
@@ -30,7 +31,7 @@ import { createConversationsRouter } from "./routes/conversations.js";
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
 const TINYCLOUD_HOST = process.env.TINYCLOUD_HOST ?? "https://node.tinycloud.xyz";
 const OPENKEY_ISSUER_URL = process.env.OPENKEY_ISSUER_URL ?? "https://openkey.so";
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "https://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 if (!BACKEND_PRIVATE_KEY) {
@@ -101,12 +102,20 @@ async function main() {
     }),
   );
 
-  // Config routes (Fireflies API key management)
+  // Backend KV accessor (for webhook config stored in backend's own space)
+  const backendKV = {
+    get: (key: string) => withSessionRefresh(node, () => node.kv.get(key)),
+    put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
+  };
+
+  // Config routes (Fireflies API key + webhook config)
   app.use(
     "/api/config",
     createConfigRouter({
       authMiddleware,
       delegationMiddleware,
+      backendKV,
+      frontendUrl: FRONTEND_URL,
     }),
   );
 

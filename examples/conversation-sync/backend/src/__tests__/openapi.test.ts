@@ -56,33 +56,49 @@ describe("OpenAPI spec", () => {
   });
 
   test("webhook POST endpoint has no security (public, HMAC-verified)", () => {
+<<<<<<< HEAD
     const webhook = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/webhooks/fireflies"
     ];
+=======
+    const webhook = (spec.paths as Record<string, Record<string, unknown>>)["/api/webhooks/fireflies"];
+>>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
     const post = webhook.post as Record<string, unknown>;
     expect(post).toBeDefined();
     expect(post.security).toEqual([]);
   });
 
   test("webhook pending has GET and DELETE operations", () => {
+<<<<<<< HEAD
     const pending = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/webhooks/fireflies/pending"
     ];
+=======
+    const pending = (spec.paths as Record<string, Record<string, unknown>>)["/api/webhooks/fireflies/pending"];
+>>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
     expect(pending.get).toBeDefined();
     expect(pending.delete).toBeDefined();
   });
 
   test("webhook-secret has PUT operation", () => {
+<<<<<<< HEAD
     const secret = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/config/webhook-secret"
     ];
+=======
+    const secret = (spec.paths as Record<string, Record<string, unknown>>)["/api/config/webhook-secret"];
+>>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
     expect(secret.put).toBeDefined();
   });
 
   test("webhook-status has GET operation", () => {
+<<<<<<< HEAD
     const status = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/config/webhook-status"
     ];
+=======
+    const status = (spec.paths as Record<string, Record<string, unknown>>)["/api/config/webhook-status"];
+>>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
     expect(status.get).toBeDefined();
   });
 

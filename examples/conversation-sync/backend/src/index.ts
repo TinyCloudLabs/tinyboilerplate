@@ -30,6 +30,7 @@ import { createSyncRouter } from "./routes/sync.js";
 <<<<<<< HEAD
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
+<<<<<<< HEAD
 =======
 =======
 import { createFirefliesRouter } from "./routes/fireflies.js";
@@ -39,6 +40,8 @@ import { createFirefliesRouter } from "./routes/fireflies.js";
 =======
 import { createConversationsRouter } from "./routes/conversations.js";
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
 
 >>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 
@@ -88,6 +91,7 @@ async function main() {
   const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
   const tryGetDelegatedAccess = async () => {
     const subResult = await backendKV.get(WEBHOOK_USER_SUB_PATH);
+<<<<<<< HEAD
     const sub =
       subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
     if (!sub) {
@@ -117,13 +121,31 @@ async function main() {
       console.log(`[webhook] delegation expired at ${stored.expiresAt}`);
       return null;
     }
+=======
+    const sub = subResult.ok && (subResult as any).data?.data
+      ? String((subResult as any).data.data)
+      : null;
+    if (!sub) return null;
+
+    // Check cache first
+    let access = delegationCache.get(sub);
+    if (access) return access;
+
+    // Load from persistent store
+    const stored = await delegationStore.load(sub);
+    if (!stored) return null;
+    if (new Date(stored.expiresAt).getTime() <= Date.now()) return null;
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
 
     // Activate delegation
     try {
       const delegation = deserializeDelegation(stored.serialized);
       access = await node.useDelegation(delegation);
       delegationCache.set(sub, access);
+<<<<<<< HEAD
       console.log("[webhook] delegation activated from store");
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
       return access;
     } catch (err) {
       console.error("[webhook] failed to activate delegation:", err);
@@ -136,6 +158,7 @@ async function main() {
   app.use(cors({ origin: FRONTEND_URL }));
 
   // Webhook routes — mounted before express.json() so raw body is preserved for HMAC verification
+<<<<<<< HEAD
   // Auth + delegation middleware passed for pending queue endpoints (GET/DELETE)
   app.use(
     "/api/webhooks",
@@ -145,6 +168,11 @@ async function main() {
       authMiddleware: authMiddleware as any,
       delegationMiddleware: delegationMiddleware as any,
     }),
+=======
+  app.use(
+    "/api/webhooks",
+    createWebhookRouter({ backendKV, tryGetDelegatedAccess }),
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
   );
 
   app.use(express.json());
@@ -186,6 +214,7 @@ async function main() {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Config routes (Fireflies API key + webhook config)
 =======
   // Config routes (Fireflies API key management)
@@ -197,6 +226,8 @@ async function main() {
     put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
   };
 
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
   // Config routes (Fireflies API key + webhook config)
 >>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
   app.use(

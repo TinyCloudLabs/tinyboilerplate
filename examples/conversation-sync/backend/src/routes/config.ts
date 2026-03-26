@@ -39,6 +39,7 @@ const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
 >>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 =======
 const WEBHOOK_SECRET_PATH = "/app.webhooks/config/fireflies-secret";
+const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
 const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
 >>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
 
@@ -170,12 +171,18 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
       try {
         await backendKV.put(WEBHOOK_SECRET_PATH, secret);
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         // Store user sub so webhook handler can look up their delegation
         if (req.user?.sub) {
           await backendKV.put(WEBHOOK_USER_SUB_PATH, req.user.sub);
         }
+<<<<<<< HEAD
 =======
 >>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         res.json({ ok: true });
       } catch (err) {
         console.error("[config] failed to store webhook secret:", err);

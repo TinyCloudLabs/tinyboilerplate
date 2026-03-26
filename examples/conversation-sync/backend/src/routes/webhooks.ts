@@ -1,5 +1,9 @@
 import { Router, raw as expressRaw } from "express";
+<<<<<<< HEAD
 import type { Request, Response, RequestHandler } from "express";
+=======
+import type { Request, Response } from "express";
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
 import type { DelegatedAccess } from "@tinyboilerplate/server";
 import { verifyFirefliesSignature } from "../services/webhook-verify.js";
 import { syncSingleTranscript, type SyncSingleResult } from "../services/sync-pipeline.js";
@@ -16,6 +20,7 @@ interface BackendKV {
 interface WebhookRoutesConfig {
   backendKV: BackendKV;
   tryGetDelegatedAccess: () => Promise<DelegatedAccess | null>;
+<<<<<<< HEAD
   /** Auth middleware for pending endpoints (not needed for POST webhook) */
   authMiddleware?: RequestHandler;
   /** Delegation middleware for pending endpoints */
@@ -26,6 +31,10 @@ interface WebhookRoutesConfig {
     access: DelegatedAccess,
     client: Pick<FirefliesClient, "getTranscript">,
   ) => Promise<SyncSingleResult>;
+=======
+  /** Override for testing */
+  syncFn?: (meetingId: string, access: DelegatedAccess, client: Pick<FirefliesClient, "getTranscript">) => Promise<SyncSingleResult>;
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
   /** Override for testing */
   createClient?: (apiKey: string) => Pick<FirefliesClient, "getTranscript">;
 }
@@ -50,6 +59,7 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
     "/fireflies",
     expressRaw({ type: "application/json" }),
     async (req: Request, res: Response) => {
+<<<<<<< HEAD
       // Log incoming request with redacted headers
       const redactedHeaders: Record<string, string> = {};
       for (const [key, val] of Object.entries(req.headers)) {
@@ -61,6 +71,8 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       }
       console.log(`[webhook] POST /fireflies — headers: ${JSON.stringify(redactedHeaders)}`);
 
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
       const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body ?? "");
 
       // 1. Read webhook secret from backend KV
@@ -68,7 +80,10 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       const secret = secretResult.ok && secretResult.data.data ? secretResult.data.data : null;
 
       if (!secret) {
+<<<<<<< HEAD
         console.log("[webhook] no webhook secret configured — rejecting");
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         res.status(401).json({
           error: "no_webhook_secret",
           message: "Webhook secret not configured",
@@ -79,9 +94,12 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       // 2. Verify HMAC signature
       const signatureHeader = req.headers["x-hub-signature"] as string | undefined;
       if (!signatureHeader || !verifyFirefliesSignature(rawBody, signatureHeader, secret)) {
+<<<<<<< HEAD
         console.log(
           `[webhook] signature verification failed — header x-hub-signature: ${signatureHeader ? signatureHeader.substring(0, 15) + "..." : "missing"}`,
         );
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         res.status(401).json({
           error: "invalid_signature",
           message: "Invalid or missing HMAC signature",
@@ -90,6 +108,7 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       }
 
       // 3. Parse JSON body
+<<<<<<< HEAD
       // Fireflies sends two payload formats:
       //   Legacy: { meetingId, eventType: "Transcription completed" }
       //   Current: { meeting_id, event: "meeting.transcribed", timestamp }
@@ -98,6 +117,12 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
         raw = JSON.parse(rawBody.toString());
       } catch {
         console.log("[webhook] failed to parse request body as JSON");
+=======
+      let payload: { meetingId?: string; eventType?: string };
+      try {
+        payload = JSON.parse(rawBody.toString());
+      } catch {
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         res.status(400).json({
           error: "invalid_json",
           message: "Request body is not valid JSON",
@@ -105,6 +130,7 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
         return;
       }
 
+<<<<<<< HEAD
       // Normalise both payload formats
       const eventType = (raw.eventType as string) ?? (raw.event as string) ?? undefined;
       const meetingId = (raw.meetingId as string) ?? (raw.meeting_id as string) ?? undefined;
@@ -125,12 +151,21 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       if (!isSyncEvent) {
         console.log(`[webhook] ignoring event — event=${eventType}`);
         res.json({ status: "ignored", eventType });
+=======
+      // 4. Ignore non-transcription events (return 200 to prevent retries)
+      if (payload.eventType !== "Transcription completed") {
+        res.json({ status: "ignored", eventType: payload.eventType });
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         return;
       }
 
       // 5. Validate meetingId
+<<<<<<< HEAD
       if (!meetingId) {
         console.log("[webhook] missing meetingId in transcription event");
+=======
+      if (!payload.meetingId) {
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         res.status(400).json({
           error: "missing_meeting_id",
           message: "meetingId is required for transcription events",
@@ -138,12 +173,20 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
         return;
       }
 
+<<<<<<< HEAD
+=======
+      const { meetingId } = payload;
+
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
       // 6. Check delegation
       try {
         const access = await tryGetDelegatedAccess();
 
         if (!access) {
+<<<<<<< HEAD
           console.log(`[webhook] delegation expired — queuing meetingId=${meetingId}`);
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
           await storePending(backendKV, meetingId);
           res.json({ status: "pending", reason: "delegation_expired" });
           return;
@@ -151,16 +194,25 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
 
         // 7. Read Fireflies API key from user's KV
         const apiKeyResult = await access.kv.get(FIREFLIES_KEY_PATH);
+<<<<<<< HEAD
         const apiKey =
           apiKeyResult.ok && apiKeyResult.data.data ? String(apiKeyResult.data.data) : null;
 
         if (!apiKey) {
           console.log(`[webhook] no Fireflies API key found — queuing meetingId=${meetingId}`);
+=======
+        const apiKey = apiKeyResult.ok && apiKeyResult.data.data
+          ? String(apiKeyResult.data.data)
+          : null;
+
+        if (!apiKey) {
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
           await storePending(backendKV, meetingId);
           res.json({ status: "pending", reason: "no_api_key" });
           return;
         }
 
+<<<<<<< HEAD
         // 8. Sync or update transcript
         await ensureSchema(access);
         const client = makeClient(apiKey);
@@ -214,12 +266,33 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
         }
       } catch (err) {
         console.error(`[webhook] error processing meetingId=${meetingId}:`, err);
+=======
+        // 8. Sync transcript
+        await ensureSchema(access);
+        const client = makeClient(apiKey);
+        const result = await doSync(meetingId, access, client);
+
+        if (result.status === "error") {
+          res.status(500).json({ status: "error", error: result.error });
+          return;
+        }
+
+        res.json({
+          status: "processed",
+          meetingId: result.meetingId,
+          conversationId: result.conversationId,
+          title: result.title,
+        });
+      } catch (err) {
+        console.error("[webhook] processing failed:", err);
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
         const message = err instanceof Error ? err.message : String(err);
         res.status(500).json({ status: "error", error: message });
       }
     },
   );
 
+<<<<<<< HEAD
   // ── Pending queue endpoints (require auth + delegation) ──────────
 
   if (config.authMiddleware && config.delegationMiddleware) {
@@ -285,11 +358,14 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
     });
   }
 
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
   return router;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+<<<<<<< HEAD
 interface PendingItem {
   meetingId: string;
   receivedAt: string;
@@ -349,6 +425,8 @@ async function updateSummary(
   return "updated";
 }
 
+=======
+>>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
 async function storePending(backendKV: BackendKV, meetingId: string) {
   const existingResult = await backendKV.get(PENDING_KV_KEY);
   let pending: Array<{ meetingId: string; receivedAt: string }> = [];

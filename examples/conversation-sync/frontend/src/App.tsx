@@ -54,6 +54,7 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
+<<<<<<< HEAD
 =======
   const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
 <<<<<<< HEAD
@@ -62,6 +63,8 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
 
   const tokenStoreRef = useRef(new TokenStore());
   const restoreAttemptedRef = useRef(false);
@@ -121,8 +124,16 @@ export function App() {
   }, [api]);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   useEffect(() => {
     if (!api || hasKey !== true) return;
+=======
+  // ── Auto-process pending webhook items ─────────────────────────────
+
+  useEffect(() => {
+    if (!api || hasKey !== true) return;
+
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
     api
       .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
         "/api/webhooks/fireflies/pending",
@@ -136,6 +147,7 @@ export function App() {
           setRefreshKey((k) => k + 1);
         }
       })
+<<<<<<< HEAD
       .catch((err) => console.error("[pending]", err));
   }, [api, hasKey]);
 
@@ -151,6 +163,13 @@ export function App() {
 
 =======
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+      .catch((err) => {
+        console.error("[pending] Failed to process pending webhooks:", err);
+      });
+  }, [api, hasKey]);
+
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
   // ── Sign In ───────────────────────────────────────────────────────
 
   const handleSignIn = useCallback(async () => {
@@ -250,9 +269,18 @@ export function App() {
         )}
 
         {pendingBanner && (
+<<<<<<< HEAD
           <div style={s.pendingBanner}>
             <span>{pendingBanner}</span>
             <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>
+=======
+          <div style={styles.pendingBanner}>
+            {pendingBanner}
+            <button
+              style={styles.bannerDismiss}
+              onClick={() => setPendingBanner(null)}
+            >
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
               &times;
             </button>
           </div>
@@ -424,6 +452,25 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     padding: 20,
     background: "#fafafa",
+  },
+  pendingBanner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 14px",
+    background: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    borderRadius: 6,
+    fontSize: 14,
+    color: "#166534",
+  },
+  bannerDismiss: {
+    background: "none",
+    border: "none",
+    fontSize: 18,
+    color: "#166534",
+    cursor: "pointer",
+    padding: "0 4px",
   },
   footer: {
     fontFamily: FONT,

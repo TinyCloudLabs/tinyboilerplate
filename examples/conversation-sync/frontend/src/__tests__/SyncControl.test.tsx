@@ -17,10 +17,14 @@ import type { ApiClient } from "@tinyboilerplate/client";
 function mockApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
 <<<<<<< HEAD
+<<<<<<< HEAD
     get: vi.fn().mockResolvedValue({ configured: false, pendingCount: 0, webhookUrl: "" }),
 =======
     get: vi.fn(),
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+=======
+    get: vi.fn().mockResolvedValue({ configured: false, pendingCount: 0, webhookUrl: "" }),
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
     post: vi.fn(),
     put: vi.fn(),
     del: vi.fn(),
@@ -391,5 +395,83 @@ describe("SyncControl", () => {
       expect(screen.getByText(/network failure/i)).toBeInTheDocument();
     });
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+  });
+
+  // ── Webhook status tests ───────────────────────────────────────────
+
+  it("fetches webhook status on mount", async () => {
+    const getMock = vi.fn().mockResolvedValue({
+      configured: true,
+      pendingCount: 0,
+      webhookUrl: "http://localhost:3001/api/webhooks/fireflies",
+    });
+    api = mockApi({ get: getMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/config/webhook-status");
+    });
+  });
+
+  it("shows 'Webhook active' when configured with no pending", async () => {
+    const getMock = vi.fn().mockResolvedValue({
+      configured: true,
+      pendingCount: 0,
+      webhookUrl: "http://localhost:3001/api/webhooks/fireflies",
+    });
+    api = mockApi({ get: getMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/webhook active/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows 'Webhook not configured' when not configured", async () => {
+    const getMock = vi.fn().mockResolvedValue({
+      configured: false,
+      pendingCount: 0,
+      webhookUrl: "http://localhost:3001/api/webhooks/fireflies",
+    });
+    api = mockApi({ get: getMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/webhook not configured/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows pending count when there are pending items", async () => {
+    const getMock = vi.fn().mockResolvedValue({
+      configured: true,
+      pendingCount: 3,
+      webhookUrl: "http://localhost:3001/api/webhooks/fireflies",
+    });
+    api = mockApi({ get: getMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 transcripts waiting/i)).toBeInTheDocument();
+    });
+  });
+
+  it("does not show webhook status if fetch fails", async () => {
+    const getMock = vi.fn().mockRejectedValue(new Error("fetch failed"));
+    api = mockApi({ get: getMock });
+
+    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+
+    // Wait for fetch to complete
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/config/webhook-status");
+    });
+
+    // Should not show webhook status
+    expect(screen.queryByText(/webhook active/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/webhook not configured/i)).not.toBeInTheDocument();
   });
 });

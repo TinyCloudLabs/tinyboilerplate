@@ -19,6 +19,7 @@ interface SyncResult {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 interface SyncProgress {
   phase: "listing" | "syncing";
   totalListed?: number;
@@ -29,12 +30,15 @@ interface SyncProgress {
   lastTitle?: string;
 }
 
+=======
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
 interface WebhookStatus {
   configured: boolean;
   pendingCount: number;
   webhookUrl: string;
 }
 
+<<<<<<< HEAD
 interface SyncControlProps {
   api: ApiClient;
   backendUrl: string;
@@ -71,6 +75,8 @@ function parseSSEChunk(buffer: string): { events: SSEEvent[]; remaining: string 
 // ── Helpers ─────────────────────────────────────────────────────────
 
 =======
+=======
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
 interface SyncControlProps {
   api: ApiClient;
   onSyncComplete: () => void;
@@ -137,6 +143,15 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
   const [lastSync, setLastSync] = useState<string | null>(
     () => localStorage.getItem(LAST_SYNC_KEY),
   );
+  const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null);
+
+  // ── Fetch webhook status on mount ──────────────────────────────────
+  useEffect(() => {
+    api
+      .get<WebhookStatus>("/api/config/webhook-status")
+      .then((status) => setWebhookStatus(status))
+      .catch(() => {});
+  }, [api]);
 
   // Refresh "X minutes ago" display
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
@@ -146,6 +161,7 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
     return () => clearInterval(id);
   }, [lastSync]);
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   // ── SSE sync handler ──────────────────────────────────────────────
 
@@ -244,12 +260,15 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
 
   const handleSync = useCallback(() => startStreamSync("incremental"), [startStreamSync]);
 
+=======
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
   const handleClearAndResync = useCallback(async () => {
     setSyncing(true);
     setResult(null);
     setError(null);
     try {
       await api.del("/api/sync/conversations");
+<<<<<<< HEAD
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSyncing(false);
@@ -393,6 +412,21 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
               ))}
             </div>
 =======
+=======
+      const data = await api.post<SyncResult>("/api/sync/fireflies", { limit });
+      setResult(data);
+      const ts = new Date().toISOString();
+      localStorage.setItem(LAST_SYNC_KEY, ts);
+      setLastSync(ts);
+      onSyncComplete();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncing(false);
+    }
+  }, [api, limit, onSyncComplete]);
+
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
   const handleSync = useCallback(async () => {
     setSyncing(true);
     setResult(null);
@@ -441,6 +475,17 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
           onClick={handleSync}
         >
           {syncing ? "Syncing..." : "Sync Now"}
+        </button>
+        <button
+          style={{
+            ...styles.button,
+            background: "#dc2626",
+            ...(syncing ? styles.buttonDisabled : {}),
+          }}
+          disabled={syncing}
+          onClick={handleClearAndResync}
+        >
+          Clear & Re-sync
         </button>
       </div>
 
@@ -493,6 +538,19 @@ export const SyncControl: FC<SyncControlProps> = ({ api, onSyncComplete }) => {
       {lastSync && (
         <p style={styles.lastSync}>Last synced: {formatTimeAgo(lastSync)}</p>
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+      )}
+
+      {webhookStatus && (
+        <div style={styles.webhookStatus}>
+          <span style={webhookStatus.configured ? styles.webhookActive : styles.webhookInactive}>
+            {webhookStatus.configured ? "Webhook active" : "Webhook not configured"}
+          </span>
+          {webhookStatus.pendingCount > 0 && (
+            <span style={styles.pendingCount}>
+              {webhookStatus.pendingCount} transcripts waiting
+            </span>
+          )}
+        </div>
       )}
     </section>
   );
@@ -889,5 +947,24 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 8,
     marginBottom: 0,
   },
+<<<<<<< HEAD
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+=======
+  webhookStatus: {
+    display: "flex",
+    gap: 12,
+    alignItems: "center",
+    marginTop: 8,
+    fontSize: 12,
+  },
+  webhookActive: {
+    color: "#166534",
+  },
+  webhookInactive: {
+    color: "#888",
+  },
+  pendingCount: {
+    color: "#92400e",
+  },
+>>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
 };

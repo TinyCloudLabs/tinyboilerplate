@@ -105,9 +105,15 @@ async function main() {
   app.use(cors({ origin: FRONTEND_URL }));
 
   // Webhook routes — mounted before express.json() so raw body is preserved for HMAC verification
+  // Auth + delegation middleware passed for pending queue endpoints (GET/DELETE)
   app.use(
     "/api/webhooks",
-    createWebhookRouter({ backendKV, tryGetDelegatedAccess }),
+    createWebhookRouter({
+      backendKV,
+      tryGetDelegatedAccess,
+      authMiddleware: authMiddleware as any,
+      delegationMiddleware: delegationMiddleware as any,
+    }),
   );
 
   app.use(express.json());

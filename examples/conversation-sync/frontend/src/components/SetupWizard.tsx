@@ -220,15 +220,28 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           <h3 style={s.stepTitle}>Get Your API Key</h3>
           <p style={s.stepDesc}>
             Go to{" "}
+<<<<<<< HEAD
             <a href="https://app.fireflies.ai/integrations" target="_blank" rel="noreferrer" style={s.link}>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+            <a
+              href="https://app.fireflies.ai/integrations"
+              target="_blank"
+              rel="noreferrer"
+              style={s.link}
+            >
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
               app.fireflies.ai
-            </a>
-            {" "}&rarr; Integrations &rarr; Fireflies API &rarr; copy your API key.
+            </a>{" "}
+            &rarr; Integrations &rarr; Fireflies API &rarr; copy your API key.
           </p>
           <div style={s.btnRow}>
-            <button style={s.btnGhost} onClick={() => setStep("welcome")}>Back</button>
-            <button style={s.btnPrimary} onClick={() => setStep("input")}>Next</button>
+            <button style={s.btnGhost} onClick={() => setStep("welcome")}>
+              Back
+            </button>
+            <button style={s.btnPrimary} onClick={() => setStep("input")}>
+              Next
+            </button>
           </div>
         </div>
       )}
@@ -244,7 +257,9 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
             style={s.input}
           />
           <div style={s.btnRow}>
-            <button style={s.btnGhost} onClick={() => setStep("instructions")}>Back</button>
+            <button style={s.btnGhost} onClick={() => setStep("instructions")}>
+              Back
+            </button>
             <button
               style={{ ...s.btnPrimary, ...(apiKey.trim() === "" || saving ? s.btnDisabled : {}) }}
               disabled={apiKey.trim() === "" || saving}
@@ -296,13 +311,25 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
                   <p style={s.successSub}>{userInfo.email}</p>
                 </div>
               </div>
-              <button style={s.btnPrimary} onClick={() => setStep("webhook")}>Continue</button>
+              <button style={s.btnPrimary} onClick={() => setStep("webhook")}>
+                Continue
+              </button>
             </>
           ) : (
             <>
               <div style={s.errorCard}>{testError}</div>
+<<<<<<< HEAD
               <button style={s.btnGhost} onClick={() => { setTestError(null); setStep("input"); }}>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+              <button
+                style={s.btnGhost}
+                onClick={() => {
+                  setTestError(null);
+                  setStep("input");
+                }}
+              >
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
                 Try Again
               </button>
             </>
@@ -347,6 +374,7 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
                 setWebhookError(null);
                 setWebhookSaved(false);
               }}
+<<<<<<< HEAD
               style={{ ...s.input, flex: 1, marginBottom: 0 }}
             />
             <button
@@ -466,6 +494,8 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               placeholder="16-32 characters"
               value={webhookSecret}
               onChange={(e) => { setWebhookSecret(e.target.value); setWebhookError(null); setWebhookSaved(false); }}
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
               style={{ ...s.input, flex: 1, marginBottom: 0 }}
             />
             <button
@@ -473,7 +503,11 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               onClick={() => {
                 const arr = new Uint8Array(24);
                 crypto.getRandomValues(arr);
-                setWebhookSecret(Array.from(arr, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 32));
+                setWebhookSecret(
+                  Array.from(arr, (b) => b.toString(36).padStart(2, "0"))
+                    .join("")
+                    .slice(0, 32),
+                );
                 setWebhookError(null);
                 setWebhookSaved(false);
               }}
@@ -497,9 +531,14 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           </div>
 
           <div style={s.btnRow}>
-            <button style={s.btnGhost} onClick={() => setStep("done")}>Skip</button>
+            <button style={s.btnGhost} onClick={() => setStep("done")}>
+              Skip
+            </button>
             <button
-              style={{ ...s.btnPrimary, ...(webhookSecret.length < 16 || webhookSaving ? s.btnDisabled : {}) }}
+              style={{
+                ...s.btnPrimary,
+                ...(webhookSecret.length < 16 || webhookSaving ? s.btnDisabled : {}),
+              }}
               disabled={webhookSecret.length < 16 || webhookSaving}
               onClick={async () => {
                 setWebhookSaving(true);
@@ -517,7 +556,9 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               {webhookSaving ? "Saving\u2026" : "Save Secret"}
             </button>
             {webhookSaved && (
-              <button style={s.btnPrimary} onClick={() => setStep("done")}>Continue</button>
+              <button style={s.btnPrimary} onClick={() => setStep("done")}>
+                Continue
+              </button>
             )}
           </div>
         </div>
@@ -543,7 +584,9 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               <p style={s.successSub}>Your first sync is ready.</p>
             </div>
           </div>
-          <button style={s.btnPrimary} onClick={onComplete}>Start Syncing</button>
+          <button style={s.btnPrimary} onClick={onComplete}>
+            Start Syncing
+          </button>
         </div>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       )}

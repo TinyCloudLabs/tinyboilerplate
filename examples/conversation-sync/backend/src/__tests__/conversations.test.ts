@@ -426,13 +426,19 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
         duration_secs: 1800,
         summary: "Team discussed sprint goals",
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         metadata: JSON.stringify({
           audio_url: "https://audio.example.com/ff-123.mp3",
           organizer_email: "roman@example.com",
         }),
+<<<<<<< HEAD
 =======
         metadata: JSON.stringify({ audio_url: "https://audio.example.com/ff-123.mp3", organizer_email: "roman@example.com" }),
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         created_at: "2026-03-20T12:00:00Z",
         updated_at: "2026-03-20T12:00:00Z",
       },

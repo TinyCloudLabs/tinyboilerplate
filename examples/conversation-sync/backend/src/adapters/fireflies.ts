@@ -30,8 +30,12 @@ export const normalizeFireflies: NormalizeFn<FullTranscript> = (raw) => {
 
   // Build a lookup from attendee displayName → email for best-effort matching
   const emailByName = new Map<string, string>();
+<<<<<<< HEAD
   for (const attendee of (raw.meeting_attendees ?? [])) {
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+  for (const attendee of raw.meeting_attendees ?? []) {
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     emailByName.set(attendee.displayName, attendee.email);
   }
 

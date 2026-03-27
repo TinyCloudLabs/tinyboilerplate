@@ -44,6 +44,7 @@ function cleanSummary(str: string, max: number): string {
     .replace(/^[-*]\s+/gm, "") // bullet prefixes
     .replace(/\n+/g, " ") // newlines → spaces
     .replace(/\s{2,}/g, " ") // collapse whitespace
+<<<<<<< HEAD
     .trim();
   return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
 =======
@@ -76,13 +77,17 @@ function cleanSummary(str: string, max: number): string {
     .replace(/^[-*]\s+/gm, "")          // bullet prefixes
     .replace(/\n+/g, " ")               // newlines → spaces
     .replace(/\s{2,}/g, " ")            // collapse whitespace
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     .trim();
   return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 }
 
 export const ConversationList: FC<ConversationListProps> = ({
-  api, onSelectConversation, refreshKey,
+  api,
+  onSelectConversation,
+  refreshKey,
 }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [total, setTotal] = useState(0);
@@ -230,7 +235,9 @@ export const ConversationList: FC<ConversationListProps> = ({
 =======
     <section style={s.card}>
       <div style={s.headerRow}>
-        <span style={s.countLabel}>{total} conversation{total !== 1 ? "s" : ""}</span>
+        <span style={s.countLabel}>
+          {total} conversation{total !== 1 ? "s" : ""}
+        </span>
       </div>
 
       <ul style={s.list}>
@@ -244,12 +251,18 @@ export const ConversationList: FC<ConversationListProps> = ({
             <div style={s.meta}>
               <span>{formatDuration(c.duration_secs)}</span>
               <span style={s.metaDot}>&middot;</span>
-              <span>{c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}</span>
+              <span>
+                {c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}
+              </span>
             </div>
+<<<<<<< HEAD
             {c.summary && (
               <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>
             )}
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+            {c.summary && <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>}
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
           </li>
         ))}
       </ul>

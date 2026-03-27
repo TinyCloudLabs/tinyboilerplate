@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 =======
 import {
@@ -11,6 +12,9 @@ import {
   act,
 } from "@testing-library/react";
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+=======
+import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 import { SyncControl } from "../components/SyncControl";
 import type { ApiClient } from "@tinyboilerplate/client";
 
@@ -191,9 +195,7 @@ describe("SyncControl", () => {
 =======
   it("renders Sync Now button and limit selector", () => {
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
-    expect(
-      screen.getByRole("button", { name: /sync now/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync now/i })).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
@@ -202,17 +204,11 @@ describe("SyncControl", () => {
     const select = screen.getByRole("combobox") as HTMLSelectElement;
     expect(select.value).toBe("20");
     const options = screen.getAllByRole("option");
-    expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual([
-      "10",
-      "20",
-      "50",
-    ]);
+    expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(["10", "20", "50"]);
   });
 
   it("calls POST /api/sync/fireflies with selected limit on click", async () => {
-    const postMock = vi
-      .fn()
-      .mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
+    const postMock = vi.fn().mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
     api = mockApi({ post: postMock });
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
@@ -251,18 +247,14 @@ describe("SyncControl", () => {
   });
 
   it("shows success message on completed sync", async () => {
-    const postMock = vi
-      .fn()
-      .mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
+    const postMock = vi.fn().mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
     api = mockApi({ post: postMock });
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
     fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/synced 5 conversations/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/synced 5 conversations/i)).toBeInTheDocument();
       expect(screen.getByText(/3 already up to date/i)).toBeInTheDocument();
     });
   });
@@ -298,18 +290,12 @@ describe("SyncControl", () => {
       vi.advanceTimersByTime(60_000);
     });
 
-    expect(
-      screen.getByText(/sync is taking longer than expected/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/try again with a smaller batch/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/sync is taking longer than expected/i)).toBeInTheDocument();
+    expect(screen.getByText(/try again with a smaller batch/i)).toBeInTheDocument();
   });
 
   it("calls onSyncComplete after successful sync", async () => {
-    const postMock = vi
-      .fn()
-      .mockResolvedValue({ synced: 2, skipped: 0, failed: 0, errors: [] });
+    const postMock = vi.fn().mockResolvedValue({ synced: 2, skipped: 0, failed: 0, errors: [] });
     api = mockApi({ post: postMock });
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
@@ -321,9 +307,7 @@ describe("SyncControl", () => {
   });
 
   it("does not call onSyncComplete on full failure", async () => {
-    const postMock = vi
-      .fn()
-      .mockRejectedValue(new Error("Server error"));
+    const postMock = vi.fn().mockRejectedValue(new Error("Server error"));
     api = mockApi({ post: postMock });
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
@@ -338,9 +322,9 @@ describe("SyncControl", () => {
   it("stores last sync timestamp in localStorage on success", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-24T15:00:00Z"));
-    const postMock = vi.fn().mockImplementation(
-      () => Promise.resolve({ synced: 1, skipped: 0, failed: 0, errors: [] }),
-    );
+    const postMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve({ synced: 1, skipped: 0, failed: 0, errors: [] }));
     api = mockApi({ post: postMock });
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
@@ -351,15 +335,20 @@ describe("SyncControl", () => {
       await vi.advanceTimersByTimeAsync(100);
     });
 
+<<<<<<< HEAD
     expect(localStorage.getItem("lastSyncTimestamp")).toBe(
       "2026-03-24T15:00:00.000Z",
     );
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+=======
+    expect(localStorage.getItem("lastSyncTimestamp")).toBe("2026-03-24T15:00:00.000Z");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   it("displays last synced time from localStorage", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-24T15:10:00Z"));
+<<<<<<< HEAD
 <<<<<<< HEAD
     localStorage.setItem("lastSyncTimestamp", new Date("2026-03-24T15:00:00Z").toISOString());
 
@@ -377,15 +366,16 @@ describe("SyncControl", () => {
       "lastSyncTimestamp",
       new Date("2026-03-24T15:00:00Z").toISOString(),
     );
+=======
+    localStorage.setItem("lastSyncTimestamp", new Date("2026-03-24T15:00:00Z").toISOString());
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
     expect(screen.getByText(/last synced: 10 minutes ago/i)).toBeInTheDocument();
   });
 
   it("shows error message on API error", async () => {
-    const postMock = vi
-      .fn()
-      .mockRejectedValue(new Error("Network failure"));
+    const postMock = vi.fn().mockRejectedValue(new Error("Network failure"));
     api = mockApi({ post: postMock });
 
     render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);

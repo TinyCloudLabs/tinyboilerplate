@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 =======
 import {
@@ -10,6 +11,9 @@ import {
   cleanup,
 } from "@testing-library/react";
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 import { ConversationDetail } from "../components/ConversationDetail";
 import type { ApiClient } from "@tinyboilerplate/client";
 
@@ -44,6 +48,9 @@ const DETAIL_RESPONSE = {
   ],
   transcript: [
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     {
       index: 0,
       speaker_id: "1",
@@ -84,12 +91,15 @@ const DETAIL_RESPONSE = {
       end_time: 70,
       ai_filters: {},
     },
+<<<<<<< HEAD
 =======
     { index: 0, speaker_id: "1", speaker_name: "Alice", text: "Let's start the sprint planning.", raw_text: "Let's start the sprint planning.", start_time: 0, end_time: 5, ai_filters: {} },
     { index: 1, speaker_id: "1", speaker_name: "Alice", text: "We have a lot to cover today.", raw_text: "We have a lot to cover today.", start_time: 5, end_time: 10, ai_filters: {} },
     { index: 2, speaker_id: "2", speaker_name: "Bob", text: "Sounds good. I prepared the backlog.", raw_text: "Sounds good. I prepared the backlog.", start_time: 10, end_time: 15, ai_filters: {} },
     { index: 3, speaker_id: "1", speaker_name: "Alice", text: "Great, let's review it.", raw_text: "Great, let's review it.", start_time: 65, end_time: 70, ai_filters: {} },
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   ],
 };
 
@@ -123,12 +133,18 @@ describe("ConversationDetail", () => {
     let resolveGet!: (v: any) => void;
     const getMock = vi.fn().mockReturnValue(
 <<<<<<< HEAD
+<<<<<<< HEAD
       new Promise((resolve) => {
         resolveGet = resolve;
       }),
 =======
       new Promise((resolve) => { resolveGet = resolve; }),
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+      new Promise((resolve) => {
+        resolveGet = resolve;
+      }),
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     );
     api = mockApi({ get: getMock });
 
@@ -201,12 +217,18 @@ describe("ConversationDetail", () => {
 
     await waitFor(() => {
 <<<<<<< HEAD
+<<<<<<< HEAD
       expect(
         screen.getByText("Let's start the sprint planning. We have a lot to cover today."),
       ).toBeInTheDocument();
 =======
       expect(screen.getByText("Let's start the sprint planning. We have a lot to cover today.")).toBeInTheDocument();
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+      expect(
+        screen.getByText("Let's start the sprint planning. We have a lot to cover today."),
+      ).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       expect(screen.getByText("Sounds good. I prepared the backlog.")).toBeInTheDocument();
       expect(screen.getByText("Great, let's review it.")).toBeInTheDocument();
     });
@@ -259,6 +281,7 @@ describe("ConversationDetail", () => {
       const link = screen.getByText(/view on fireflies/i);
       expect(link).toBeInTheDocument();
 <<<<<<< HEAD
+<<<<<<< HEAD
       expect(link.closest("a")).toHaveAttribute("href", "https://app.fireflies.ai/view/01ABC");
 =======
       expect(link.closest("a")).toHaveAttribute(
@@ -266,6 +289,9 @@ describe("ConversationDetail", () => {
         "https://app.fireflies.ai/view/01ABC",
       );
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+      expect(link.closest("a")).toHaveAttribute("href", "https://app.fireflies.ai/view/01ABC");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     });
   });
 

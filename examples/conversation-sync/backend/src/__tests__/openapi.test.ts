@@ -57,12 +57,18 @@ describe("OpenAPI spec", () => {
 
   test("webhook POST endpoint has no security (public, HMAC-verified)", () => {
 <<<<<<< HEAD
+<<<<<<< HEAD
     const webhook = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/webhooks/fireflies"
     ];
 =======
     const webhook = (spec.paths as Record<string, Record<string, unknown>>)["/api/webhooks/fireflies"];
 >>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
+=======
+    const webhook = (spec.paths as Record<string, Record<string, unknown>>)[
+      "/api/webhooks/fireflies"
+    ];
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     const post = webhook.post as Record<string, unknown>;
     expect(post).toBeDefined();
     expect(post.security).toEqual([]);
@@ -70,17 +76,24 @@ describe("OpenAPI spec", () => {
 
   test("webhook pending has GET and DELETE operations", () => {
 <<<<<<< HEAD
+<<<<<<< HEAD
     const pending = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/webhooks/fireflies/pending"
     ];
 =======
     const pending = (spec.paths as Record<string, Record<string, unknown>>)["/api/webhooks/fireflies/pending"];
 >>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
+=======
+    const pending = (spec.paths as Record<string, Record<string, unknown>>)[
+      "/api/webhooks/fireflies/pending"
+    ];
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     expect(pending.get).toBeDefined();
     expect(pending.delete).toBeDefined();
   });
 
   test("webhook-secret has PUT operation", () => {
+<<<<<<< HEAD
 <<<<<<< HEAD
     const secret = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/config/webhook-secret"
@@ -88,10 +101,16 @@ describe("OpenAPI spec", () => {
 =======
     const secret = (spec.paths as Record<string, Record<string, unknown>>)["/api/config/webhook-secret"];
 >>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
+=======
+    const secret = (spec.paths as Record<string, Record<string, unknown>>)[
+      "/api/config/webhook-secret"
+    ];
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     expect(secret.put).toBeDefined();
   });
 
   test("webhook-status has GET operation", () => {
+<<<<<<< HEAD
 <<<<<<< HEAD
     const status = (spec.paths as Record<string, Record<string, unknown>>)[
       "/api/config/webhook-status"
@@ -99,6 +118,11 @@ describe("OpenAPI spec", () => {
 =======
     const status = (spec.paths as Record<string, Record<string, unknown>>)["/api/config/webhook-status"];
 >>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
+=======
+    const status = (spec.paths as Record<string, Record<string, unknown>>)[
+      "/api/config/webhook-status"
+    ];
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     expect(status.get).toBeDefined();
   });
 

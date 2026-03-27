@@ -77,8 +77,15 @@ function formatDate(isoString: string): string {
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString("en-US", {
+<<<<<<< HEAD
     weekday: "short", month: "short", day: "numeric", year: "numeric",
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 }
 
@@ -197,7 +204,11 @@ function getSpeakerColor(name: string, map: Map<string, number>): string {
 
 // ── Component ────────────────────────────────────────────────────────
 
-export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversationId, onBack }) => {
+export const ConversationDetail: FC<ConversationDetailProps> = ({
+  api,
+  conversationId,
+  onBack,
+}) => {
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +216,8 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api.get<DetailResponse>(`/api/conversations/${conversationId}`)
+    api
+      .get<DetailResponse>(`/api/conversations/${conversationId}`)
       .then((res) => setData(res))
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
@@ -239,6 +251,7 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
       <div>
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         <button style={s.backBtn} onClick={onBack}>
           &larr; Back
         </button>
@@ -251,6 +264,11 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
 =======
         <button style={s.backBtn} onClick={onBack}>&larr; Back</button>
+=======
+        <button style={s.backBtn} onClick={onBack}>
+          &larr; Back
+        </button>
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         <div style={s.errorCard}>{error}</div>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       </div>
@@ -312,8 +330,14 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
       </button>
 =======
     <section style={s.container}>
+<<<<<<< HEAD
       <button style={s.backBtn} onClick={onBack}>&larr; Back to conversations</button>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+      <button style={s.backBtn} onClick={onBack}>
+        &larr; Back to conversations
+      </button>
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
       {/* Header */}
       <div style={s.header}>
@@ -325,7 +349,9 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
           {participants.length > 0 && (
             <>
               <span style={s.metaDot}>&middot;</span>
-              <span style={s.metaText}>{participants.length} participant{participants.length !== 1 ? "s" : ""}</span>
+              <span style={s.metaText}>
+                {participants.length} participant{participants.length !== 1 ? "s" : ""}
+              </span>
             </>
           )}
         </div>
@@ -380,8 +406,15 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
 =======
         <div style={s.summaryCard}>
           <h3 style={s.sectionLabel}>Summary</h3>
+<<<<<<< HEAD
           <div style={s.summaryText} dangerouslySetInnerHTML={{ __html: renderSummary(conversation.summary) }} />
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+          <div
+            style={s.summaryText}
+            dangerouslySetInnerHTML={{ __html: renderSummary(conversation.summary) }}
+          />
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         </div>
       )}
 
@@ -402,6 +435,7 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
                   data-testid="transcript-block"
                   style={{ ...s.block, borderLeftColor: color }}
                 >
+<<<<<<< HEAD
                   <div style={s.blockHeader}>
                     {block.speakerName && (
                       <span style={{ ...s.speakerName, color }}>{block.speakerName}</span>
@@ -449,6 +483,8 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
               const color = getSpeakerColor(block.speakerName, speakerMap);
               return (
                 <div key={i} data-testid="transcript-block" style={{ ...s.block, borderLeftColor: color }}>
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
                   <div style={s.blockHeader}>
                     {block.speakerName && (
                       <span style={{ ...s.speakerName, color }}>{block.speakerName}</span>

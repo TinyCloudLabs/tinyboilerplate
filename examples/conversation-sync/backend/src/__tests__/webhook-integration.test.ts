@@ -232,10 +232,14 @@ describe("Webhook Integration Tests", () => {
       createWebhookRouter({
         backendKV,
 <<<<<<< HEAD
+<<<<<<< HEAD
         tryGetDelegatedAccess: async () => (delegationActive ? (mockAccess as any) : null),
 =======
         tryGetDelegatedAccess: async () => (delegationActive ? mockAccess as any : null),
 >>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
+=======
+        tryGetDelegatedAccess: async () => (delegationActive ? (mockAccess as any) : null),
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         authMiddleware: mockAuthMiddleware,
         delegationMiddleware,
         syncFn: syncSingleTranscript,
@@ -441,6 +445,7 @@ describe("Webhook Integration Tests", () => {
         table: "conversation",
         values: [
 <<<<<<< HEAD
+<<<<<<< HEAD
           "existing-conv-id", // id
           "Already Synced Meeting", // title
           "fireflies", // source
@@ -455,10 +460,14 @@ describe("Webhook Integration Tests", () => {
           "2026-01-01T00:00:00Z", // updated_at
 =======
           "existing-conv-id",      // id
+=======
+          "existing-conv-id", // id
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
           "Already Synced Meeting", // title
-          "fireflies",             // source
-          "already-synced",        // source_id
+          "fireflies", // source
+          "already-synced", // source_id
           "https://app.fireflies.ai/view/already-synced", // source_url
+<<<<<<< HEAD
           "2026-01-01T00:00:00Z",  // started_at
           "2026-01-01T00:30:00Z",  // ended_at
           1800,                    // duration_secs
@@ -467,6 +476,15 @@ describe("Webhook Integration Tests", () => {
           "2026-01-01T00:00:00Z",  // created_at
           "2026-01-01T00:00:00Z",  // updated_at
 >>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
+=======
+          "2026-01-01T00:00:00Z", // started_at
+          "2026-01-01T00:30:00Z", // ended_at
+          1800, // duration_secs
+          "Overview text", // summary
+          "{}", // metadata
+          "2026-01-01T00:00:00Z", // created_at
+          "2026-01-01T00:00:00Z", // updated_at
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         ],
       });
 

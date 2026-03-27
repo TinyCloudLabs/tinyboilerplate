@@ -71,6 +71,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       // Total count
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
       let total = 0;
       if (countResult.ok && countResult.data.rows?.[0]) {
@@ -90,6 +91,9 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         `SELECT COUNT(*) AS total FROM conversation`,
       );
+=======
+      const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       let total = 0;
       if (countResult.ok && countResult.data.rows?.[0]) {
         const countRow = rowToObject(
@@ -178,6 +182,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       const row = rowToObject(convoResult.data.rows[0] as unknown[], convoResult.data.columns);
 
       // Parse metadata from JSON string
@@ -195,6 +200,9 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
         convoResult.data.rows[0] as unknown[],
         convoResult.data.columns,
       );
+=======
+      const row = rowToObject(convoResult.data.rows[0] as unknown[], convoResult.data.columns);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
       // Parse metadata from JSON string
       let metadata: Record<string, unknown> = {};
@@ -219,6 +227,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
             participantsResult.data.rows as unknown[][],
             participantsResult.data.columns,
           )
+<<<<<<< HEAD
         : [];
 
       // Load transcript blob from KV
@@ -250,13 +259,17 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       );
       const participants = participantsResult.ok
         ? rowsToObjects(participantsResult.data.rows as unknown[][], participantsResult.data.columns)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         : [];
 
       // Load transcript blob from KV
       const kvKey = `/app.conversations/transcript/${id}`;
       console.log(`[conversations] Loading transcript from KV: ${kvKey}`);
       const kvResult = await access.kv.get(kvKey);
-      console.log(`[conversations] KV result ok=${kvResult.ok}, hasData=${kvResult.ok && kvResult.data?.data != null}, type=${kvResult.ok ? typeof kvResult.data?.data : 'n/a'}`);
+      console.log(
+        `[conversations] KV result ok=${kvResult.ok}, hasData=${kvResult.ok && kvResult.data?.data != null}, type=${kvResult.ok ? typeof kvResult.data?.data : "n/a"}`,
+      );
       let transcript: unknown = null;
 <<<<<<< HEAD
       if (transcriptBlob) {
@@ -270,7 +283,11 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
         const raw = kvResult.data.data;
         // KV may return already-parsed object or a JSON string
         if (typeof raw === "string") {
-          try { transcript = JSON.parse(raw); } catch { transcript = null; }
+          try {
+            transcript = JSON.parse(raw);
+          } catch {
+            transcript = null;
+          }
         } else {
           transcript = raw;
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)

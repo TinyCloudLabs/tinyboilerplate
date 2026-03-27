@@ -114,12 +114,18 @@ function createMockFullTranscript(overrides: Partial<FullTranscript> = {}): Full
     transcript_url: overrides.transcript_url ?? "https://app.fireflies.ai/view/ff-1",
     speakers: overrides.speakers ?? [{ id: "s1", name: "Alice" }],
 <<<<<<< HEAD
+<<<<<<< HEAD
     meeting_attendees: overrides.meeting_attendees ?? [
       { displayName: "Alice", email: "alice@example.com" },
     ],
 =======
     meeting_attendees: overrides.meeting_attendees ?? [{ displayName: "Alice", email: "alice@example.com" }],
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+    meeting_attendees: overrides.meeting_attendees ?? [
+      { displayName: "Alice", email: "alice@example.com" },
+    ],
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     sentences: overrides.sentences ?? [],
     summary: overrides.summary ?? {
       keywords: ["planning"],
@@ -266,6 +272,9 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
       { id: "conv-2", source_id: "ff-2" },
     ]);
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     mockSQL._setMetadata(
       "conv-1",
       JSON.stringify({ audio_url: "https://audio.example.com/ff-1.mp3" }),
@@ -274,6 +283,7 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
       "conv-2",
       JSON.stringify({ audio_url: "https://audio.example.com/ff-2.mp3" }),
     );
+<<<<<<< HEAD
 
     // Both now have summaries on Fireflies
     clientFactory.setGetResult(
@@ -328,6 +338,36 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
       },
     }));
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+
+    // Both now have summaries on Fireflies
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({
+        id: "ff-1",
+        summary: {
+          keywords: ["roadmap"],
+          action_items: [],
+          overview: "Discussed Q3 roadmap",
+          shorthand_bullet: "- Roadmap",
+          meeting_type: "planning",
+        },
+      }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({
+        id: "ff-2",
+        summary: {
+          keywords: ["standup"],
+          action_items: [],
+          overview: "Daily standup sync",
+          shorthand_bullet: "- Standup",
+          meeting_type: "standup",
+        },
+      }),
+    );
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     const res = await fetch(`http://localhost:${port}/api/sync/backfill-summaries`, {
       method: "POST",
@@ -341,12 +381,17 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
 
     // Verify UPDATE calls were made
 <<<<<<< HEAD
+<<<<<<< HEAD
     const updateCalls = mockSQL._calls.filter((c) =>
       c.sql.includes("UPDATE conversation SET summary"),
 =======
     const updateCalls = mockSQL._calls.filter(
       (c) => c.sql.includes("UPDATE conversation SET summary"),
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+    const updateCalls = mockSQL._calls.filter((c) =>
+      c.sql.includes("UPDATE conversation SET summary"),
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     );
     expect(updateCalls).toHaveLength(2);
 
@@ -370,6 +415,9 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
     mockSQL._setMetadata("conv-1", JSON.stringify({}));
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     clientFactory.setGetResult(
       "ff-1",
       createMockFullTranscript({
@@ -383,6 +431,7 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
         },
       }),
     );
+<<<<<<< HEAD
 =======
     clientFactory.setGetResult("ff-1", createMockFullTranscript({
       id: "ff-1",
@@ -395,6 +444,8 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
       },
     }));
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     const res = await fetch(`http://localhost:${port}/api/sync/backfill-summaries`, {
       method: "POST",
@@ -421,6 +472,9 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
 
     // ff-1 now has a summary, ff-2 still does not
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     clientFactory.setGetResult(
       "ff-1",
       createMockFullTranscript({
@@ -447,6 +501,7 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
         },
       }),
     );
+<<<<<<< HEAD
 =======
     clientFactory.setGetResult("ff-1", createMockFullTranscript({
       id: "ff-1",
@@ -469,6 +524,8 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
       },
     }));
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     mockSQL._setMetadata("conv-1", JSON.stringify({}));
 

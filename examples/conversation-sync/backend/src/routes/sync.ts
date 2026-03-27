@@ -29,6 +29,7 @@ interface SyncRoutesConfig {
   /** Optional factory for testing — defaults to creating a real FirefliesClient */
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   createClient?: (
     apiKey: string,
   ) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
@@ -39,6 +40,11 @@ interface SyncRoutesConfig {
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 =======
   createClient?: (apiKey: string) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
+=======
+  createClient?: (
+    apiKey: string,
+  ) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   /** Delay between API calls in ms (default 800). Set to 0 for tests. */
   syncDelayMs?: number;
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
@@ -97,6 +103,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         error: "no_api_key",
         message:
           "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+<<<<<<< HEAD
 =======
     const apiKey = await access.kv.get(FIREFLIES_KEY_PATH);
 =======
@@ -108,6 +115,8 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         error: "no_api_key",
         message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       });
       return;
     }
@@ -130,15 +139,21 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       const summaries = await client.listTranscripts(limit);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       console.log(
         `[sync] Fireflies returned ${summaries.length} transcripts:`,
         summaries.map((s) => ({ id: s.id, title: s.title })),
       );
+<<<<<<< HEAD
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
 =======
       console.log(`[sync] Fireflies returned ${summaries.length} transcripts:`, summaries.map(s => ({ id: s.id, title: s.title })));
 >>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
       if (summaries.length === 0) {
         res.json({
@@ -317,12 +332,18 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 
     let aborted = false;
 <<<<<<< HEAD
+<<<<<<< HEAD
     req.on("close", () => {
       aborted = true;
     });
 =======
     req.on("close", () => { aborted = true; });
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+    req.on("close", () => {
+      aborted = true;
+    });
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     const sendEvent = (type: string, data: unknown) => {
       if (aborted) return;
@@ -333,11 +354,16 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       // 1. Read Fireflies API key
       const keyResult = await access.kv.get(FIREFLIES_KEY_PATH);
 <<<<<<< HEAD
+<<<<<<< HEAD
       const apiKey =
         keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
 =======
       const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+      const apiKey =
+        keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       if (!apiKey) {
         sendEvent("error", { message: "No Fireflies API key configured." });
         res.end();
@@ -368,13 +394,19 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 
       // 4. Paginate through all transcripts
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       if (aborted) {
         res.end();
         return;
       }
+<<<<<<< HEAD
 =======
       if (aborted) { res.end(); return; }
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
       const paginationResult = await client.listAllTranscripts({
         batchSize: 25,
@@ -383,14 +415,20 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         delayMs,
         onProgress: (info) => {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
           sendEvent("progress", {
             phase: "listing",
             batch: info.batch,
             totalListed: info.totalSoFar,
           });
+<<<<<<< HEAD
 =======
           sendEvent("progress", { phase: "listing", batch: info.batch, totalListed: info.totalSoFar });
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         },
       });
 
@@ -466,11 +504,16 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       res.status(404).json({
         error: "no_api_key",
 <<<<<<< HEAD
+<<<<<<< HEAD
         message:
           "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
 =======
         message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+        message:
+          "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       });
       return;
     }
@@ -526,17 +569,23 @@ export function createSyncRouter(config: SyncRoutesConfig) {
               if (raw) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
                 try {
                   metadata = JSON.parse(String(raw));
                 } catch {
                   /* ignore malformed JSON */
                 }
+<<<<<<< HEAD
 =======
                 try { metadata = JSON.parse(String(raw)); } catch {}
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 =======
                 try { metadata = JSON.parse(String(raw)); } catch { /* ignore malformed JSON */ }
 >>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
               }
             }
             metadata.keywords = keywords;

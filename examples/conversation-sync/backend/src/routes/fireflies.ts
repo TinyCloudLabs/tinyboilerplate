@@ -44,11 +44,16 @@ export function createFirefliesRouter(config: FirefliesRoutesConfig) {
       res.status(404).json({
         error: "no_api_key",
 <<<<<<< HEAD
+<<<<<<< HEAD
         message:
           "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
 =======
         message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
 >>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
+=======
+        message:
+          "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       });
       return;
     }

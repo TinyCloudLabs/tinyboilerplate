@@ -16,7 +16,13 @@ function truncate(str: string, headLen: number, tailLen: number): string {
 }
 
 export const AuthPanel: FC<AuthPanelProps> = ({
-  isSignedIn, address, did, loading, error, onSignIn, onSignOut,
+  isSignedIn,
+  address,
+  did,
+  loading,
+  error,
+  onSignIn,
+  onSignOut,
 }) => {
   return (
     <section style={s.card}>
@@ -51,12 +57,18 @@ export const AuthPanel: FC<AuthPanelProps> = ({
             <code style={s.infoValue}>{truncate(did ?? "", 18, 8)}</code>
           </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
           <button onClick={onSignOut} style={s.btnGhost}>
             Sign Out
           </button>
 =======
           <button onClick={onSignOut} style={s.btnGhost}>Sign Out</button>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+          <button onClick={onSignOut} style={s.btnGhost}>
+            Sign Out
+          </button>
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         </div>
       )}
 

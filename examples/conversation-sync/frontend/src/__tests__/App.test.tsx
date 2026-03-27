@@ -13,6 +13,9 @@ const mockApiClient = { get: mockGet, post: mockPost, put: mockPut, del: mockDel
 vi.mock("@tinyboilerplate/client", () => {
   class MockTokenStore {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     hasTokens() {
       return true;
     }
@@ -25,12 +28,15 @@ vi.mock("@tinyboilerplate/client", () => {
     getAccessToken() {
       return "mock-token";
     }
+<<<<<<< HEAD
 =======
     hasTokens() { return true; }
     isExpired() { return false; }
     getAddress() { return "0xabc123"; }
     getAccessToken() { return "mock-token"; }
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     setTokens() {}
     clear() {}
   }
@@ -58,12 +64,18 @@ function createMockStorage(): Storage {
     removeItem: (key: string) => store.delete(key),
     clear: () => store.clear(),
 <<<<<<< HEAD
+<<<<<<< HEAD
     get length() {
       return store.size;
     },
 =======
     get length() { return store.size; },
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
+=======
+    get length() {
+      return store.size;
+    },
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     key: (index: number) => [...store.keys()][index] ?? null,
   };
 }
@@ -183,12 +195,18 @@ describe("App auto-process pending", () => {
       if (url === "/api/webhooks/fireflies/pending") {
         return Promise.resolve({
 <<<<<<< HEAD
+<<<<<<< HEAD
           processed: [
             { status: "created", meetingId: "m1", conversationId: "c1", title: "Meeting 1" },
           ],
 =======
           processed: [{ status: "created", meetingId: "m1", conversationId: "c1", title: "Meeting 1" }],
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
+=======
+          processed: [
+            { status: "created", meetingId: "m1", conversationId: "c1", title: "Meeting 1" },
+          ],
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
           skipped: [],
           errors: [],
         });

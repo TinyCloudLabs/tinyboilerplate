@@ -20,8 +20,5 @@ export function verifyFirefliesSignature(
 
   if (signatureHeader.length !== expected.length) return false;
 
-  return timingSafeEqual(
-    Buffer.from(signatureHeader),
-    Buffer.from(expected),
-  );
+  return timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expected));
 }

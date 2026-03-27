@@ -174,28 +174,22 @@ export class FirefliesClient {
 
   /** Fetch the authenticated user's info. */
   async getUser(): Promise<FirefliesUser> {
-    return this.request<{ user: FirefliesUser }>(GET_USER_QUERY).then(
-      (data) => data.user,
-    );
+    return this.request<{ user: FirefliesUser }>(GET_USER_QUERY).then((data) => data.user);
   }
 
   /** List transcripts with optional pagination. */
-  async listTranscripts(
-    limit?: number,
-    skip?: number,
-  ): Promise<TranscriptSummary[]> {
-    return this.request<{ transcripts: TranscriptSummary[] }>(
-      LIST_TRANSCRIPTS_QUERY,
-      { limit, skip },
-    ).then((data) => data.transcripts);
+  async listTranscripts(limit?: number, skip?: number): Promise<TranscriptSummary[]> {
+    return this.request<{ transcripts: TranscriptSummary[] }>(LIST_TRANSCRIPTS_QUERY, {
+      limit,
+      skip,
+    }).then((data) => data.transcripts);
   }
 
   /** Fetch a single transcript with full detail. */
   async getTranscript(id: string): Promise<FullTranscript> {
-    return this.request<{ transcript: FullTranscript }>(
-      GET_TRANSCRIPT_QUERY,
-      { id },
-    ).then((data) => data.transcript);
+    return this.request<{ transcript: FullTranscript }>(GET_TRANSCRIPT_QUERY, { id }).then(
+      (data) => data.transcript,
+    );
   }
 
   /**
@@ -248,10 +242,7 @@ export class FirefliesClient {
 
   // ── Private ───────────────────────────────────────────────────
 
-  private async request<T>(
-    query: string,
-    variables?: Record<string, unknown>,
-  ): Promise<T> {
+  private async request<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       const response = await fetch(FIREFLIES_GRAPHQL_URL, {
         method: "POST",
@@ -266,15 +257,15 @@ export class FirefliesClient {
       if (response.status === 429 && attempt < MAX_RETRIES) {
         const retryAfter = response.headers.get("retry-after");
         const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : DEFAULT_RATE_LIMIT_WAIT_MS;
-        console.log(`[fireflies] Rate limited (429). Waiting ${Math.ceil(waitMs / 1000)}s (attempt ${attempt}/${MAX_RETRIES})`);
+        console.log(
+          `[fireflies] Rate limited (429). Waiting ${Math.ceil(waitMs / 1000)}s (attempt ${attempt}/${MAX_RETRIES})`,
+        );
         await sleep(waitMs);
         continue;
       }
 
       if (!response.ok) {
-        throw new Error(
-          `Fireflies API error: ${response.status} ${response.statusText}`,
-        );
+        throw new Error(`Fireflies API error: ${response.status} ${response.statusText}`);
       }
 
       const json = (await response.json()) as {
@@ -288,8 +279,12 @@ export class FirefliesClient {
         if (rateLimited && attempt < MAX_RETRIES) {
           const match = rateLimited.message?.match(/retry after (.+?)(\s*\(|$)/i);
           const waitUntil = match ? new Date(match[1]) : null;
-          const waitMs = waitUntil ? Math.max(waitUntil.getTime() - Date.now(), 0) : DEFAULT_RATE_LIMIT_WAIT_MS;
-          console.log(`[fireflies] Rate limited (GraphQL). Waiting ${Math.ceil(waitMs / 1000)}s (attempt ${attempt}/${MAX_RETRIES})`);
+          const waitMs = waitUntil
+            ? Math.max(waitUntil.getTime() - Date.now(), 0)
+            : DEFAULT_RATE_LIMIT_WAIT_MS;
+          console.log(
+            `[fireflies] Rate limited (GraphQL). Waiting ${Math.ceil(waitMs / 1000)}s (attempt ${attempt}/${MAX_RETRIES})`,
+          );
           await sleep(waitMs);
           continue;
         }

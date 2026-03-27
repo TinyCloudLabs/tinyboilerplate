@@ -156,6 +156,7 @@ export const SyncControl: FC<SyncControlProps> = ({
   getAccessToken,
   onSyncComplete,
 }) => {
+<<<<<<< HEAD
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [result, setResult] = useState<SyncResult | null>(null);
@@ -194,18 +195,21 @@ function truncate(str: string, max: number): string {
 // ── Component ───────────────────────────────────────────────────────
 
 export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessToken, onSyncComplete }) => {
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastSync, setLastSync] = useState<string | null>(
-    () => localStorage.getItem(LAST_SYNC_KEY),
+  const [lastSync, setLastSync] = useState<string | null>(() =>
+    localStorage.getItem(LAST_SYNC_KEY),
   );
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    api.get<WebhookStatus>("/api/config/webhook-status")
+    api
+      .get<WebhookStatus>("/api/config/webhook-status")
       .then((status) => setWebhookStatus(status))
       .catch(() => {});
   }, [api]);
@@ -326,86 +330,98 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
 =======
   // ── SSE sync handler ──────────────────────────────────────────────
 
-  const startStreamSync = useCallback(async (mode: "incremental" | "full") => {
-    setSyncing(true);
-    setResult(null);
-    setError(null);
-    setProgress({ phase: "listing" });
+  const startStreamSync = useCallback(
+    async (mode: "incremental" | "full") => {
+      setSyncing(true);
+      setResult(null);
+      setError(null);
+      setProgress({ phase: "listing" });
 
-    const controller = new AbortController();
-    abortRef.current = controller;
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-    try {
-      const token = getAccessToken() ?? "";
-      const url = `${backendUrl}/api/sync/fireflies/stream?mode=${mode}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      });
+      try {
+        const token = getAccessToken() ?? "";
+        const url = `${backendUrl}/api/sync/fireflies/stream?mode=${mode}`;
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
 
-      if (!response.ok || !response.body) {
-        throw new Error(`Stream failed: ${response.status} ${response.statusText}`);
-      }
+        if (!response.ok || !response.body) {
+          throw new Error(`Stream failed: ${response.status} ${response.statusText}`);
+        }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const { events, remaining } = parseSSEChunk(buffer);
-        buffer = remaining;
+          buffer += decoder.decode(value, { stream: true });
+          const { events, remaining } = parseSSEChunk(buffer);
+          buffer = remaining;
 
-        for (const event of events) {
-          const data = JSON.parse(event.data);
+          for (const event of events) {
+            const data = JSON.parse(event.data);
 
-          switch (event.type) {
-            case "status":
-              setProgress((prev) => ({ ...prev, phase: data.phase, total: data.total }));
-              break;
-            case "progress":
-              if (data.phase === "listing") {
-                setProgress((prev) => ({ ...prev, phase: "listing", totalListed: data.totalListed }));
-              } else {
-                setProgress({
-                  phase: "syncing",
-                  current: data.current,
-                  total: data.total,
+            switch (event.type) {
+              case "status":
+                setProgress((prev) => ({ ...prev, phase: data.phase, total: data.total }));
+                break;
+              case "progress":
+                if (data.phase === "listing") {
+                  setProgress((prev) => ({
+                    ...prev,
+                    phase: "listing",
+                    totalListed: data.totalListed,
+                  }));
+                } else {
+                  setProgress({
+                    phase: "syncing",
+                    current: data.current,
+                    total: data.total,
+                    synced: data.synced,
+                    failed: data.failed,
+                    lastTitle: data.lastTitle,
+                  });
+                }
+                break;
+              case "complete": {
+                setResult({
                   synced: data.synced,
+                  skipped: data.skipped,
                   failed: data.failed,
-                  lastTitle: data.lastTitle,
+                  errors: data.errors,
                 });
+                setProgress(null);
+                const ts = new Date().toISOString();
+                localStorage.setItem(LAST_SYNC_KEY, ts);
+                setLastSync(ts);
+                onSyncComplete();
+                break;
               }
-              break;
-            case "complete": {
-              setResult({ synced: data.synced, skipped: data.skipped, failed: data.failed, errors: data.errors });
-              setProgress(null);
-              const ts = new Date().toISOString();
-              localStorage.setItem(LAST_SYNC_KEY, ts);
-              setLastSync(ts);
-              onSyncComplete();
-              break;
+              case "error":
+                setError(data.message);
+                setProgress(null);
+                break;
             }
-            case "error":
-              setError(data.message);
-              setProgress(null);
-              break;
           }
         }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+        setProgress(null);
+      } finally {
+        setSyncing(false);
+        abortRef.current = null;
       }
-    } catch (err) {
-      if ((err as Error).name !== "AbortError") {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-      setProgress(null);
-    } finally {
-      setSyncing(false);
-      abortRef.current = null;
-    }
-  }, [backendUrl, getAccessToken, onSyncComplete]);
+    },
+    [backendUrl, getAccessToken, onSyncComplete],
+  );
 
   const handleSync = useCallback(() => startStreamSync("incremental"), [startStreamSync]);
 
@@ -435,6 +451,7 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
     progress?.phase === "syncing" && progress.total
       ? Math.round(((progress.current ?? 0) / progress.total) * 100)
       : 0;
+<<<<<<< HEAD
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -595,6 +612,8 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
   const pct = progress?.phase === "syncing" && progress.total
     ? Math.round(((progress.current ?? 0) / progress.total) * 100)
     : 0;
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -699,9 +718,7 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
       <div style={s.headerRow}>
         <div style={s.titleGroup}>
           <h3 style={s.heading}>Sync</h3>
-          {lastSync && (
-            <span style={s.lastSyncBadge}>{formatTimeAgo(lastSync)}</span>
-          )}
+          {lastSync && <span style={s.lastSyncBadge}>{formatTimeAgo(lastSync)}</span>}
           {webhookStatus?.configured && (
             <span style={s.webhookBadge}>
               <span style={s.webhookDot} />
@@ -737,10 +754,13 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
             <span style={s.phaseLabel}>Scanning Fireflies</span>
           </div>
           <p style={s.phaseDetail}>
-            {progress.totalListed != null
-              ? <><span style={s.statNum}>{progress.totalListed}</span> transcripts found</>
-              : "Fetching transcript list\u2026"
-            }
+            {progress.totalListed != null ? (
+              <>
+                <span style={s.statNum}>{progress.totalListed}</span> transcripts found
+              </>
+            ) : (
+              "Fetching transcript list\u2026"
+            )}
           </p>
         </div>
       )}
@@ -777,18 +797,18 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
           </div>
 
           {/* Current transcript */}
-          {progress.lastTitle && (
-            <p style={s.currentTitle}>{truncate(progress.lastTitle, 52)}</p>
-          )}
+          {progress.lastTitle && <p style={s.currentTitle}>{truncate(progress.lastTitle, 52)}</p>}
         </div>
       )}
 
       {/* Result */}
       {result && (
-        <div style={{
-          ...s.resultCard,
-          borderLeftColor: result.failed > 0 ? "#f59e0b" : "#10b981",
-        }}>
+        <div
+          style={{
+            ...s.resultCard,
+            borderLeftColor: result.failed > 0 ? "#f59e0b" : "#10b981",
+          }}
+        >
           <div style={s.resultStatsRow}>
             <div style={s.resultStat}>
               <span style={{ ...s.resultNum, color: "#10b981" }}>{result.synced}</span>
@@ -810,7 +830,9 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
           {result.errors.length > 0 && (
             <div style={s.errorList}>
               {result.errors.map((e, i) => (
-                <p key={i} style={s.errorItem}>{e}</p>
+                <p key={i} style={s.errorItem}>
+                  {e}
+                </p>
               ))}
             </div>
           )}

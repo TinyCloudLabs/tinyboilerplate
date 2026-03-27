@@ -46,16 +46,22 @@ function createMockClientFactory() {
 
   return {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     setGetUserResult(fn: () => Promise<any>) {
       getUserResult = fn;
     },
     getLastApiKey() {
       return lastApiKey;
     },
+<<<<<<< HEAD
 =======
     setGetUserResult(fn: () => Promise<any>) { getUserResult = fn; },
     getLastApiKey() { return lastApiKey; },
 >>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     factory(apiKey: string) {
       lastApiKey = apiKey;
       return {

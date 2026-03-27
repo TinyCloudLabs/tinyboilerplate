@@ -90,6 +90,7 @@ describe("normalizeFireflies", () => {
     expect(result.conversation.source).toBe("fireflies");
     expect(result.conversation.source_id).toBe("ff-abc-123");
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(result.conversation.source_url).toBe("https://app.fireflies.ai/view/ff-abc-123");
     expect(result.conversation.duration_secs).toBe(1800);
     expect(result.conversation.summary).toBe("Daily standup covering sprint progress.");
@@ -102,6 +103,11 @@ describe("normalizeFireflies", () => {
       "Daily standup covering sprint progress.",
     );
 >>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
+=======
+    expect(result.conversation.source_url).toBe("https://app.fireflies.ai/view/ff-abc-123");
+    expect(result.conversation.duration_secs).toBe(1800);
+    expect(result.conversation.summary).toBe("Daily standup covering sprint progress.");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   it("converts started_at from epoch ms to ISO 8601", () => {
@@ -143,12 +149,16 @@ describe("normalizeFireflies", () => {
     const result = normalizeFireflies(raw);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(result.conversation.summary).toBe("A discussion about quarterly goals.");
 =======
     expect(result.conversation.summary).toBe(
       "A discussion about quarterly goals.",
     );
 >>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
+=======
+    expect(result.conversation.summary).toBe("A discussion about quarterly goals.");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   it("metadata includes audio_url, organizer_email, keywords, meeting_type", () => {
@@ -213,12 +223,16 @@ describe("normalizeFireflies", () => {
     const result = normalizeFireflies(raw);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     const unknown = result.participants.find((p) => p.name === "Unknown Speaker");
 =======
     const unknown = result.participants.find(
       (p) => p.name === "Unknown Speaker",
     );
 >>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
+=======
+    const unknown = result.participants.find((p) => p.name === "Unknown Speaker");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     expect(unknown?.email).toBeNull();
   });
 
@@ -264,6 +278,7 @@ describe("normalizeFireflies", () => {
 
     // All IDs should be unique
 <<<<<<< HEAD
+<<<<<<< HEAD
     const allIds = [result.conversation.id, ...result.participants.map((p) => p.id)];
 =======
     const allIds = [
@@ -271,6 +286,9 @@ describe("normalizeFireflies", () => {
       ...result.participants.map((p) => p.id),
     ];
 >>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
+=======
+    const allIds = [result.conversation.id, ...result.participants.map((p) => p.id)];
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     const uniqueIds = new Set(allIds);
     expect(uniqueIds.size).toBe(allIds.length);
   });

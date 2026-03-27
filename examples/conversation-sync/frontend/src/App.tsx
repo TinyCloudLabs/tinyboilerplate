@@ -119,8 +119,12 @@ export function App() {
 =======
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   useEffect(() => {
-    if (!api) { setHasKey(null); return; }
-    api.get<{ exists: boolean }>("/api/config/fireflies-key/exists")
+    if (!api) {
+      setHasKey(null);
+      return;
+    }
+    api
+      .get<{ exists: boolean }>("/api/config/fireflies-key/exists")
       .then((res) => setHasKey(res.exists))
       .catch(() => setHasKey(false));
   }, [api]);
@@ -144,12 +148,21 @@ export function App() {
 =======
   useEffect(() => {
     if (!api || hasKey !== true) return;
+<<<<<<< HEAD
     api.get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>("/api/webhooks/fireflies/pending")
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+    api
+      .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
+        "/api/webhooks/fireflies/pending",
+      )
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       .then((result) => {
         const count = result.processed?.length ?? 0;
         if (count > 0) {
-          setPendingBanner(`Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`);
+          setPendingBanner(
+            `Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`,
+          );
           setRefreshKey((k) => k + 1);
         }
       })
@@ -163,6 +176,9 @@ export function App() {
   useEffect(() => {
     if (!api || hasKey !== true) return;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     api
       .post<{ updated: number; still_missing: number }>("/api/sync/backfill-summaries")
       .then((result) => {
@@ -192,28 +208,40 @@ export function App() {
     setAuthError(null);
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       const {
         address: addr,
         web3Provider,
         tokens,
       } = await openKeySignIn({
+<<<<<<< HEAD
 =======
       const { address: addr, web3Provider, tokens } = await openKeySignIn({
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         host: OPENKEY_HOST,
         clientId: OPENKEY_CLIENT_ID,
         redirectUri: window.location.origin,
       });
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       tokenStoreRef.current.setTokens(
         tokens.accessToken,
         tokens.refreshToken ?? "",
         tokens.expiresIn,
         addr,
       );
+<<<<<<< HEAD
 =======
       tokenStoreRef.current.setTokens(tokens.accessToken, tokens.refreshToken ?? "", tokens.expiresIn, addr);
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       const tcwInstance = await createAndSignIn(web3Provider, {
         tinycloudHosts: [TINYCLOUD_HOST],
         autoCreateSpace: true,
@@ -310,8 +338,14 @@ export function App() {
 =======
           <div style={s.pendingBanner}>
             <span>{pendingBanner}</span>
+<<<<<<< HEAD
             <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>&times;</button>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+            <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>
+              &times;
+            </button>
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
           </div>
         )}
 
@@ -386,6 +420,7 @@ export function App() {
       <footer style={s.footer}>
         Powered by{" "}
 <<<<<<< HEAD
+<<<<<<< HEAD
         <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>
           TinyCloud
         </a>
@@ -398,6 +433,15 @@ export function App() {
         {" & "}
         <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>OpenKey</a>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+        <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>
+          TinyCloud
+        </a>
+        {" & "}
+        <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>
+          OpenKey
+        </a>
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       </footer>
     </div>
   );

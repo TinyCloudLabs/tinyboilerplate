@@ -30,6 +30,7 @@ describe("SetupWizard", () => {
   it("renders welcome step initially", () => {
     render(<SetupWizard api={api} onComplete={onComplete} />);
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(screen.getByText(/connect fireflies/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /get started/i })).toBeInTheDocument();
   });
@@ -44,6 +45,9 @@ describe("SetupWizard", () => {
     expect(
       screen.getByText(/connect your fireflies\.ai account/i),
     ).toBeInTheDocument();
+=======
+    expect(screen.getByText(/connect your fireflies\.ai account/i)).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
   });
 
@@ -52,10 +56,14 @@ describe("SetupWizard", () => {
     render(<SetupWizard api={api} onComplete={onComplete} />);
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByText(/app\.fireflies\.ai/i)).toBeInTheDocument();
+<<<<<<< HEAD
     expect(
       screen.getByRole("link", { name: /fireflies integrations/i }),
     ).toHaveAttribute(
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+    expect(screen.getByRole("link", { name: /fireflies integrations/i })).toHaveAttribute(
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
       "href",
       "https://app.fireflies.ai/integrations",
     );
@@ -88,12 +96,8 @@ describe("SetupWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     // Step 2 → 3
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    expect(
-      screen.getByPlaceholderText(/paste your api key/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /save/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/paste your api key/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save/i })).toBeInTheDocument();
   });
 
   it("disables Save button when API key input is empty", () => {
@@ -105,10 +109,14 @@ describe("SetupWizard", () => {
 
   it("calls PUT /api/config/fireflies-key on Save and advances to test step", async () => {
     const putMock = vi.fn().mockResolvedValue({ ok: true });
+<<<<<<< HEAD
     const getMock = vi
       .fn()
       .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+    const getMock = vi.fn().mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     api = mockApi({ put: putMock, get: getMock });
 
     render(<SetupWizard api={api} onComplete={onComplete} />);
@@ -144,6 +152,7 @@ describe("SetupWizard", () => {
   it("shows connected user info on successful connection test", async () => {
     const putMock = vi.fn().mockResolvedValue({ ok: true });
 <<<<<<< HEAD
+<<<<<<< HEAD
     const getMock = vi.fn().mockResolvedValue({ name: "Roman", email: "roman@example.com" });
     api = mockApi({ put: putMock, get: getMock });
 
@@ -158,6 +167,9 @@ describe("SetupWizard", () => {
     const getMock = vi
       .fn()
       .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+=======
+    const getMock = vi.fn().mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     api = mockApi({ put: putMock, get: getMock });
 
     render(<SetupWizard api={api} onComplete={onComplete} />);
@@ -203,12 +215,16 @@ describe("SetupWizard", () => {
       expect(screen.getByText(/invalid api key/i)).toBeInTheDocument();
     });
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
 =======
     expect(
       screen.getByRole("button", { name: /try again/i }),
     ).toBeInTheDocument();
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   it("goes back to input step on Try Again after failed test", async () => {
@@ -236,14 +252,19 @@ describe("SetupWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
+<<<<<<< HEAD
       expect(
         screen.getByRole("button", { name: /try again/i }),
       ).toBeInTheDocument();
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+      expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     });
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
 
     // Should be back on input step
+<<<<<<< HEAD
 <<<<<<< HEAD
     expect(screen.getByPlaceholderText(/paste your fireflies api key/i)).toBeInTheDocument();
   });
@@ -266,24 +287,19 @@ describe("SetupWizard", () => {
     expect(
       screen.getByPlaceholderText(/paste your api key/i),
     ).toBeInTheDocument();
+=======
+    expect(screen.getByPlaceholderText(/paste your api key/i)).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   // Step 5: Webhook configuration
   // Helper: navigate to webhook step (through successful connection test)
   async function navigateToWebhook() {
     const putMock = vi.fn().mockResolvedValue({ ok: true });
-    const getMock = vi
-      .fn()
-      .mockResolvedValue({ name: "Roman", email: "roman@example.com" });
+    const getMock = vi.fn().mockResolvedValue({ name: "Roman", email: "roman@example.com" });
     api = mockApi({ put: putMock, get: getMock });
 
-    render(
-      <SetupWizard
-        api={api}
-        onComplete={onComplete}
-        backendUrl="http://localhost:3001"
-      />,
-    );
+    render(<SetupWizard api={api} onComplete={onComplete} backendUrl="http://localhost:3001" />);
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.change(screen.getByPlaceholderText(/paste your api key/i), {
@@ -431,9 +447,7 @@ describe("SetupWizard", () => {
 
   it("displays webhook URL with backend URL", async () => {
     await navigateToWebhook();
-    expect(
-      screen.getByText("http://localhost:3001/api/webhooks/fireflies"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("http://localhost:3001/api/webhooks/fireflies")).toBeInTheDocument();
   });
 
   it("has a copy URL button that copies to clipboard", async () => {
@@ -445,25 +459,19 @@ describe("SetupWizard", () => {
     await navigateToWebhook();
     fireEvent.click(screen.getByRole("button", { name: /copy url/i }));
 
-    expect(writeText).toHaveBeenCalledWith(
-      "http://localhost:3001/api/webhooks/fireflies",
-    );
+    expect(writeText).toHaveBeenCalledWith("http://localhost:3001/api/webhooks/fireflies");
   });
 
   it("shows webhook secret input field", async () => {
     await navigateToWebhook();
-    expect(
-      screen.getByPlaceholderText(/webhook secret/i),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/webhook secret/i)).toBeInTheDocument();
   });
 
   it("generates a random secret on button click", async () => {
     await navigateToWebhook();
     fireEvent.click(screen.getByRole("button", { name: /generate random/i }));
 
-    const input = screen.getByPlaceholderText(
-      /webhook secret/i,
-    ) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(/webhook secret/i) as HTMLInputElement;
     expect(input.value.length).toBeGreaterThanOrEqual(16);
   });
 
@@ -532,9 +540,7 @@ describe("SetupWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /skip/i }));
 
     expect(screen.getByText(/you're all set/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /sync now/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync now/i })).toBeInTheDocument();
   });
 
   it("calls onComplete when Sync Now is clicked", async () => {
@@ -558,9 +564,13 @@ describe("SetupWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByText(/app\.fireflies\.ai/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /back/i }));
+<<<<<<< HEAD
     expect(
       screen.getByText(/connect your fireflies\.ai account/i),
     ).toBeInTheDocument();
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+    expect(screen.getByText(/connect your fireflies\.ai account/i)).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 });

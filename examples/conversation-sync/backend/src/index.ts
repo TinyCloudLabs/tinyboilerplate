@@ -43,8 +43,11 @@ import { createConversationsRouter } from "./routes/conversations.js";
 =======
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
 
+<<<<<<< HEAD
 >>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
 
+=======
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 // ── Environment ──────────────────────────────────────────────────────
 
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
@@ -92,6 +95,7 @@ async function main() {
   const tryGetDelegatedAccess = async () => {
     const subResult = await backendKV.get(WEBHOOK_USER_SUB_PATH);
 <<<<<<< HEAD
+<<<<<<< HEAD
     const sub =
       subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
     if (!sub) {
@@ -125,8 +129,14 @@ async function main() {
     const sub = subResult.ok && (subResult as any).data?.data
       ? String((subResult as any).data.data)
       : null;
+=======
+    const sub =
+      subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     if (!sub) {
-      console.log("[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user");
+      console.log(
+        "[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user",
+      );
       return null;
     }
     console.log(`[webhook] resolving delegation for sub=${sub}`);
@@ -146,7 +156,9 @@ async function main() {
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
 =======
     if (!stored) {
-      console.log("[webhook] no delegation in store for this sub — user needs to sign in and delegate");
+      console.log(
+        "[webhook] no delegation in store for this sub — user needs to sign in and delegate",
+      );
       return null;
     }
     if (new Date(stored.expiresAt).getTime() <= Date.now()) {

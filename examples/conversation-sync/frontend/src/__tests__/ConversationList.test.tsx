@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 =======
 import {
@@ -10,6 +11,9 @@ import {
   cleanup,
 } from "@testing-library/react";
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 import { ConversationList } from "../components/ConversationList";
 import type { ApiClient } from "@tinyboilerplate/client";
 
@@ -32,11 +36,16 @@ const CONVERSATIONS = [
     started_at: "2026-03-20T14:00:00Z",
     duration_secs: 1800,
 <<<<<<< HEAD
+<<<<<<< HEAD
     summary:
       "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
 =======
     summary: "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    summary:
+      "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     created_at: "2026-03-20T15:00:00Z",
     participant_count: 4,
   },
@@ -85,12 +94,16 @@ describe("ConversationList", () => {
     api = mockApi({ get: getMock });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -99,12 +112,16 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=0");
 =======
     expect(getMock).toHaveBeenCalledWith(
       "/api/conversations?limit=20&offset=0",
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=0");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   it("shows loading state while fetching", async () => {
@@ -117,6 +134,7 @@ describe("ConversationList", () => {
     api = mockApi({ get: getMock });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     expect(screen.getByText("Loading conversations")).toBeInTheDocument();
@@ -128,6 +146,9 @@ describe("ConversationList", () => {
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
 
@@ -143,6 +164,7 @@ describe("ConversationList", () => {
       get: vi.fn().mockResolvedValue({ conversations: [], total: 0 }),
     });
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
@@ -163,6 +185,13 @@ describe("ConversationList", () => {
         screen.getByText(/click sync to import from fireflies/i),
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
       ).toBeInTheDocument();
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/click sync to import from fireflies/i)).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     });
   });
 
@@ -175,12 +204,16 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("30 min")).toBeInTheDocument(); // 1800s
@@ -198,12 +231,16 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("4 participants")).toBeInTheDocument();
@@ -226,6 +263,7 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
@@ -236,6 +274,9 @@ describe("ConversationList", () => {
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       // Should show truncated text with ellipsis
@@ -254,12 +295,16 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("Quick Standup")).toBeInTheDocument();
@@ -277,12 +322,16 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -302,6 +351,7 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
@@ -316,6 +366,12 @@ describe("ConversationList", () => {
         screen.getByRole("button", { name: /load more/i }),
       ).toBeInTheDocument();
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /load more/i })).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     });
   });
 
@@ -328,17 +384,22 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
     });
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
 =======
@@ -346,6 +407,9 @@ describe("ConversationList", () => {
       screen.queryByRole("button", { name: /load more/i }),
     ).not.toBeInTheDocument();
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
   });
 
   it("loads next page when Load More is clicked", async () => {
@@ -374,12 +438,16 @@ describe("ConversationList", () => {
     api = mockApi({ get: getMock });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -393,12 +461,16 @@ describe("ConversationList", () => {
 
     // Should have fetched with offset=3 (first page had 3 items)
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=3");
 =======
     expect(getMock).toHaveBeenCalledWith(
       "/api/conversations?limit=20&offset=3",
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=3");
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     // All 4 conversations should be visible
     expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -411,12 +483,16 @@ describe("ConversationList", () => {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
     );
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 
     await waitFor(() => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
@@ -450,17 +526,22 @@ describe("ConversationList", () => {
       })
       .mockResolvedValueOnce({
 <<<<<<< HEAD
+<<<<<<< HEAD
         conversations: [{ ...CONVERSATIONS[0], title: "Updated Sprint Planning" }],
 =======
         conversations: [
           { ...CONVERSATIONS[0], title: "Updated Sprint Planning" },
         ],
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+        conversations: [{ ...CONVERSATIONS[0], title: "Updated Sprint Planning" }],
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         total: 1,
       });
     api = mockApi({ get: getMock });
 
     const { rerender } = render(
+<<<<<<< HEAD
 <<<<<<< HEAD
       <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={0} />,
 =======
@@ -470,6 +551,9 @@ describe("ConversationList", () => {
         refreshKey={0}
       />,
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+      <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={0} />,
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     );
 
     await waitFor(() => {
@@ -477,6 +561,7 @@ describe("ConversationList", () => {
     });
 
     rerender(
+<<<<<<< HEAD
 <<<<<<< HEAD
       <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={1} />,
     );
@@ -496,6 +581,13 @@ describe("ConversationList", () => {
         screen.getByText("Updated Sprint Planning"),
       ).toBeInTheDocument();
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+      <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={1} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Updated Sprint Planning")).toBeInTheDocument();
+>>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     });
 
     expect(getMock).toHaveBeenCalledTimes(2);

@@ -1,8 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { describe, it, expect, afterEach } from "bun:test";
 =======
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+import { describe, it, expect, afterEach } from "bun:test";
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
 import express from "express";
 import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";

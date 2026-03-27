@@ -580,6 +580,7 @@ async function updateSummary(
   let metadata: Record<string, unknown> = {};
   if (rawMeta) {
 <<<<<<< HEAD
+<<<<<<< HEAD
     try {
       metadata = JSON.parse(String(rawMeta));
     } catch {
@@ -588,6 +589,9 @@ async function updateSummary(
 =======
     try { metadata = JSON.parse(String(rawMeta)); } catch {}
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+    try { metadata = JSON.parse(String(rawMeta)); } catch { /* ignore malformed JSON */ }
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
   }
   metadata.keywords = transcript.summary?.keywords ?? [];
   metadata.meeting_type = transcript.summary?.meeting_type ?? null;

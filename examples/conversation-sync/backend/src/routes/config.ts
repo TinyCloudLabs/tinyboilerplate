@@ -48,6 +48,9 @@ const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
 export function createConfigRouter(config: ConfigRoutesConfig) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
   const { authMiddleware, delegationMiddleware, backendKV } = config;
   const router = Router();
 

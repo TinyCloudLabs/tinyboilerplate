@@ -35,10 +35,14 @@ function createMockSQL() {
   let missingRows: Array<{ id: string; source_id: string }> = [];
   /** Metadata stored per conversation id */
 <<<<<<< HEAD
+<<<<<<< HEAD
   const metadataByConvId = new Map<string, string>();
 =======
   let metadataByConvId = new Map<string, string>();
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+  const metadataByConvId = new Map<string, string>();
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
 
   return {
     _calls: calls,
@@ -130,20 +134,28 @@ function createMockFullTranscript(overrides: Partial<FullTranscript> = {}): Full
 
 function createMockClientFactory() {
 <<<<<<< HEAD
+<<<<<<< HEAD
   const getResults = new Map<string, FullTranscript | Error>();
 =======
   let getResults = new Map<string, FullTranscript | Error>();
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+  const getResults = new Map<string, FullTranscript | Error>();
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
 
   return {
     setGetResult(id: string, result: FullTranscript | Error) {
       getResults.set(id, result);
     },
 <<<<<<< HEAD
+<<<<<<< HEAD
     factory(_apiKey: string) {
 =======
     factory(apiKey: string) {
 >>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+=======
+    factory(_apiKey: string) {
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
       return {
         listTranscripts: async () => [],
         getTranscript: async (id: string) => {

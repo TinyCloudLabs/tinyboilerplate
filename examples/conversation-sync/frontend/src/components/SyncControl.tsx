@@ -380,7 +380,7 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
                 });
               }
               break;
-            case "complete":
+            case "complete": {
               setResult({ synced: data.synced, skipped: data.skipped, failed: data.failed, errors: data.errors });
               setProgress(null);
               const ts = new Date().toISOString();
@@ -388,6 +388,7 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
               setLastSync(ts);
               onSyncComplete();
               break;
+            }
             case "error":
               setError(data.message);
               setProgress(null);

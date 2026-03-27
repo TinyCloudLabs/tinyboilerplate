@@ -4,9 +4,12 @@ import { FirefliesClient } from "../services/fireflies-client.js";
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 import type { PaginationOptions } from "../services/fireflies-client.js";
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
 import { ensureSchema } from "../schema.js";
 import { syncSingleTranscript } from "../services/sync-pipeline.js";
 =======
@@ -522,6 +525,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
                 : (metaResult.data.rows[0] as any).metadata;
               if (raw) {
 <<<<<<< HEAD
+<<<<<<< HEAD
                 try {
                   metadata = JSON.parse(String(raw));
                 } catch {
@@ -530,6 +534,9 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 =======
                 try { metadata = JSON.parse(String(raw)); } catch {}
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+                try { metadata = JSON.parse(String(raw)); } catch { /* ignore malformed JSON */ }
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
               }
             }
             metadata.keywords = keywords;

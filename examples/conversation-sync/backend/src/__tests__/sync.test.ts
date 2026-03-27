@@ -258,6 +258,7 @@ function createMockClientFactory() {
   let listBatches: TranscriptSummary[][] | null = null;
   let listCallIndex = 0;
   const getResults = new Map<string, FullTranscript | Error>();
+<<<<<<< HEAD
   let lastApiKey: string | null = null;
 
   return {
@@ -326,6 +327,8 @@ function createMockClientFactory() {
   let listCallIndex = 0;
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   let getResults = new Map<string, FullTranscript | Error>();
+=======
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
   let lastApiKey: string | null = null;
 
   return {
@@ -352,7 +355,6 @@ function createMockClientFactory() {
         listAllTranscripts: async (options?: PaginationOptions): Promise<PaginationResult> => {
           // If batches are set, simulate real pagination
           if (listBatches) {
-            const batchSize = options?.batchSize ?? 25;
             const knownIds = options?.knownIds;
             const mode = options?.mode ?? "incremental";
             const all: TranscriptSummary[] = [];
@@ -474,6 +476,7 @@ function parseSSEText(text: string): ParsedSSEEvent[] {
     }
     if (data) {
 <<<<<<< HEAD
+<<<<<<< HEAD
       try {
         events.push({ type, data: JSON.parse(data) });
       } catch {
@@ -482,6 +485,9 @@ function parseSSEText(text: string): ParsedSSEEvent[] {
 =======
       try { events.push({ type, data: JSON.parse(data) }); } catch {}
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+      try { events.push({ type, data: JSON.parse(data) }); } catch { /* skip malformed */ }
+>>>>>>> 554d6dd (fix: resolve all ESLint errors for CI)
     }
   }
   return events;

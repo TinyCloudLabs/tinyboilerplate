@@ -11,10 +11,14 @@ function makeFullTranscript(overrides?: Partial<FullTranscript>): FullTranscript
     title: "Team standup",
     date: 1700000000000, // 2023-11-14T22:13:20.000Z
 <<<<<<< HEAD
+<<<<<<< HEAD
     duration: 30, // 30 minutes (Fireflies API returns minutes)
 =======
     duration: 1800, // 30 minutes
 >>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
+=======
+    duration: 30, // 30 minutes (Fireflies API returns minutes)
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     organizer_email: "roman@tinycloud.xyz",
     transcript_url: "https://app.fireflies.ai/view/ff-abc-123",
     speakers: [
@@ -108,6 +112,7 @@ describe("normalizeFireflies", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   it("computes ended_at as started_at + duration (minutes → seconds)", () => {
     // date = 1700000000000 (2023-11-14T22:13:20.000Z), duration = 30 min
     // ended_at = 1700000000000 + (30 * 60 * 1000) = 1700001800000
@@ -120,6 +125,13 @@ describe("normalizeFireflies", () => {
     // 2023-11-14T22:43:20.000Z
     const raw = makeFullTranscript({ date: 1700000000000, duration: 1800 });
 >>>>>>> bac670e (TC-1300: Add NormalizedConversation types and Fireflies adapter)
+=======
+  it("computes ended_at as started_at + duration (minutes → seconds)", () => {
+    // date = 1700000000000 (2023-11-14T22:13:20.000Z), duration = 30 min
+    // ended_at = 1700000000000 + (30 * 60 * 1000) = 1700001800000
+    // 2023-11-14T22:43:20.000Z
+    const raw = makeFullTranscript({ date: 1700000000000, duration: 30 });
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     const result = normalizeFireflies(raw);
 
     expect(result.conversation.ended_at).toBe("2023-11-14T22:43:20.000Z");

@@ -257,6 +257,134 @@ describe("FirefliesClient", () => {
     });
   });
 
+  // ── listAllTranscripts() ──────────────────────────────────────
+
+  describe("listAllTranscripts()", () => {
+    function makeTranscript(id: string) {
+      return {
+        id,
+        title: `Meeting ${id}`,
+        date: 1700000000000,
+        duration: 1800,
+        organizer_email: "test@example.com",
+        transcript_url: `https://app.fireflies.ai/view/${id}`,
+      };
+    }
+
+    it("paginates through multiple batches", async () => {
+      // Batch 1: full batch of 2
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } })
+      );
+      // Batch 2: partial batch (last page)
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } })
+      );
+
+      const result = await client.listAllTranscripts({ batchSize: 2, delayMs: 0 });
+
+      expect(result.transcripts).toHaveLength(3);
+      expect(result.batchCount).toBe(2);
+      expect(result.earlyExit).toBe(false);
+      expect(result.transcripts.map((t) => t.id)).toEqual(["t1", "t2", "t3"]);
+    });
+
+    it("stops on empty first batch", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [] } })
+      );
+
+      const result = await client.listAllTranscripts({ batchSize: 25, delayMs: 0 });
+
+      expect(result.transcripts).toHaveLength(0);
+      expect(result.batchCount).toBe(1);
+      expect(result.earlyExit).toBe(false);
+    });
+
+    it("incremental mode stops when hitting known IDs", async () => {
+      // Batch 1: all new
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t3"), makeTranscript("t4")] } })
+      );
+      // Batch 2: t2 is known — should stop here, only add t5
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t5"), makeTranscript("t2")] } })
+      );
+
+      const result = await client.listAllTranscripts({
+        batchSize: 2,
+        mode: "incremental",
+        knownIds: new Set(["t1", "t2"]),
+        delayMs: 0,
+      });
+
+      expect(result.earlyExit).toBe(true);
+      expect(result.batchCount).toBe(2);
+      // t3, t4 from batch 1, t5 from batch 2 (t2 excluded)
+      expect(result.transcripts.map((t) => t.id)).toEqual(["t3", "t4", "t5"]);
+    });
+
+    it("full mode ignores known IDs and fetches everything", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } })
+      );
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } })
+      );
+
+      const result = await client.listAllTranscripts({
+        batchSize: 2,
+        mode: "full",
+        knownIds: new Set(["t1"]),
+        delayMs: 0,
+      });
+
+      expect(result.earlyExit).toBe(false);
+      expect(result.transcripts).toHaveLength(3);
+    });
+
+    it("calls onProgress after each batch", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } })
+      );
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } })
+      );
+
+      const progressCalls: Array<{ batch: number; totalSoFar: number }> = [];
+      await client.listAllTranscripts({
+        batchSize: 2,
+        delayMs: 0,
+        onProgress: (info) => progressCalls.push(info),
+      });
+
+      expect(progressCalls).toEqual([
+        { batch: 1, totalSoFar: 2 },
+        { batch: 2, totalSoFar: 3 },
+      ]);
+    });
+
+    it("clamps batchSize to range 1–50", async () => {
+      // batchSize 0 should become 1
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [] } })
+      );
+      await client.listAllTranscripts({ batchSize: 0, delayMs: 0 });
+
+      const body1 = lastRequestBody();
+      expect(body1.variables?.limit).toBe(1);
+
+      // batchSize 100 should become 50
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { transcripts: [] } })
+      );
+      await client.listAllTranscripts({ batchSize: 100, delayMs: 0 });
+
+      const body2 = lastRequestBody();
+      expect(body2.variables?.limit).toBe(50);
+    });
+  });
+
   // ── Error handling ─────────────────────────────────────────────
 
   describe("error handling", () => {
@@ -286,6 +414,51 @@ describe("FirefliesClient", () => {
       mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
 
       expect(client.getUser()).rejects.toThrow("fetch failed");
+    });
+
+    it("retries on HTTP 429 and succeeds", async () => {
+      // First call: 429
+      mockFetch.mockResolvedValueOnce(
+        new Response("Rate limited", { status: 429, headers: { "Retry-After": "1" } })
+      );
+      // Second call: success
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } })
+      );
+
+      const result = await client.getUser();
+      expect(result.name).toBe("A");
+      expect(mockFetch.mock.calls.length).toBe(2);
+    });
+
+    it("retries on GraphQL too_many_requests error and succeeds", async () => {
+      // First call: rate limit error
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          data: null,
+          errors: [{ message: "Rate limit. retry after 2026-01-01T00:00:01Z", code: "too_many_requests" }],
+        })
+      );
+      // Second call: success
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } })
+      );
+
+      const result = await client.getUser();
+      expect(result.name).toBe("A");
+      expect(mockFetch.mock.calls.length).toBe(2);
+    });
+
+    it("throws after max retries on persistent rate limits", async () => {
+      // All 3 attempts return 429
+      for (let i = 0; i < 3; i++) {
+        mockFetch.mockResolvedValueOnce(
+          new Response("Rate limited", { status: 429, headers: { "Retry-After": "1" } })
+        );
+      }
+
+      await expect(client.getUser()).rejects.toThrow("429");
+      expect(mockFetch.mock.calls.length).toBe(3);
     });
   });
 });

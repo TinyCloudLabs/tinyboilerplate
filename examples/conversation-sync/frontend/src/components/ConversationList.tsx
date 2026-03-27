@@ -28,6 +28,7 @@ const PAGE_SIZE = 20;
 
 function formatDuration(secs: number): string {
 <<<<<<< HEAD
+<<<<<<< HEAD
   if (secs >= 3600) return `${Math.round(secs / 3600)} hr`;
   return `${Math.round(secs / 60)} min`;
 }
@@ -52,23 +53,36 @@ function cleanSummary(str: string, max: number): string {
   }
   const minutes = Math.round(secs / 60);
   return `${minutes} min`;
+=======
+  if (secs >= 3600) return `${Math.round(secs / 3600)} hr`;
+  return `${Math.round(secs / 60)} min`;
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 }
 
 function formatDate(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(isoString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+<<<<<<< HEAD
 function truncateSummary(summary: string, maxLen = 100): string {
   if (summary.length <= maxLen) return summary;
   return summary.slice(0, maxLen) + "\u2026";
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+/** Strip markdown artifacts and collapse to a clean plain-text snippet. */
+function cleanSummary(str: string, max: number): string {
+  const clean = str
+    .replace(/\*\*(.+?)\*\*/g, "$1")   // bold
+    .replace(/^[-*]\s+/gm, "")          // bullet prefixes
+    .replace(/\n+/g, " ")               // newlines → spaces
+    .replace(/\s{2,}/g, " ")            // collapse whitespace
+    .trim();
+  return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 }
 
 export const ConversationList: FC<ConversationListProps> = ({
-  api,
-  onSelectConversation,
-  refreshKey,
+  api, onSelectConversation, refreshKey,
 }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [total, setTotal] = useState(0);
@@ -97,9 +111,12 @@ export const ConversationList: FC<ConversationListProps> = ({
   );
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   // Initial fetch + refresh on refreshKey change
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   useEffect(() => {
     setLoading(true);
     setConversations([]);
@@ -114,6 +131,9 @@ export const ConversationList: FC<ConversationListProps> = ({
 
   if (loading) {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     return (
       <div style={s.loadingCard}>
         <div style={s.loadingDots}>
@@ -124,6 +144,7 @@ export const ConversationList: FC<ConversationListProps> = ({
         <p style={s.loadingText}>Loading conversations</p>
       </div>
     );
+<<<<<<< HEAD
   }
 
   if (error) {
@@ -140,10 +161,22 @@ export const ConversationList: FC<ConversationListProps> = ({
   if (error) {
     return <div style={styles.error}>{error}</div>;
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+  }
+
+  if (error) {
+    return (
+      <div style={s.errorCard}>
+        <span style={s.errorIcon}>!</span>
+        {error}
+      </div>
+    );
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   }
 
   if (conversations.length === 0) {
     return (
+<<<<<<< HEAD
 <<<<<<< HEAD
       <div style={s.emptyCard}>
         <p style={s.emptyTitle}>No conversations yet</p>
@@ -155,6 +188,11 @@ export const ConversationList: FC<ConversationListProps> = ({
           Click Sync to import from Fireflies.
         </p>
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+      <div style={s.emptyCard}>
+        <p style={s.emptyTitle}>No conversations yet</p>
+        <p style={s.emptySub}>Sync your first meetings from Fireflies above.</p>
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       </div>
     );
   }
@@ -162,6 +200,7 @@ export const ConversationList: FC<ConversationListProps> = ({
   const hasMore = conversations.length < total;
 
   return (
+<<<<<<< HEAD
 <<<<<<< HEAD
     <section style={s.card}>
       <div style={s.headerRow}>
@@ -188,22 +227,27 @@ export const ConversationList: FC<ConversationListProps> = ({
 =======
     <section>
       <ul style={styles.list}>
+=======
+    <section style={s.card}>
+      <div style={s.headerRow}>
+        <span style={s.countLabel}>{total} conversation{total !== 1 ? "s" : ""}</span>
+      </div>
+
+      <ul style={s.list}>
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
         {conversations.map((c) => (
-          <li
-            key={c.id}
-            style={styles.row}
-            onClick={() => onSelectConversation(c.id)}
-          >
-            <div style={styles.rowHeader}>
-              <span style={styles.title}>{c.title}</span>
-              <span style={styles.date}>{formatDate(c.started_at)}</span>
+          <li key={c.id} style={s.row} onClick={() => onSelectConversation(c.id)}>
+            <div style={s.rowTop}>
+              <span style={s.title}>{c.title}</span>
+              <span style={s.date}>{formatDate(c.started_at)}</span>
             </div>
-            <div style={styles.meta}>
+            <div style={s.meta}>
               <span>{formatDuration(c.duration_secs)}</span>
-              <span>{c.participant_count} participants</span>
+              <span style={s.metaDot}>&middot;</span>
+              <span>{c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}</span>
             </div>
             {c.summary && (
-              <p style={styles.summary}>{truncateSummary(c.summary)}</p>
+              <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>
             )}
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
           </li>
@@ -212,6 +256,7 @@ export const ConversationList: FC<ConversationListProps> = ({
 
       {hasMore && (
         <button
+<<<<<<< HEAD
 <<<<<<< HEAD
           style={{ ...s.loadMore, ...(loadingMore ? s.loadMoreDisabled : {}) }}
           disabled={loadingMore}
@@ -228,6 +273,13 @@ export const ConversationList: FC<ConversationListProps> = ({
         >
           {loadingMore ? "Loading..." : "Load More"}
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+          style={{ ...s.loadMore, ...(loadingMore ? s.loadMoreDisabled : {}) }}
+          disabled={loadingMore}
+          onClick={handleLoadMore}
+        >
+          {loadingMore ? "Loading\u2026" : "Load More"}
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
         </button>
       )}
     </section>
@@ -237,6 +289,9 @@ export const ConversationList: FC<ConversationListProps> = ({
 // ── Styles ──────────────────────────────────────────────────────────
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 const FONT = "'Outfit', -apple-system, sans-serif";
 const MONO = "'IBM Plex Mono', 'SF Mono', monospace";
 
@@ -247,6 +302,7 @@ const s: Record<string, React.CSSProperties> = {
     border: "1px solid #e2e4e9",
     borderRadius: 12,
     overflow: "hidden",
+<<<<<<< HEAD
   },
   headerRow: {
     padding: "14px 20px 0",
@@ -265,15 +321,13 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#555",
     textAlign: "center",
     padding: 20,
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   },
-  error: {
-    fontSize: 13,
-    color: "#b91c1c",
-    background: "#fef2f2",
-    padding: "8px 12px",
-    border: "1px solid #fecaca",
-    borderRadius: 6,
+  headerRow: {
+    padding: "14px 20px 0",
   },
+<<<<<<< HEAD
   empty: {
     textAlign: "center",
     padding: "32px 16px",
@@ -288,6 +342,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     margin: 0,
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+  countLabel: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: 500,
+    color: "#9ca3af",
+    letterSpacing: "0.03em",
+    textTransform: "uppercase" as const,
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   },
   list: {
     listStyle: "none",
@@ -295,6 +358,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
   },
   row: {
+<<<<<<< HEAD
 <<<<<<< HEAD
     padding: "14px 20px",
     borderBottom: "1px solid #f3f4f6",
@@ -435,52 +499,144 @@ const styles: Record<string, React.CSSProperties> = {
 =======
     padding: "12px 16px",
     borderBottom: "1px solid #e5e7eb",
+=======
+    padding: "14px 20px",
+    borderBottom: "1px solid #f3f4f6",
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     cursor: "pointer",
+    transition: "background 0.12s",
   },
-  rowHeader: {
+  rowTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "baseline",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "#18181b",
+    letterSpacing: "-0.01em",
   },
   date: {
-    fontSize: 13,
-    color: "#888",
+    fontFamily: MONO,
+    fontSize: 12,
+    fontWeight: 400,
+    color: "#9ca3af",
+    flexShrink: 0,
+    marginLeft: 12,
   },
   meta: {
     display: "flex",
-    gap: 12,
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 4,
+    alignItems: "center",
+    gap: 5,
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  metaDot: {
+    color: "#d1d5db",
   },
   summary: {
     fontSize: 13,
-    color: "#777",
-    margin: "4px 0 0",
-    lineHeight: 1.4,
+    color: "#6b7280",
+    margin: "5px 0 0",
+    lineHeight: 1.45,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical" as const,
+    overflow: "hidden",
   },
   loadMore: {
+    fontFamily: FONT,
     display: "block",
     width: "100%",
-    padding: "10px 0",
-    fontSize: 14,
+    padding: "12px 0",
+    fontSize: 13,
     fontWeight: 500,
-    color: "#2563eb",
+    color: "#6b7280",
     background: "transparent",
-    border: "1px solid #e0e0e0",
-    borderRadius: 6,
+    border: "none",
+    borderTop: "1px solid #f3f4f6",
     cursor: "pointer",
-    marginTop: 8,
   },
   loadMoreDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
     cursor: "not-allowed",
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+  },
+  loadingCard: {
+    fontFamily: FONT,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    gap: 14,
+    padding: "40px 20px",
+    background: "#fff",
+    border: "1px solid #e2e4e9",
+    borderRadius: 12,
+    animation: "fadeSlideIn 0.3s ease-out",
+  },
+  loadingDots: {
+    display: "flex",
+    gap: 6,
+  },
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    background: "#6366f1",
+    animation: "syncPulse 1s ease-in-out infinite",
+  },
+  loadingText: {
+    fontFamily: FONT,
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#6b7280",
+    margin: 0,
+  },
+  emptyCard: {
+    fontFamily: FONT,
+    textAlign: "center" as const,
+    padding: "36px 20px",
+    background: "#fff",
+    border: "1px solid #e2e4e9",
+    borderRadius: 12,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "#374151",
+    margin: "0 0 4px",
+  },
+  emptySub: {
+    fontSize: 13,
+    color: "#9ca3af",
+    margin: 0,
+  },
+  errorCard: {
+    fontFamily: FONT,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: "12px 16px",
+    fontSize: 13,
+    color: "#991b1b",
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: 12,
+    lineHeight: 1.4,
+  },
+  errorIcon: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 18,
+    height: 18,
+    borderRadius: "50%",
+    background: "#ef4444",
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: 700,
+    flexShrink: 0,
   },
 };

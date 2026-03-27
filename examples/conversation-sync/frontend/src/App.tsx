@@ -50,6 +50,9 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -108,21 +111,21 @@ export function App() {
   }, []);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   // ── Check Fireflies Key ────────────────────────────────────────────
 
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   useEffect(() => {
-    if (!api) {
-      setHasKey(null);
-      return;
-    }
-    api
-      .get<{ exists: boolean }>("/api/config/fireflies-key/exists")
+    if (!api) { setHasKey(null); return; }
+    api.get<{ exists: boolean }>("/api/config/fireflies-key/exists")
       .then((res) => setHasKey(res.exists))
       .catch(() => setHasKey(false));
   }, [api]);
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   useEffect(() => {
@@ -138,21 +141,28 @@ export function App() {
       .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
         "/api/webhooks/fireflies/pending",
       )
+=======
+  useEffect(() => {
+    if (!api || hasKey !== true) return;
+    api.get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>("/api/webhooks/fireflies/pending")
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       .then((result) => {
         const count = result.processed?.length ?? 0;
         if (count > 0) {
-          setPendingBanner(
-            `Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`,
-          );
+          setPendingBanner(`Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`);
           setRefreshKey((k) => k + 1);
         }
       })
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       .catch((err) => console.error("[pending]", err));
   }, [api, hasKey]);
 
   useEffect(() => {
     if (!api || hasKey !== true) return;
+<<<<<<< HEAD
     api
       .post<{ updated: number; still_missing: number }>("/api/sync/backfill-summaries")
       .then((result) => {
@@ -167,6 +177,11 @@ export function App() {
       .catch((err) => {
         console.error("[pending] Failed to process pending webhooks:", err);
       });
+=======
+    api.post<{ updated: number; still_missing: number }>("/api/sync/backfill-summaries")
+      .then((result) => { if (result.updated > 0) setRefreshKey((k) => k + 1); })
+      .catch((err) => console.error("[backfill]", err));
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   }, [api, hasKey]);
 
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
@@ -176,21 +191,29 @@ export function App() {
     setAuthLoading(true);
     setAuthError(null);
     try {
+<<<<<<< HEAD
       const {
         address: addr,
         web3Provider,
         tokens,
       } = await openKeySignIn({
+=======
+      const { address: addr, web3Provider, tokens } = await openKeySignIn({
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
         host: OPENKEY_HOST,
         clientId: OPENKEY_CLIENT_ID,
         redirectUri: window.location.origin,
       });
+<<<<<<< HEAD
       tokenStoreRef.current.setTokens(
         tokens.accessToken,
         tokens.refreshToken ?? "",
         tokens.expiresIn,
         addr,
       );
+=======
+      tokenStoreRef.current.setTokens(tokens.accessToken, tokens.refreshToken ?? "", tokens.expiresIn, addr);
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       const tcwInstance = await createAndSignIn(web3Provider, {
         tinycloudHosts: [TINYCLOUD_HOST],
         autoCreateSpace: true,
@@ -270,6 +293,7 @@ export function App() {
 
         {pendingBanner && (
 <<<<<<< HEAD
+<<<<<<< HEAD
           <div style={s.pendingBanner}>
             <span>{pendingBanner}</span>
             <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>
@@ -283,6 +307,11 @@ export function App() {
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
               &times;
             </button>
+=======
+          <div style={s.pendingBanner}>
+            <span>{pendingBanner}</span>
+            <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>&times;</button>
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
           </div>
         )}
 
@@ -299,6 +328,7 @@ export function App() {
               onSelectConversation={setSelectedConversationId}
               refreshKey={refreshKey}
             />
+<<<<<<< HEAD
             <button
               style={s.disconnectLink}
               onClick={async () => {
@@ -337,8 +367,10 @@ export function App() {
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
           <>
             <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
             <button
-              style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "4px 0" }}
+              style={s.disconnectLink}
               onClick={async () => {
                 await api.del("/api/config/fireflies-key");
                 setHasKey(false);
@@ -346,11 +378,6 @@ export function App() {
             >
               Disconnect Fireflies
             </button>
-            <ConversationList
-              api={api}
-              onSelectConversation={setSelectedConversationId}
-              refreshKey={refreshKey}
-            />
           </>
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
         )}
@@ -358,6 +385,7 @@ export function App() {
 
       <footer style={s.footer}>
         Powered by{" "}
+<<<<<<< HEAD
         <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>
           TinyCloud
         </a>
@@ -365,6 +393,11 @@ export function App() {
         <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>
           OpenKey
         </a>
+=======
+        <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>TinyCloud</a>
+        {" & "}
+        <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>OpenKey</a>
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       </footer>
     </div>
   );
@@ -412,6 +445,7 @@ const s: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     gap: 16,
+<<<<<<< HEAD
   },
   pendingBanner: {
     display: "flex",
@@ -452,25 +486,42 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     padding: 20,
     background: "#fafafa",
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   },
   pendingBanner: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "10px 14px",
-    background: "#f0fdf4",
-    border: "1px solid #bbf7d0",
-    borderRadius: 6,
-    fontSize: 14,
-    color: "#166534",
+    padding: "12px 16px",
+    background: "#fff",
+    border: "1px solid #e2e4e9",
+    borderLeft: "3px solid #10b981",
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#065f46",
+    animation: "fadeSlideIn 0.3s ease-out",
   },
   bannerDismiss: {
+    fontFamily: FONT,
     background: "none",
     border: "none",
     fontSize: 18,
-    color: "#166534",
+    color: "#9ca3af",
     cursor: "pointer",
     padding: "0 4px",
+    lineHeight: 1,
+  },
+  disconnectLink: {
+    fontFamily: FONT,
+    background: "none",
+    border: "none",
+    fontSize: 12,
+    color: "#9ca3af",
+    cursor: "pointer",
+    padding: 0,
+    textAlign: "center" as const,
   },
   footer: {
     fontFamily: FONT,

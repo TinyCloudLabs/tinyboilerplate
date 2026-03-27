@@ -3,6 +3,10 @@ import type { Request, Response, RequestHandler } from "express";
 import { FirefliesClient } from "../services/fireflies-client.js";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+import type { PaginationOptions } from "../services/fireflies-client.js";
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 import { ensureSchema } from "../schema.js";
 import { syncSingleTranscript } from "../services/sync-pipeline.js";
 =======
@@ -21,6 +25,7 @@ interface SyncRoutesConfig {
   delegationMiddleware: RequestHandler;
   /** Optional factory for testing — defaults to creating a real FirefliesClient */
 <<<<<<< HEAD
+<<<<<<< HEAD
   createClient?: (
     apiKey: string,
   ) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
@@ -29,6 +34,11 @@ interface SyncRoutesConfig {
 =======
   createClient?: (apiKey: string) => Pick<FirefliesClient, "listTranscripts" | "getTranscript">;
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+  createClient?: (apiKey: string) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
+  /** Delay between API calls in ms (default 800). Set to 0 for tests. */
+  syncDelayMs?: number;
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -37,13 +47,19 @@ const FIREFLIES_KEY_PATH = "/app.conversations/config/fireflies-key";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 const SYNC_DELAY_MS = 800;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+<<<<<<< HEAD
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 
 // ── Sync Routes ──────────────────────────────────────────────────────
 
@@ -51,9 +67,13 @@ export function createSyncRouter(config: SyncRoutesConfig) {
   const { authMiddleware, delegationMiddleware } = config;
   const makeClient = config.createClient ?? ((key: string) => new FirefliesClient(key));
 <<<<<<< HEAD
+<<<<<<< HEAD
   const delayMs = config.syncDelayMs ?? SYNC_DELAY_MS;
 =======
 >>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
+=======
+  const delayMs = config.syncDelayMs ?? SYNC_DELAY_MS;
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   const router = Router();
 
   // All sync routes require auth + delegation
@@ -277,6 +297,9 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   // ── GET /api/sync/fireflies/stream — SSE paginated sync with progress ──
   router.get("/fireflies/stream", async (req: Request, res: Response) => {
     const access = req.delegatedAccess!;
@@ -290,9 +313,13 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     res.flushHeaders();
 
     let aborted = false;
+<<<<<<< HEAD
     req.on("close", () => {
       aborted = true;
     });
+=======
+    req.on("close", () => { aborted = true; });
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 
     const sendEvent = (type: string, data: unknown) => {
       if (aborted) return;
@@ -302,8 +329,12 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     try {
       // 1. Read Fireflies API key
       const keyResult = await access.kv.get(FIREFLIES_KEY_PATH);
+<<<<<<< HEAD
       const apiKey =
         keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
+=======
+      const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       if (!apiKey) {
         sendEvent("error", { message: "No Fireflies API key configured." });
         res.end();
@@ -333,10 +364,14 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       sendEvent("status", { phase: "listing", message: "Fetching transcript list..." });
 
       // 4. Paginate through all transcripts
+<<<<<<< HEAD
       if (aborted) {
         res.end();
         return;
       }
+=======
+      if (aborted) { res.end(); return; }
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
 
       const paginationResult = await client.listAllTranscripts({
         batchSize: 25,
@@ -344,11 +379,15 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         knownIds: mode === "incremental" ? knownIds : undefined,
         delayMs,
         onProgress: (info) => {
+<<<<<<< HEAD
           sendEvent("progress", {
             phase: "listing",
             batch: info.batch,
             totalListed: info.totalSoFar,
           });
+=======
+          sendEvent("progress", { phase: "listing", batch: info.batch, totalListed: info.totalSoFar });
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
         },
       });
 
@@ -423,8 +462,12 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
+<<<<<<< HEAD
         message:
           "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+=======
+        message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
       });
       return;
     }
@@ -478,11 +521,15 @@ export function createSyncRouter(config: SyncRoutesConfig) {
                 ? metaResult.data.rows[0][0]
                 : (metaResult.data.rows[0] as any).metadata;
               if (raw) {
+<<<<<<< HEAD
                 try {
                   metadata = JSON.parse(String(raw));
                 } catch {
                   /* ignore malformed JSON */
                 }
+=======
+                try { metadata = JSON.parse(String(raw)); } catch {}
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
               }
             }
             metadata.keywords = keywords;
@@ -514,8 +561,11 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     }
   });
 
+<<<<<<< HEAD
 =======
 >>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
+=======
+>>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   // ── DELETE /api/sync/conversations — clear all data for re-sync ──
   router.delete("/conversations", async (req: Request, res: Response) => {
     const access = req.delegatedAccess!;

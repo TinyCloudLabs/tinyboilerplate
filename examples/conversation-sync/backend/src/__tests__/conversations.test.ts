@@ -9,16 +9,23 @@ import type { Request, Response, NextFunction } from "express";
 import { createConversationsRouter } from "../routes/conversations.js";
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // ── Mock KV Store (matches real SDK: returns Result objects) ─────────
 =======
 // ── Mock KV Store ────────────────────────────────────────────────────
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+// ── Mock KV Store (matches real SDK: returns Result objects) ─────────
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
 function createMockKV() {
   const data = new Map<string, string>();
   return {
     _data: data,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     get: async (key: string) => {
       const val = data.get(key);
       if (val === undefined) return { ok: true, data: { data: null } };
@@ -33,6 +40,7 @@ function createMockKV() {
       return { ok: true };
     },
     list: async (_opts?: any) => ({ ok: true, data: { keys: [...data.keys()] } }),
+<<<<<<< HEAD
   };
 }
 
@@ -107,56 +115,82 @@ function createMockSQL(config: MockSQLConfig = {}) {
     get: async (key: string) => data.get(key) ?? null,
     put: async (key: string, value: string) => { data.set(key, value); },
     delete: async (key: string) => { data.delete(key); },
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
   };
 }
 
-// ── Mock SQL ─────────────────────────────────────────────────────────
+// ── Mock SQL (matches real SDK: query returns {ok, data: {rows, columns}}) ──
 
 interface MockSQLConfig {
-  conversationRows?: any[];
+  conversationRows?: Record<string, unknown>[];
   totalCount?: number;
-  participantRows?: any[];
-  detailRow?: any;
+  participantRows?: Record<string, unknown>[];
+  detailRow?: Record<string, unknown>;
+}
+
+function toArrayRows(objects: Record<string, unknown>[]): { rows: unknown[][]; columns: string[] } {
+  if (objects.length === 0) return { rows: [], columns: [] };
+  const columns = Object.keys(objects[0]);
+  const rows = objects.map((obj) => columns.map((col) => obj[col]));
+  return { rows, columns };
 }
 
 function createMockSQL(config: MockSQLConfig = {}) {
-  const calls: Array<{ sql: string; params?: any[] }> = [];
+  const calls: Array<{ method: string; sql: string; params?: any[] }> = [];
 
-  return {
-    _calls: calls,
-    _config: config,
-    execute: async (sql: string, params?: any[]) => {
-      calls.push({ sql, params });
+  const query = async (sql: string, params?: any[]) => {
+    calls.push({ method: "query", sql, params });
 
-      // Schema CREATE statements
-      if (sql.trim().startsWith("CREATE")) {
-        return { ok: true };
-      }
+    // List conversations (has participant_count subquery) — check before COUNT
+    if (sql.includes("participant_count") && sql.includes("ORDER BY")) {
+      return { ok: true, data: toArrayRows(config.conversationRows ?? []) };
+    }
 
-      // List conversations query (has participant_count subquery) — check before COUNT
-      if (sql.includes("participant_count") && sql.includes("ORDER BY")) {
-        return { ok: true, rows: config.conversationRows ?? [] };
-      }
+    // COUNT query for total
+    if (sql.includes("COUNT(*)") && sql.includes("AS total")) {
+      return { ok: true, data: toArrayRows([{ total: config.totalCount ?? 0 }]) };
+    }
 
-      // COUNT query for total (standalone COUNT, not subquery)
-      if (sql.includes("COUNT(*)") && sql.includes("AS total")) {
-        return { ok: true, rows: [{ total: config.totalCount ?? 0 }] };
-      }
+    // Single conversation by id
+    if (sql.includes("FROM conversation") && sql.includes("WHERE") && sql.includes("id = ?")) {
+      return { ok: true, data: toArrayRows(config.detailRow ? [config.detailRow] : []) };
+    }
 
-      // Single conversation by id
-      if (sql.includes("FROM conversation") && sql.includes("WHERE") && sql.includes("id = ?")) {
-        return { ok: true, rows: config.detailRow ? [config.detailRow] : [] };
-      }
+    // Participants by conversation_id
+    if (sql.includes("FROM participant") && sql.includes("conversation_id = ?")) {
+      return { ok: true, data: toArrayRows(config.participantRows ?? []) };
+    }
 
-      // Participants by conversation_id
-      if (sql.includes("FROM participant") && sql.includes("conversation_id = ?")) {
-        return { ok: true, rows: config.participantRows ?? [] };
-      }
+    // Schema verify SELECT
+    if (sql.includes("SELECT 1 FROM conversation")) {
+      return { ok: true, data: { rows: [[1]], columns: ["1"] } };
+    }
 
-      return { ok: true, rows: [] };
-    },
+    return { ok: true, data: { rows: [], columns: [] } };
   };
+<<<<<<< HEAD
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+
+  const execute = async (sql: string, params?: any[]) => {
+    calls.push({ method: "execute", sql, params });
+
+    // Schema CREATE statements
+    if (sql.trim().startsWith("CREATE")) {
+      return { ok: true };
+    }
+
+    // DELETE
+    if (sql.trim().startsWith("DELETE")) {
+      return { ok: true, data: { changes: 0 } };
+    }
+
+    return { ok: true, data: { changes: 0 } };
+  };
+
+  return { _calls: calls, _config: config, query, execute };
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 }
 
 // ── Test Helpers ─────────────────────────────────────────────────────
@@ -268,17 +302,23 @@ describe("Conversations Routes — GET /api/conversations", () => {
     await fetch(`http://localhost:${port}/api/conversations`);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Find the list query and check params
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     const listCall = mockSQL._calls.find(
       (c) => c.sql.includes("ORDER BY") && c.sql.includes("LIMIT"),
     );
     expect(listCall).toBeDefined();
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Last two params should be limit=20, offset=0
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     const params = listCall!.params!;
     expect(params[params.length - 2]).toBe(20);
     expect(params[params.length - 1]).toBe(0);
@@ -327,6 +367,7 @@ describe("Conversations Routes — GET /api/conversations", () => {
     await fetch(`http://localhost:${port}/api/conversations`);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     // First SQL calls should be CREATE TABLE statements (via execute)
     const firstCall = mockSQL._calls[0];
     expect(firstCall.sql.trim().startsWith("CREATE")).toBe(true);
@@ -336,6 +377,12 @@ describe("Conversations Routes — GET /api/conversations", () => {
     const firstCall = mockSQL._calls[0];
     expect(firstCall.sql.trim().startsWith("CREATE")).toBe(true);
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+    // First SQL calls should be CREATE TABLE statements (via execute)
+    const firstCall = mockSQL._calls[0];
+    expect(firstCall.sql.trim().startsWith("CREATE")).toBe(true);
+    expect(firstCall.method).toBe("execute");
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
   });
 });
 
@@ -354,9 +401,12 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
   it("returns conversation with participants and transcript", async () => {
     mockKV = createMockKV();
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Put transcript blob in KV
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     const transcript = [{ speaker_name: "Alice", text: "Hello", start_time: 0.5, end_time: 2.1 }];
     mockKV._data.set("/app.conversations/transcript/conv-1", JSON.stringify(transcript));
 
@@ -398,9 +448,12 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
     expect(body.conversation.title).toBe("Sprint Planning");
     expect(body.conversation.source_id).toBe("ff-123");
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // metadata should be parsed JSON object
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     expect(body.conversation.metadata).toEqual({
       audio_url: "https://audio.example.com/ff-123.mp3",
       organizer_email: "roman@example.com",
@@ -427,9 +480,12 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
   it("returns null transcript when KV blob is missing", async () => {
     mockKV = createMockKV();
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // No transcript in KV
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
     mockSQL = createMockSQL({
       detailRow: {
@@ -485,9 +541,12 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
     await fetch(`http://localhost:${port}/api/conversations/conv-abc`);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     // Check SQL was called with the right id
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     const selectCall = mockSQL._calls.find(
       (c) => c.sql.includes("FROM conversation") && c.sql.includes("id = ?"),
     );

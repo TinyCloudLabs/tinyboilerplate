@@ -213,6 +213,7 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
         }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         // Derive webhook URL — always use the backend's own host (not frontendUrl)
         const webhookUrl = `${req.protocol}://${req.get("host")}/api/webhooks/fireflies`;
 =======
@@ -220,6 +221,10 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
         const baseUrl = frontendUrl || `${req.protocol}://${req.get("host")}`;
         const webhookUrl = `${baseUrl}/api/webhooks/fireflies`;
 >>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
+=======
+        // Derive webhook URL — always use the backend's own host (not frontendUrl)
+        const webhookUrl = `${req.protocol}://${req.get("host")}/api/webhooks/fireflies`;
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
         res.json({ configured, pendingCount, webhookUrl });
       } catch (err) {

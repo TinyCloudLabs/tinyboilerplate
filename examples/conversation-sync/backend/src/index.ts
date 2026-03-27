@@ -125,17 +125,35 @@ async function main() {
     const sub = subResult.ok && (subResult as any).data?.data
       ? String((subResult as any).data.data)
       : null;
-    if (!sub) return null;
+    if (!sub) {
+      console.log("[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user");
+      return null;
+    }
+    console.log(`[webhook] resolving delegation for sub=${sub}`);
 
     // Check cache first
     let access = delegationCache.get(sub);
-    if (access) return access;
+    if (access) {
+      console.log("[webhook] delegation found in cache");
+      return access;
+    }
 
     // Load from persistent store
     const stored = await delegationStore.load(sub);
+<<<<<<< HEAD
     if (!stored) return null;
     if (new Date(stored.expiresAt).getTime() <= Date.now()) return null;
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+=======
+    if (!stored) {
+      console.log("[webhook] no delegation in store for this sub — user needs to sign in and delegate");
+      return null;
+    }
+    if (new Date(stored.expiresAt).getTime() <= Date.now()) {
+      console.log(`[webhook] delegation expired at ${stored.expiresAt}`);
+      return null;
+    }
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
     // Activate delegation
     try {
@@ -143,9 +161,13 @@ async function main() {
       access = await node.useDelegation(delegation);
       delegationCache.set(sub, access);
 <<<<<<< HEAD
+<<<<<<< HEAD
       console.log("[webhook] delegation activated from store");
 =======
 >>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+=======
+      console.log("[webhook] delegation activated from store");
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
       return access;
     } catch (err) {
       console.error("[webhook] failed to activate delegation:", err);

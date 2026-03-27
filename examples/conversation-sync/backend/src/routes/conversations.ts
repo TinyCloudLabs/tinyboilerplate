@@ -1,10 +1,14 @@
 import { Router } from "express";
 import type { Request, Response, RequestHandler } from "express";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { ensureSchema } from "../schema.js";
 =======
 import { ensureSchema, DATABASE_NAME } from "../schema.js";
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+import { ensureSchema } from "../schema.js";
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -19,6 +23,9 @@ const DEFAULT_LIMIT = 20;
 const DEFAULT_OFFSET = 0;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /**
@@ -37,8 +44,11 @@ function rowsToObjects(rows: unknown[][], columns: string[]): Record<string, unk
   return rows.map((row) => rowToObject(row, columns));
 }
 
+<<<<<<< HEAD
 =======
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 // ── Conversations Routes ─────────────────────────────────────────────
 
 export function createConversationsRouter(config: ConversationsRoutesConfig) {
@@ -60,6 +70,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
       // Total count
 <<<<<<< HEAD
+<<<<<<< HEAD
       const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
       let total = 0;
       if (countResult.ok && countResult.data.rows?.[0]) {
@@ -74,15 +85,27 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       const listResult = await access.sql.query(
 =======
       const countResult = await access.sql.execute(
+=======
+      const countResult = await access.sql.query(
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         `SELECT COUNT(*) AS total FROM conversation`,
       );
-      const total = countResult.ok && countResult.rows?.[0]
-        ? (countResult.rows[0] as any).total
-        : 0;
+      let total = 0;
+      if (countResult.ok && countResult.data.rows?.[0]) {
+        const countRow = rowToObject(
+          countResult.data.rows[0] as unknown[],
+          countResult.data.columns,
+        );
+        total = Number(countRow.total) || 0;
+      }
 
       // Paginated list with participant_count subquery
+<<<<<<< HEAD
       const listResult = await access.sql.execute(
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+      const listResult = await access.sql.query(
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
            (SELECT COUNT(*) FROM participant p WHERE p.conversation_id = c.id) AS participant_count
          FROM conversation c
@@ -92,12 +115,18 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       );
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       const conversations = listResult.ok
         ? rowsToObjects(listResult.data.rows as unknown[][], listResult.data.columns)
         : [];
 =======
       const conversations = listResult.ok ? (listResult.rows ?? []) : [];
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+      const conversations = listResult.ok
+        ? rowsToObjects(listResult.data.rows as unknown[][], listResult.data.columns)
+        : [];
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
       res.json({ conversations, total });
     } catch (err) {
@@ -117,15 +146,20 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
       // Fetch conversation
 <<<<<<< HEAD
+<<<<<<< HEAD
       const convoResult = await access.sql.query(
 =======
       const convoResult = await access.sql.execute(
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+      const convoResult = await access.sql.query(
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         `SELECT id, title, source, source_id, source_url, started_at, ended_at, duration_secs, summary, metadata, created_at, updated_at
          FROM conversation WHERE id = ?`,
         [id],
       );
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       if (!convoResult.ok || !convoResult.data.rows?.length) {
 =======
@@ -135,10 +169,14 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
       if (!row) {
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+      if (!convoResult.ok || !convoResult.data.rows?.length) {
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         res.status(404).json({ error: "not_found", message: `Conversation ${id} not found` });
         return;
       }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       const row = rowToObject(convoResult.data.rows[0] as unknown[], convoResult.data.columns);
 
@@ -152,6 +190,17 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       try {
         metadata = row.metadata ? JSON.parse(row.metadata) : {};
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+      const row = rowToObject(
+        convoResult.data.rows[0] as unknown[],
+        convoResult.data.columns,
+      );
+
+      // Parse metadata from JSON string
+      let metadata: Record<string, unknown> = {};
+      try {
+        metadata = row.metadata ? JSON.parse(String(row.metadata)) : {};
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
       } catch {
         metadata = {};
       }
@@ -159,6 +208,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       const conversation = { ...row, metadata };
 
       // Fetch participants
+<<<<<<< HEAD
 <<<<<<< HEAD
       const participantsResult = await access.sql.query(
         `SELECT id, name, email, speaker_label FROM participant WHERE conversation_id = ?`,
@@ -192,21 +242,38 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
           transcript = raw;
 =======
       const participantsResult = await access.sql.execute(
+=======
+      const participantsResult = await access.sql.query(
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         `SELECT id, name, email, speaker_label FROM participant WHERE conversation_id = ?`,
         [id],
       );
-      const participants = participantsResult.ok ? (participantsResult.rows ?? []) : [];
+      const participants = participantsResult.ok
+        ? rowsToObjects(participantsResult.data.rows as unknown[][], participantsResult.data.columns)
+        : [];
 
       // Load transcript blob from KV
       const kvKey = `/app.conversations/transcript/${id}`;
-      const transcriptBlob = await access.kv.get(kvKey);
+      console.log(`[conversations] Loading transcript from KV: ${kvKey}`);
+      const kvResult = await access.kv.get(kvKey);
+      console.log(`[conversations] KV result ok=${kvResult.ok}, hasData=${kvResult.ok && kvResult.data?.data != null}, type=${kvResult.ok ? typeof kvResult.data?.data : 'n/a'}`);
       let transcript: unknown = null;
+<<<<<<< HEAD
       if (transcriptBlob) {
         try {
           transcript = JSON.parse(transcriptBlob);
         } catch {
           transcript = null;
 >>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+=======
+      if (kvResult.ok && kvResult.data.data) {
+        const raw = kvResult.data.data;
+        // KV may return already-parsed object or a JSON string
+        if (typeof raw === "string") {
+          try { transcript = JSON.parse(raw); } catch { transcript = null; }
+        } else {
+          transcript = raw;
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         }
       }
 

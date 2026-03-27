@@ -11,6 +11,9 @@ function createMockKV() {
   return {
     _data: data,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     get: async (key: string) => {
       const val = data.get(key);
       if (val === undefined) return { ok: true, data: { data: null } };
@@ -24,11 +27,14 @@ function createMockKV() {
       data.delete(key);
       return { ok: true };
     },
+<<<<<<< HEAD
 =======
     get: async (key: string) => data.get(key) ?? null,
     put: async (key: string, value: string) => { data.set(key, value); },
     delete: async (key: string) => { data.delete(key); },
 >>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
+=======
+>>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
   };
 }
 

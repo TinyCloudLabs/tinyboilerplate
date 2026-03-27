@@ -139,7 +139,7 @@ function createMockClientFactory() {
   /** For paginated listing: array of batches, each batch returned per call */
   let listBatches: TranscriptSummary[][] | null = null;
   let listCallIndex = 0;
-  let getResults = new Map<string, FullTranscript | Error>();
+  const getResults = new Map<string, FullTranscript | Error>();
   let lastApiKey: string | null = null;
 
   return {
@@ -162,7 +162,6 @@ function createMockClientFactory() {
         listAllTranscripts: async (options?: PaginationOptions): Promise<PaginationResult> => {
           // If batches are set, simulate real pagination
           if (listBatches) {
-            const batchSize = options?.batchSize ?? 25;
             const knownIds = options?.knownIds;
             const mode = options?.mode ?? "incremental";
             const all: TranscriptSummary[] = [];
@@ -271,7 +270,7 @@ function parseSSEText(text: string): ParsedSSEEvent[] {
       else if (line.startsWith("data: ")) data = line.slice(6);
     }
     if (data) {
-      try { events.push({ type, data: JSON.parse(data) }); } catch {}
+      try { events.push({ type, data: JSON.parse(data) }); } catch { /* skip malformed */ }
     }
   }
   return events;

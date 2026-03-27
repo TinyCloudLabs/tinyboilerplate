@@ -25,7 +25,7 @@ const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
 // ── Config Routes ────────────────────────────────────────────────────
 
 export function createConfigRouter(config: ConfigRoutesConfig) {
-  const { authMiddleware, delegationMiddleware, backendKV, frontendUrl } = config;
+  const { authMiddleware, delegationMiddleware, backendKV } = config;
   const router = Router();
 
   // All config routes require auth

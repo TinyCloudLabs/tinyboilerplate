@@ -1,7 +1,6 @@
 import { Router } from "express";
 import type { Request, Response, RequestHandler } from "express";
 import { FirefliesClient } from "../services/fireflies-client.js";
-import type { PaginationOptions } from "../services/fireflies-client.js";
 import { ensureSchema } from "../schema.js";
 import { syncSingleTranscript } from "../services/sync-pipeline.js";
 
@@ -331,7 +330,7 @@ export function createSyncRouter(config: SyncRoutesConfig) {
                 ? metaResult.data.rows[0][0]
                 : (metaResult.data.rows[0] as any).metadata;
               if (raw) {
-                try { metadata = JSON.parse(String(raw)); } catch {}
+                try { metadata = JSON.parse(String(raw)); } catch { /* ignore malformed JSON */ }
               }
             }
             metadata.keywords = keywords;

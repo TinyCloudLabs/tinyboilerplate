@@ -322,7 +322,7 @@ async function updateSummary(
   // Merge summary data into metadata
   let metadata: Record<string, unknown> = {};
   if (rawMeta) {
-    try { metadata = JSON.parse(String(rawMeta)); } catch {}
+    try { metadata = JSON.parse(String(rawMeta)); } catch { /* ignore malformed JSON */ }
   }
   metadata.keywords = transcript.summary?.keywords ?? [];
   metadata.meeting_type = transcript.summary?.meeting_type ?? null;

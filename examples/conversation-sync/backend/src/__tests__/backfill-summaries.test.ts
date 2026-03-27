@@ -34,7 +34,7 @@ function createMockSQL() {
   /** Rows returned for the "missing summaries" SELECT */
   let missingRows: Array<{ id: string; source_id: string }> = [];
   /** Metadata stored per conversation id */
-  let metadataByConvId = new Map<string, string>();
+  const metadataByConvId = new Map<string, string>();
 
   return {
     _calls: calls,
@@ -119,13 +119,13 @@ function createMockFullTranscript(overrides: Partial<FullTranscript> = {}): Full
 }
 
 function createMockClientFactory() {
-  let getResults = new Map<string, FullTranscript | Error>();
+  const getResults = new Map<string, FullTranscript | Error>();
 
   return {
     setGetResult(id: string, result: FullTranscript | Error) {
       getResults.set(id, result);
     },
-    factory(apiKey: string) {
+    factory(_apiKey: string) {
       return {
         listTranscripts: async () => [],
         getTranscript: async (id: string) => {

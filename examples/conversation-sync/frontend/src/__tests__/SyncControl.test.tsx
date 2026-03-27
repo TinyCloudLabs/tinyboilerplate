@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 =======
 import {
@@ -15,6 +16,9 @@ import {
 =======
 import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 >>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
+=======
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
 import { SyncControl } from "../components/SyncControl";
 import type { ApiClient } from "@tinyboilerplate/client";
 
@@ -54,9 +58,13 @@ describe("SyncControl", () => {
   let api: ApiClient;
   let onSyncComplete: ReturnType<typeof vi.fn>;
 <<<<<<< HEAD
+<<<<<<< HEAD
   const getAccessToken = vi.fn().mockReturnValue("test-token");
 =======
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
+=======
+  const getAccessToken = vi.fn().mockReturnValue("test-token");
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
 
   beforeEach(() => {
     api = mockApi();
@@ -71,6 +79,9 @@ describe("SyncControl", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
   it("renders Sync All and Reset buttons", () => {
     render(
       <SyncControl
@@ -79,6 +90,7 @@ describe("SyncControl", () => {
         getAccessToken={getAccessToken}
         onSyncComplete={onSyncComplete}
       />,
+<<<<<<< HEAD
     );
     expect(screen.getByRole("button", { name: /sync all/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /reset/i })).toBeInTheDocument();
@@ -231,21 +243,14 @@ describe("SyncControl", () => {
       new Promise((resolve) => {
         resolveSync = resolve;
       }),
+=======
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     );
-    api = mockApi({ post: postMock });
-
-    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
-    fireEvent.click(screen.getByRole("button", { name: /sync now/i }));
-
-    expect(screen.getByText(/syncing conversations/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /syncing/i })).toBeDisabled();
-
-    // Resolve to clean up
-    await act(async () => {
-      resolveSync({ synced: 0, skipped: 0, failed: 0, errors: [] });
-    });
+    expect(screen.getByRole("button", { name: /sync all/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /reset/i })).toBeInTheDocument();
   });
 
+<<<<<<< HEAD
   it("shows success message on completed sync", async () => {
     const postMock = vi.fn().mockResolvedValue({ synced: 5, skipped: 3, failed: 0, errors: [] });
     api = mockApi({ post: postMock });
@@ -389,6 +394,8 @@ describe("SyncControl", () => {
 
   // ── Webhook status tests ───────────────────────────────────────────
 
+=======
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
   it("fetches webhook status on mount", async () => {
     const getMock = vi.fn().mockResolvedValue({
       configured: true,
@@ -397,14 +404,21 @@ describe("SyncControl", () => {
     });
     api = mockApi({ get: getMock });
 
-    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+      />,
+    );
 
     await waitFor(() => {
       expect(getMock).toHaveBeenCalledWith("/api/config/webhook-status");
     });
   });
 
-  it("shows 'Webhook active' when configured with no pending", async () => {
+  it("shows 'Live' badge when webhook is configured", async () => {
     const getMock = vi.fn().mockResolvedValue({
       configured: true,
       pendingCount: 0,
@@ -412,14 +426,21 @@ describe("SyncControl", () => {
     });
     api = mockApi({ get: getMock });
 
-    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText(/webhook active/i)).toBeInTheDocument();
+      expect(screen.getByText(/live/i)).toBeInTheDocument();
     });
   });
 
-  it("shows 'Webhook not configured' when not configured", async () => {
+  it("does not show Live badge when webhook is not configured", async () => {
     const getMock = vi.fn().mockResolvedValue({
       configured: false,
       pendingCount: 0,
@@ -427,11 +448,20 @@ describe("SyncControl", () => {
     });
     api = mockApi({ get: getMock });
 
-    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText(/webhook not configured/i)).toBeInTheDocument();
+      expect(getMock).toHaveBeenCalledWith("/api/config/webhook-status");
     });
+
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
   });
 
   it("shows pending count when there are pending items", async () => {
@@ -442,26 +472,53 @@ describe("SyncControl", () => {
     });
     api = mockApi({ get: getMock });
 
-    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+      />,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText(/3 transcripts waiting/i)).toBeInTheDocument();
+      expect(screen.getByText(/transcripts queued from webhook/i)).toBeInTheDocument();
     });
   });
 
-  it("does not show webhook status if fetch fails", async () => {
+  it("does not show webhook badge if fetch fails", async () => {
     const getMock = vi.fn().mockRejectedValue(new Error("fetch failed"));
     api = mockApi({ get: getMock });
 
-    render(<SyncControl api={api} onSyncComplete={onSyncComplete} />);
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+      />,
+    );
 
-    // Wait for fetch to complete
     await waitFor(() => {
       expect(getMock).toHaveBeenCalledWith("/api/config/webhook-status");
     });
 
-    // Should not show webhook status
-    expect(screen.queryByText(/webhook active/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/webhook not configured/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+  });
+
+  it("displays last synced time from localStorage", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-24T15:10:00Z"));
+    localStorage.setItem("lastSyncTimestamp", new Date("2026-03-24T15:00:00Z").toISOString());
+
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+      />,
+    );
+    expect(screen.getByText(/10 min ago/i)).toBeInTheDocument();
   });
 });

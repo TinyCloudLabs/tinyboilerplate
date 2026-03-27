@@ -151,6 +151,7 @@ describe("ConversationDetail", () => {
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     expect(screen.getByText("Loading conversation")).toBeInTheDocument();
 
     resolveGet(DETAIL_RESPONSE);
@@ -163,6 +164,13 @@ describe("ConversationDetail", () => {
     await waitFor(() => {
       expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+    expect(screen.getByText("Loading conversation")).toBeInTheDocument();
+
+    resolveGet(DETAIL_RESPONSE);
+    await waitFor(() => {
+      expect(screen.queryByText("Loading conversation")).not.toBeInTheDocument();
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     });
   });
 
@@ -178,15 +186,20 @@ describe("ConversationDetail", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   it("renders participant names as chips", async () => {
 =======
   it("renders participant names", async () => {
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+  it("renders participant names as chips", async () => {
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     api = mockApi({ get: vi.fn().mockResolvedValue(DETAIL_RESPONSE) });
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
 
     await waitFor(() => {
+<<<<<<< HEAD
 <<<<<<< HEAD
       expect(screen.getByText("2 participants")).toBeInTheDocument();
     });
@@ -201,6 +214,13 @@ describe("ConversationDetail", () => {
 
   it("renders summary section", async () => {
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+      expect(screen.getByText("2 participants")).toBeInTheDocument();
+    });
+  });
+
+  it("renders summary section with HTML", async () => {
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     api = mockApi({ get: vi.fn().mockResolvedValue(DETAIL_RESPONSE) });
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
@@ -251,15 +271,20 @@ describe("ConversationDetail", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   it("formats timestamps as m:ss", async () => {
 =======
   it("formats timestamps as mm:ss", async () => {
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+  it("formats timestamps as m:ss", async () => {
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     api = mockApi({ get: vi.fn().mockResolvedValue(DETAIL_RESPONSE) });
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
 
     await waitFor(() => {
+<<<<<<< HEAD
 <<<<<<< HEAD
       expect(screen.getByText("0:00")).toBeInTheDocument(); // start_time 0
       expect(screen.getByText("0:10")).toBeInTheDocument(); // start_time 10
@@ -269,6 +294,11 @@ describe("ConversationDetail", () => {
       expect(screen.getByText("00:10")).toBeInTheDocument(); // start_time 10
       expect(screen.getByText("01:05")).toBeInTheDocument(); // start_time 65
 >>>>>>> ab0248b (TC-1308: Build ConversationDetail component with transcript view and speaker labels)
+=======
+      expect(screen.getByText("0:00")).toBeInTheDocument(); // start_time 0
+      expect(screen.getByText("0:10")).toBeInTheDocument(); // start_time 10
+      expect(screen.getByText("1:05")).toBeInTheDocument(); // start_time 65
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     });
   });
 

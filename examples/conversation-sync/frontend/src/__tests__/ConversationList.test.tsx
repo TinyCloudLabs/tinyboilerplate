@@ -138,6 +138,7 @@ describe("ConversationList", () => {
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     expect(screen.getByText("Loading conversations")).toBeInTheDocument();
+<<<<<<< HEAD
 
     resolveGet({ conversations: [], total: 0 });
     await waitFor(() => {
@@ -156,6 +157,12 @@ describe("ConversationList", () => {
     await waitFor(() => {
       expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+
+    resolveGet({ conversations: [], total: 0 });
+    await waitFor(() => {
+      expect(screen.queryByText("Loading conversations")).not.toBeInTheDocument();
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     });
   });
 
@@ -190,8 +197,14 @@ describe("ConversationList", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
+<<<<<<< HEAD
       expect(screen.getByText(/click sync to import from fireflies/i)).toBeInTheDocument();
 >>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
+=======
+      expect(
+        screen.getByText(/sync your first meetings from fireflies above/i),
+      ).toBeInTheDocument();
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     });
   });
 
@@ -250,10 +263,14 @@ describe("ConversationList", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   it("truncates and cleans summary text", async () => {
 =======
   it("truncates summary to ~100 chars", async () => {
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+  it("truncates and cleans summary text", async () => {
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     const longSummary = "A".repeat(150);
     api = mockApi({
       get: vi.fn().mockResolvedValue({
@@ -270,6 +287,7 @@ describe("ConversationList", () => {
       // cleanSummary uses max=120, so truncated text + ellipsis
       const summaryEl = screen.getByText(/A+\u2026$/);
       expect(summaryEl.textContent!.length).toBeLessThanOrEqual(120);
+<<<<<<< HEAD
 =======
     render(
       <ConversationList api={api} onSelectConversation={onSelectConversation} />,
@@ -283,6 +301,8 @@ describe("ConversationList", () => {
       const summaryEl = screen.getByText(/A+…$/);
       expect(summaryEl.textContent!.length).toBeLessThanOrEqual(104); // 100 + "…" + some tolerance
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
     });
   });
 
@@ -500,6 +520,9 @@ describe("ConversationList", () => {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
   it("shows conversation count header", async () => {
     api = mockApi({
       get: vi.fn().mockResolvedValue({
@@ -515,8 +538,11 @@ describe("ConversationList", () => {
     });
   });
 
+<<<<<<< HEAD
 =======
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
+=======
+>>>>>>> eafdd67 (test: update frontend tests for redesigned components)
   it("refreshes when refreshKey changes", async () => {
     const getMock = vi
       .fn()

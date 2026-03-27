@@ -65,6 +65,15 @@ function validPayload(meetingId = "meeting-123") {
   });
 }
 
+/** Current Fireflies payload format */
+function validPayloadV2(meetingId = "meeting-123") {
+  return JSON.stringify({
+    meeting_id: meetingId,
+    event: "meeting.transcribed",
+    timestamp: Date.now(),
+  });
+}
+
 function startServer(app: express.Express): Promise<{ server: Server; port: number }> {
   return new Promise((resolve) => {
     const server = app.listen(0, () => {
@@ -186,6 +195,17 @@ describe("POST /api/webhooks/fireflies", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.status).toBe("processed");
+  });
+
+  it("returns 200 with status 'processed' for current Fireflies payload format", async () => {
+    const body = validPayloadV2("v2-meeting");
+    const res = await post(body, { "x-hub-signature": sign(body, SECRET) });
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe("processed");
+    expect(syncFn).toHaveBeenCalledTimes(1);
+    expect(syncFn.mock.calls[0][0]).toBe("v2-meeting");
   });
 
   it("calls syncFn with correct meetingId", async () => {

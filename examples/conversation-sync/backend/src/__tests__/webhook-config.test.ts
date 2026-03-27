@@ -195,12 +195,12 @@ describe("Webhook Config Routes", () => {
       expect(body.pendingCount).toBe(0);
     });
 
-    it("returns webhookUrl from frontendUrl config", async () => {
+    it("returns webhookUrl from backend host (ignores frontendUrl)", async () => {
       const res = await fetch(`http://localhost:${port}/api/config/webhook-status`);
 
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body.webhookUrl).toBe("http://localhost:3001/api/webhooks/fireflies");
+      expect(body.webhookUrl).toBe(`http://localhost:${port}/api/webhooks/fireflies`);
     });
 
     it("derives webhookUrl from request host when no frontendUrl", async () => {

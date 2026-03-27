@@ -4,64 +4,96 @@ import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
 import { createConversationsRouter } from "../routes/conversations.js";
 
-// ── Mock KV Store ────────────────────────────────────────────────────
+// ── Mock KV Store (matches real SDK: returns Result objects) ─────────
 
 function createMockKV() {
   const data = new Map<string, string>();
   return {
     _data: data,
-    get: async (key: string) => data.get(key) ?? null,
-    put: async (key: string, value: string) => { data.set(key, value); },
-    delete: async (key: string) => { data.delete(key); },
+    get: async (key: string) => {
+      const val = data.get(key);
+      if (val === undefined) return { ok: true, data: { data: null } };
+      return { ok: true, data: { data: val } };
+    },
+    put: async (key: string, value: string) => {
+      data.set(key, value);
+      return { ok: true };
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+      return { ok: true };
+    },
+    list: async (_opts?: any) => ({ ok: true, data: { keys: [...data.keys()] } }),
   };
 }
 
-// ── Mock SQL ─────────────────────────────────────────────────────────
+// ── Mock SQL (matches real SDK: query returns {ok, data: {rows, columns}}) ──
 
 interface MockSQLConfig {
-  conversationRows?: any[];
+  conversationRows?: Record<string, unknown>[];
   totalCount?: number;
-  participantRows?: any[];
-  detailRow?: any;
+  participantRows?: Record<string, unknown>[];
+  detailRow?: Record<string, unknown>;
+}
+
+function toArrayRows(objects: Record<string, unknown>[]): { rows: unknown[][]; columns: string[] } {
+  if (objects.length === 0) return { rows: [], columns: [] };
+  const columns = Object.keys(objects[0]);
+  const rows = objects.map((obj) => columns.map((col) => obj[col]));
+  return { rows, columns };
 }
 
 function createMockSQL(config: MockSQLConfig = {}) {
-  const calls: Array<{ sql: string; params?: any[] }> = [];
+  const calls: Array<{ method: string; sql: string; params?: any[] }> = [];
 
-  return {
-    _calls: calls,
-    _config: config,
-    execute: async (sql: string, params?: any[]) => {
-      calls.push({ sql, params });
+  const query = async (sql: string, params?: any[]) => {
+    calls.push({ method: "query", sql, params });
 
-      // Schema CREATE statements
-      if (sql.trim().startsWith("CREATE")) {
-        return { ok: true };
-      }
+    // List conversations (has participant_count subquery) — check before COUNT
+    if (sql.includes("participant_count") && sql.includes("ORDER BY")) {
+      return { ok: true, data: toArrayRows(config.conversationRows ?? []) };
+    }
 
-      // List conversations query (has participant_count subquery) — check before COUNT
-      if (sql.includes("participant_count") && sql.includes("ORDER BY")) {
-        return { ok: true, rows: config.conversationRows ?? [] };
-      }
+    // COUNT query for total
+    if (sql.includes("COUNT(*)") && sql.includes("AS total")) {
+      return { ok: true, data: toArrayRows([{ total: config.totalCount ?? 0 }]) };
+    }
 
-      // COUNT query for total (standalone COUNT, not subquery)
-      if (sql.includes("COUNT(*)") && sql.includes("AS total")) {
-        return { ok: true, rows: [{ total: config.totalCount ?? 0 }] };
-      }
+    // Single conversation by id
+    if (sql.includes("FROM conversation") && sql.includes("WHERE") && sql.includes("id = ?")) {
+      return { ok: true, data: toArrayRows(config.detailRow ? [config.detailRow] : []) };
+    }
 
-      // Single conversation by id
-      if (sql.includes("FROM conversation") && sql.includes("WHERE") && sql.includes("id = ?")) {
-        return { ok: true, rows: config.detailRow ? [config.detailRow] : [] };
-      }
+    // Participants by conversation_id
+    if (sql.includes("FROM participant") && sql.includes("conversation_id = ?")) {
+      return { ok: true, data: toArrayRows(config.participantRows ?? []) };
+    }
 
-      // Participants by conversation_id
-      if (sql.includes("FROM participant") && sql.includes("conversation_id = ?")) {
-        return { ok: true, rows: config.participantRows ?? [] };
-      }
+    // Schema verify SELECT
+    if (sql.includes("SELECT 1 FROM conversation")) {
+      return { ok: true, data: { rows: [[1]], columns: ["1"] } };
+    }
 
-      return { ok: true, rows: [] };
-    },
+    return { ok: true, data: { rows: [], columns: [] } };
   };
+
+  const execute = async (sql: string, params?: any[]) => {
+    calls.push({ method: "execute", sql, params });
+
+    // Schema CREATE statements
+    if (sql.trim().startsWith("CREATE")) {
+      return { ok: true };
+    }
+
+    // DELETE
+    if (sql.trim().startsWith("DELETE")) {
+      return { ok: true, data: { changes: 0 } };
+    }
+
+    return { ok: true, data: { changes: 0 } };
+  };
+
+  return { _calls: calls, _config: config, query, execute };
 }
 
 // ── Test Helpers ─────────────────────────────────────────────────────
@@ -172,12 +204,10 @@ describe("Conversations Routes — GET /api/conversations", () => {
 
     await fetch(`http://localhost:${port}/api/conversations`);
 
-    // Find the list query and check params
     const listCall = mockSQL._calls.find(
       (c) => c.sql.includes("ORDER BY") && c.sql.includes("LIMIT"),
     );
     expect(listCall).toBeDefined();
-    // Last two params should be limit=20, offset=0
     const params = listCall!.params!;
     expect(params[params.length - 2]).toBe(20);
     expect(params[params.length - 1]).toBe(0);
@@ -225,9 +255,10 @@ describe("Conversations Routes — GET /api/conversations", () => {
 
     await fetch(`http://localhost:${port}/api/conversations`);
 
-    // First SQL calls should be CREATE TABLE/INDEX statements
+    // First SQL calls should be CREATE TABLE statements (via execute)
     const firstCall = mockSQL._calls[0];
     expect(firstCall.sql.trim().startsWith("CREATE")).toBe(true);
+    expect(firstCall.method).toBe("execute");
   });
 });
 
@@ -245,7 +276,6 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
 
   it("returns conversation with participants and transcript", async () => {
     mockKV = createMockKV();
-    // Put transcript blob in KV
     const transcript = [{ speaker_name: "Alice", text: "Hello", start_time: 0.5, end_time: 2.1 }];
     mockKV._data.set("/app.conversations/transcript/conv-1", JSON.stringify(transcript));
 
@@ -279,7 +309,6 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
     expect(body.conversation.id).toBe("conv-1");
     expect(body.conversation.title).toBe("Sprint Planning");
     expect(body.conversation.source_id).toBe("ff-123");
-    // metadata should be parsed JSON object
     expect(body.conversation.metadata).toEqual({
       audio_url: "https://audio.example.com/ff-123.mp3",
       organizer_email: "roman@example.com",
@@ -305,7 +334,6 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
 
   it("returns null transcript when KV blob is missing", async () => {
     mockKV = createMockKV();
-    // No transcript in KV
 
     mockSQL = createMockSQL({
       detailRow: {
@@ -360,7 +388,6 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
 
     await fetch(`http://localhost:${port}/api/conversations/conv-abc`);
 
-    // Check SQL was called with the right id
     const selectCall = mockSQL._calls.find(
       (c) => c.sql.includes("FROM conversation") && c.sql.includes("id = ?"),
     );

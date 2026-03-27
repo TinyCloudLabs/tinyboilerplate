@@ -135,9 +135,8 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
           }
         }
 
-        // Derive webhook URL
-        const baseUrl = frontendUrl || `${req.protocol}://${req.get("host")}`;
-        const webhookUrl = `${baseUrl}/api/webhooks/fireflies`;
+        // Derive webhook URL — always use the backend's own host (not frontendUrl)
+        const webhookUrl = `${req.protocol}://${req.get("host")}/api/webhooks/fireflies`;
 
         res.json({ configured, pendingCount, webhookUrl });
       } catch (err) {

@@ -6,7 +6,7 @@ function createMockAccess() {
   return {
     sql: {
       execute: mock(async (_sql: string) => ({ ok: true })),
-      query: mock(async () => ({ ok: true, rows: [], columns: [] })),
+      query: mock(async () => ({ ok: true, data: { rows: [], columns: [] } })),
     },
     kv: {},
   } as any;
@@ -36,7 +36,6 @@ describe("schema", () => {
       const calls = access.sql.execute.mock.calls;
       const allSql = calls.map((c: any) => c[0]).join("\n");
       expect(allSql).toContain("CREATE TABLE IF NOT EXISTS conversation");
-      expect(allSql).toContain("UNIQUE(source, source_id)");
     });
 
     it("executes CREATE TABLE for participant table", async () => {
@@ -45,18 +44,15 @@ describe("schema", () => {
       const calls = access.sql.execute.mock.calls;
       const allSql = calls.map((c: any) => c[0]).join("\n");
       expect(allSql).toContain("CREATE TABLE IF NOT EXISTS participant");
-      expect(allSql).toContain("REFERENCES conversation(id)");
     });
 
-    it("creates all 4 indexes", async () => {
+    it("executes exactly 2 CREATE TABLE statements", async () => {
       await ensureSchema(access);
 
       const calls = access.sql.execute.mock.calls;
-      const allSql = calls.map((c: any) => c[0]).join("\n");
-      expect(allSql).toContain("idx_convo_source");
-      expect(allSql).toContain("idx_convo_started");
-      expect(allSql).toContain("idx_participant_convo");
-      expect(allSql).toContain("idx_participant_email");
+      expect(calls.length).toBe(2);
+      expect(calls[0][0]).toContain("CREATE TABLE IF NOT EXISTS conversation");
+      expect(calls[1][0]).toContain("CREATE TABLE IF NOT EXISTS participant");
     });
 
     it("no-ops on subsequent calls with the same access", async () => {

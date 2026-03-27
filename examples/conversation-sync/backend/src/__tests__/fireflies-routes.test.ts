@@ -10,9 +10,19 @@ function createMockKV() {
   const data = new Map<string, string>();
   return {
     _data: data,
-    get: async (key: string) => data.get(key) ?? null,
-    put: async (key: string, value: string) => { data.set(key, value); },
-    delete: async (key: string) => { data.delete(key); },
+    get: async (key: string) => {
+      const val = data.get(key);
+      if (val === undefined) return { ok: true, data: { data: null } };
+      return { ok: true, data: { data: val } };
+    },
+    put: async (key: string, value: string) => {
+      data.set(key, value);
+      return { ok: true };
+    },
+    delete: async (key: string) => {
+      data.delete(key);
+      return { ok: true };
+    },
   };
 }
 

@@ -28,7 +28,8 @@ export function createFirefliesRouter(config: FirefliesRoutesConfig) {
 
   // ── GET /api/fireflies/user — connection test ───────────────────
   router.get("/user", async (req: Request, res: Response) => {
-    const apiKey = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
+    const keyResult = await req.delegatedAccess!.kv.get(FIREFLIES_KEY_PATH);
+    const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
 
     if (!apiKey) {
       res.status(404).json({

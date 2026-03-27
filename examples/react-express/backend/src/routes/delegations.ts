@@ -3,6 +3,7 @@ import type { Request, Response, RequestHandler } from "express";
 import type { TinyCloudNode } from "@tinycloud/node-sdk";
 import { deserializeDelegation } from "@tinycloud/node-sdk";
 import type { DelegationStore, DelegationCache } from "@tinyboilerplate/server";
+import { DEFAULT_DELEGATION_EXPIRY_MS } from "@tinyboilerplate/core";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
             ? delegation.expiry
             : new Date(delegation.expiry)
           ).toISOString()
-        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        : new Date(Date.now() + DEFAULT_DELEGATION_EXPIRY_MS).toISOString();
 
       // Store the delegation keyed by JWT sub (not client-supplied address)
       await store.store(sub, serialized, {

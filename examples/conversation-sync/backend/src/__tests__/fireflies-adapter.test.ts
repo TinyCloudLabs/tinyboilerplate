@@ -10,7 +10,7 @@ function makeFullTranscript(overrides?: Partial<FullTranscript>): FullTranscript
     id: "ff-abc-123",
     title: "Team standup",
     date: 1700000000000, // 2023-11-14T22:13:20.000Z
-    duration: 1800, // 30 minutes
+    duration: 30, // 30 minutes (Fireflies API returns minutes)
     organizer_email: "roman@tinycloud.xyz",
     transcript_url: "https://app.fireflies.ai/view/ff-abc-123",
     speakers: [
@@ -97,11 +97,11 @@ describe("normalizeFireflies", () => {
     expect(result.conversation.started_at).toBe("2023-11-14T22:13:20.000Z");
   });
 
-  it("computes ended_at as started_at + duration", () => {
-    // date = 1700000000000 (2023-11-14T22:13:20.000Z), duration = 1800s
-    // ended_at = 1700000000000 + (1800 * 1000) = 1700001800000
+  it("computes ended_at as started_at + duration (minutes → seconds)", () => {
+    // date = 1700000000000 (2023-11-14T22:13:20.000Z), duration = 30 min
+    // ended_at = 1700000000000 + (30 * 60 * 1000) = 1700001800000
     // 2023-11-14T22:43:20.000Z
-    const raw = makeFullTranscript({ date: 1700000000000, duration: 1800 });
+    const raw = makeFullTranscript({ date: 1700000000000, duration: 30 });
     const result = normalizeFireflies(raw);
 
     expect(result.conversation.ended_at).toBe("2023-11-14T22:43:20.000Z");

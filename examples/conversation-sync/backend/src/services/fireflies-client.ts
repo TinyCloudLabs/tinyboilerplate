@@ -1,4 +1,12 @@
 const FIREFLIES_GRAPHQL_URL = "https://api.fireflies.ai/graphql";
+const MAX_RETRIES = 3;
+const DEFAULT_RATE_LIMIT_WAIT_MS = 60_000;
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ── Response types ──────────────────────────────────────────────────
 
@@ -134,6 +142,27 @@ const GET_TRANSCRIPT_QUERY = `query GetTranscript($id: String!) {
   }
 }`;
 
+// ── Pagination types ────────────────────────────────────────────────
+
+export interface PaginationOptions {
+  /** Transcripts per API call (default 25, max 50). */
+  batchSize?: number;
+  /** "incremental" stops at already-known IDs; "full" fetches everything. */
+  mode?: "incremental" | "full";
+  /** Known transcript IDs for incremental early-exit. */
+  knownIds?: Set<string>;
+  /** Delay between API calls in ms (default 800). */
+  delayMs?: number;
+  /** Called after each batch with progress info. */
+  onProgress?: (info: { batch: number; totalSoFar: number }) => void;
+}
+
+export interface PaginationResult {
+  transcripts: TranscriptSummary[];
+  batchCount: number;
+  earlyExit: boolean;
+}
+
 // ── Client ──────────────────────────────────────────────────────────
 
 export class FirefliesClient {
@@ -169,36 +198,107 @@ export class FirefliesClient {
     ).then((data) => data.transcript);
   }
 
+  /**
+   * Paginate through all transcripts.
+   *
+   * In "incremental" mode (default), stops early when it encounters
+   * transcripts already in `knownIds` — assumes newest-first API ordering.
+   * In "full" mode, fetches every page until exhausted.
+   */
+  async listAllTranscripts(options?: PaginationOptions): Promise<PaginationResult> {
+    const batchSize = Math.min(Math.max(options?.batchSize ?? 25, 1), 50);
+    const mode = options?.mode ?? "incremental";
+    const knownIds = options?.knownIds;
+    const delayMs = options?.delayMs ?? 800;
+    const onProgress = options?.onProgress;
+
+    const all: TranscriptSummary[] = [];
+    let skip = 0;
+    let batchCount = 0;
+    let earlyExit = false;
+
+    while (true) {
+      if (skip > 0) await sleep(delayMs);
+
+      const page = await this.listTranscripts(batchSize, skip);
+      batchCount++;
+
+      // Incremental: stop when we hit already-known transcripts
+      if (mode === "incremental" && knownIds) {
+        const seenInBatch = page.some((t) => knownIds.has(t.id));
+        if (seenInBatch) {
+          for (const t of page) {
+            if (!knownIds.has(t.id)) all.push(t);
+          }
+          earlyExit = true;
+          onProgress?.({ batch: batchCount, totalSoFar: all.length });
+          break;
+        }
+      }
+
+      all.push(...page);
+      onProgress?.({ batch: batchCount, totalSoFar: all.length });
+
+      if (page.length < batchSize) break; // last page
+      skip += batchSize;
+    }
+
+    return { transcripts: all, batchCount, earlyExit };
+  }
+
   // ── Private ───────────────────────────────────────────────────
 
   private async request<T>(
     query: string,
     variables?: Record<string, unknown>,
   ): Promise<T> {
-    const response = await fetch(FIREFLIES_GRAPHQL_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({ query, variables }),
-    });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const response = await fetch(FIREFLIES_GRAPHQL_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({ query, variables }),
+      });
 
-    if (!response.ok) {
-      throw new Error(
-        `Fireflies API error: ${response.status} ${response.statusText}`,
-      );
+      // Handle HTTP 429
+      if (response.status === 429 && attempt < MAX_RETRIES) {
+        const retryAfter = response.headers.get("retry-after");
+        const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : DEFAULT_RATE_LIMIT_WAIT_MS;
+        console.log(`[fireflies] Rate limited (429). Waiting ${Math.ceil(waitMs / 1000)}s (attempt ${attempt}/${MAX_RETRIES})`);
+        await sleep(waitMs);
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          `Fireflies API error: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const json = (await response.json()) as {
+        data?: T;
+        errors?: Array<{ message: string; code?: string }>;
+      };
+
+      // Handle GraphQL-level rate limits
+      if (json.errors?.length) {
+        const rateLimited = json.errors.find((e) => e.code === "too_many_requests");
+        if (rateLimited && attempt < MAX_RETRIES) {
+          const match = rateLimited.message?.match(/retry after (.+?)(\s*\(|$)/i);
+          const waitUntil = match ? new Date(match[1]) : null;
+          const waitMs = waitUntil ? Math.max(waitUntil.getTime() - Date.now(), 0) : DEFAULT_RATE_LIMIT_WAIT_MS;
+          console.log(`[fireflies] Rate limited (GraphQL). Waiting ${Math.ceil(waitMs / 1000)}s (attempt ${attempt}/${MAX_RETRIES})`);
+          await sleep(waitMs);
+          continue;
+        }
+        throw new Error(json.errors[0].message);
+      }
+
+      return json.data as T;
     }
 
-    const json = (await response.json()) as {
-      data?: T;
-      errors?: Array<{ message: string }>;
-    };
-
-    if (json.errors?.length) {
-      throw new Error(json.errors[0].message);
-    }
-
-    return json.data as T;
+    throw new Error("Fireflies API: max retries exceeded");
   }
 }

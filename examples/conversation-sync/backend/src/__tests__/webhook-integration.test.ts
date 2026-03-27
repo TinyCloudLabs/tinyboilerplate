@@ -39,7 +39,7 @@ export function mockFirefliesTranscript(
     id: meetingId,
     title: overrides.title ?? `Meeting ${meetingId}`,
     date: overrides.date ?? 1711000000000,
-    duration: overrides.duration ?? 1800,
+    duration: overrides.duration ?? 30,
     organizer_email: overrides.organizer_email ?? "organizer@example.com",
     transcript_url: overrides.transcript_url ?? `https://app.fireflies.ai/view/${meetingId}`,
     speakers: overrides.speakers ?? [

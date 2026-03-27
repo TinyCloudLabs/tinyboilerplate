@@ -29,19 +29,17 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 // ── App ─────────────────────────────────────────────────────────────
 
 export function App() {
-  // Auth state
   const [address, setAddress] = useState<string | null>(null);
   const [did, setDid] = useState<string | null>(null);
   const [tcw, setTcw] = useState<TinyCloudWeb | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
 
-  // Token store (persists across re-renders, auto-loads from localStorage)
   const tokenStoreRef = useRef(new TokenStore());
   const restoreAttemptedRef = useRef(false);
 
@@ -61,36 +59,21 @@ export function App() {
       setAuthLoading(true);
       try {
         console.log("[restore] Attempting session restore for", storedAddress);
-
-        // 1. Create API client with persisted tokens
         const apiClient = createApiClient(BACKEND_URL, {
           tokenStore,
-          refreshConfig: {
-            openKeyHost: OPENKEY_HOST,
-            clientId: OPENKEY_CLIENT_ID,
-          },
+          refreshConfig: { openKeyHost: OPENKEY_HOST, clientId: OPENKEY_CLIENT_ID },
         });
-
-        // 2. Check if backend still has an active delegation
         const token = tokenStore.getAccessToken();
         if (!token) throw new Error("No access token after restore");
-
         const status = await checkDelegationStatus(BACKEND_URL, token);
-        if (status.status !== "active") {
-          throw new Error("Delegation expired or missing — re-auth required");
-        }
-        console.log("[restore] Delegation active. Session fully restored!");
-
-        // DID is deterministic from address (mainnet)
+        if (status.status !== "active") throw new Error("Delegation expired or missing");
+        console.log("[restore] Session fully restored!");
         const did = `did:pkh:eip155:1:${storedAddress}`;
-
-        // No TinyCloudWeb instance — not needed for API operations.
-        // User must re-authenticate to create new delegations.
         setAddress(storedAddress);
         setDid(did);
         setApi(apiClient);
       } catch (err) {
-        console.warn("[restore] Session restore failed, clearing state:", err);
+        console.warn("[restore] Session restore failed:", err);
         tokenStore.clear();
       } finally {
         setAuthLoading(false);
@@ -98,40 +81,31 @@ export function App() {
     })();
   }, []);
 
-  // ── Check Fireflies Key ────────────────────────────────────────────
-
   useEffect(() => {
-    if (!api) {
-      setHasKey(null);
-      return;
-    }
-    api
-      .get<{ exists: boolean }>("/api/config/fireflies-key/exists")
+    if (!api) { setHasKey(null); return; }
+    api.get<{ exists: boolean }>("/api/config/fireflies-key/exists")
       .then((res) => setHasKey(res.exists))
       .catch(() => setHasKey(false));
   }, [api]);
 
-  // ── Auto-process pending webhook items ─────────────────────────────
-
   useEffect(() => {
     if (!api || hasKey !== true) return;
-
-    api
-      .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
-        "/api/webhooks/fireflies/pending",
-      )
+    api.get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>("/api/webhooks/fireflies/pending")
       .then((result) => {
         const count = result.processed?.length ?? 0;
         if (count > 0) {
-          setPendingBanner(
-            `Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`,
-          );
+          setPendingBanner(`Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`);
           setRefreshKey((k) => k + 1);
         }
       })
-      .catch((err) => {
-        console.error("[pending] Failed to process pending webhooks:", err);
-      });
+      .catch((err) => console.error("[pending]", err));
+  }, [api, hasKey]);
+
+  useEffect(() => {
+    if (!api || hasKey !== true) return;
+    api.post<{ updated: number; still_missing: number }>("/api/sync/backfill-summaries")
+      .then((result) => { if (result.updated > 0) setRefreshKey((k) => k + 1); })
+      .catch((err) => console.error("[backfill]", err));
   }, [api, hasKey]);
 
   // ── Sign In ───────────────────────────────────────────────────────
@@ -139,69 +113,28 @@ export function App() {
   const handleSignIn = useCallback(async () => {
     setAuthLoading(true);
     setAuthError(null);
-
     try {
-      // 1. OpenKey sign-in — passkey auth + OAuth PKCE token exchange
-      console.log("[sign-in] Step 1: OpenKey sign-in...");
-      const {
-        address: addr,
-        web3Provider,
-        tokens,
-      } = await openKeySignIn({
+      const { address: addr, web3Provider, tokens } = await openKeySignIn({
         host: OPENKEY_HOST,
         clientId: OPENKEY_CLIENT_ID,
         redirectUri: window.location.origin,
       });
-      console.log("[sign-in] Step 1 complete. Address:", addr);
-
-      // 2. Store tokens for backend auth (with address for session restore)
-      tokenStoreRef.current.setTokens(
-        tokens.accessToken,
-        tokens.refreshToken ?? "",
-        tokens.expiresIn,
-        addr,
-      );
-      console.log("[sign-in] Step 2: Tokens stored.");
-
-      // 3. TinyCloud sign-in — SIWE signed via OpenKey
-      console.log("[sign-in] Step 3: TinyCloud sign-in...");
+      tokenStoreRef.current.setTokens(tokens.accessToken, tokens.refreshToken ?? "", tokens.expiresIn, addr);
       const tcwInstance = await createAndSignIn(web3Provider, {
         tinycloudHosts: [TINYCLOUD_HOST],
         autoCreateSpace: true,
       });
-      console.log("[sign-in] Step 3 complete. DID:", tcwInstance.did);
-
-      // 4. Create API client with token-based auth
       const apiClient = createApiClient(BACKEND_URL, {
         tokenStore: tokenStoreRef.current,
-        refreshConfig: {
-          openKeyHost: OPENKEY_HOST,
-          clientId: OPENKEY_CLIENT_ID,
-        },
+        refreshConfig: { openKeyHost: OPENKEY_HOST, clientId: OPENKEY_CLIENT_ID },
       });
-      console.log("[sign-in] Step 4: API client created.");
-
-      // 5. Auto-delegate to backend
-      console.log("[sign-in] Step 5: Fetching server-info...");
       const infoRes = await fetch(`${BACKEND_URL}/api/server-info`);
       if (!infoRes.ok) throw new Error(`Server info: ${infoRes.statusText}`);
       const info: ServerInfo = await infoRes.json();
-      const backendDID = info.did;
-      console.log("[sign-in] Step 5 complete. Backend DID:", backendDID);
-
       const token = tokenStoreRef.current.getAccessToken();
       if (!token) throw new Error("No access token after sign-in");
-
-      // Always create a fresh delegation on sign-in to pick up any
-      // config changes (path, actions, expiry). Sending a new delegation
-      // overwrites the previous one on the backend.
-      console.log("[sign-in] Step 6: Creating delegation...");
-      const serialized = await createDelegation(tcwInstance, backendDID);
-      console.log("[sign-in] Step 6 complete. Sending delegation...");
+      const serialized = await createDelegation(tcwInstance, info.did);
       await sendDelegation(BACKEND_URL, serialized, token);
-      console.log("[sign-in] Step 7: Delegation sent. Sign-in complete!");
-
-      // Update state — api being non-null signals delegation is ready
       setAddress(addr);
       setDid(tcwInstance.did ?? null);
       setTcw(tcwInstance);
@@ -213,15 +146,9 @@ export function App() {
     }
   }, []);
 
-  // ── Sign Out ──────────────────────────────────────────────────────
-
   const handleSignOut = useCallback(async () => {
-    // Best-effort revoke — don't block sign-out on failure
     const token = tokenStoreRef.current.getAccessToken();
-    if (token) {
-      revokeDelegation(BACKEND_URL, token).catch(() => {});
-    }
-
+    if (token) revokeDelegation(BACKEND_URL, token).catch(() => {});
     await tcw?.signOut?.();
     tokenStoreRef.current.clear();
     setAddress(null);
@@ -237,13 +164,13 @@ export function App() {
   const isSignedIn = address !== null && api !== null;
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Conversation Sync</h1>
-        <p style={styles.subtitle}>Sync meeting transcripts to your TinyCloud space</p>
+    <div style={s.shell}>
+      <header style={s.header}>
+        <h1 style={s.logo}>Conversation Sync</h1>
+        <span style={s.badge}>Fireflies</span>
       </header>
 
-      <main style={styles.main}>
+      <main style={s.main}>
         <AuthPanel
           isSignedIn={isSignedIn}
           address={address}
@@ -267,22 +194,27 @@ export function App() {
         )}
 
         {pendingBanner && (
-          <div style={styles.pendingBanner}>
-            {pendingBanner}
-            <button
-              style={styles.bannerDismiss}
-              onClick={() => setPendingBanner(null)}
-            >
-              &times;
-            </button>
+          <div style={s.pendingBanner}>
+            <span>{pendingBanner}</span>
+            <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>&times;</button>
           </div>
         )}
 
         {isSignedIn && hasKey === true && !selectedConversationId && (
           <>
-            <SyncControl api={api} onSyncComplete={() => setRefreshKey((k) => k + 1)} />
+            <SyncControl
+              api={api}
+              backendUrl={BACKEND_URL}
+              getAccessToken={() => tokenStoreRef.current.getAccessToken()}
+              onSyncComplete={() => setRefreshKey((k) => k + 1)}
+            />
+            <ConversationList
+              api={api}
+              onSelectConversation={setSelectedConversationId}
+              refreshKey={refreshKey}
+            />
             <button
-              style={{ background: "none", border: "none", color: "#888", fontSize: 12, cursor: "pointer", padding: "4px 0" }}
+              style={s.disconnectLink}
               onClick={async () => {
                 await api.del("/api/config/fireflies-key");
                 setHasKey(false);
@@ -290,26 +222,15 @@ export function App() {
             >
               Disconnect Fireflies
             </button>
-            <ConversationList
-              api={api}
-              onSelectConversation={setSelectedConversationId}
-              refreshKey={refreshKey}
-            />
           </>
         )}
       </main>
 
-      <footer style={styles.footer}>
-        <p>
-          Powered by{" "}
-          <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer">
-            TinyCloud
-          </a>{" "}
-          &{" "}
-          <a href="https://openkey.so" target="_blank" rel="noreferrer">
-            OpenKey
-          </a>
-        </p>
+      <footer style={s.footer}>
+        Powered by{" "}
+        <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>TinyCloud</a>
+        {" & "}
+        <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>OpenKey</a>
       </footer>
     </div>
   );
@@ -317,64 +238,93 @@ export function App() {
 
 // ── Styles ────────────────────────────────────────────────────────────
 
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    maxWidth: 720,
+const FONT = "'Outfit', -apple-system, sans-serif";
+const MONO = "'IBM Plex Mono', 'SF Mono', monospace";
+
+const s: Record<string, React.CSSProperties> = {
+  shell: {
+    maxWidth: 680,
     margin: "0 auto",
-    padding: "24px 16px",
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    color: "#1a1a1a",
+    padding: "32px 20px 48px",
+    fontFamily: FONT,
+    color: "#18181b",
     lineHeight: 1.5,
   },
   header: {
-    textAlign: "center",
-    marginBottom: 32,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 28,
   },
-  title: {
-    fontSize: 28,
+  logo: {
+    fontFamily: FONT,
+    fontSize: 20,
     fontWeight: 700,
     margin: 0,
+    letterSpacing: "-0.02em",
+    color: "#18181b",
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    margin: "4px 0 0",
+  badge: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: 500,
+    color: "#6366f1",
+    background: "#eef2ff",
+    padding: "2px 8px",
+    borderRadius: 4,
+    letterSpacing: "0.03em",
   },
   main: {
     display: "flex",
     flexDirection: "column",
-    gap: 24,
-  },
-  mainView: {
-    border: "1px solid #e0e0e0",
-    borderRadius: 8,
-    padding: 20,
-    background: "#fafafa",
+    gap: 16,
   },
   pendingBanner: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "10px 14px",
-    background: "#f0fdf4",
-    border: "1px solid #bbf7d0",
-    borderRadius: 6,
-    fontSize: 14,
-    color: "#166534",
+    padding: "12px 16px",
+    background: "#fff",
+    border: "1px solid #e2e4e9",
+    borderLeft: "3px solid #10b981",
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#065f46",
+    animation: "fadeSlideIn 0.3s ease-out",
   },
   bannerDismiss: {
+    fontFamily: FONT,
     background: "none",
     border: "none",
     fontSize: 18,
-    color: "#166534",
+    color: "#9ca3af",
     cursor: "pointer",
     padding: "0 4px",
+    lineHeight: 1,
+  },
+  disconnectLink: {
+    fontFamily: FONT,
+    background: "none",
+    border: "none",
+    fontSize: 12,
+    color: "#9ca3af",
+    cursor: "pointer",
+    padding: 0,
+    textAlign: "center" as const,
   },
   footer: {
+    fontFamily: FONT,
     textAlign: "center",
     marginTop: 48,
-    fontSize: 13,
-    color: "#999",
+    fontSize: 11,
+    fontWeight: 500,
+    color: "#9ca3af",
+    letterSpacing: "0.03em",
+    textTransform: "uppercase" as const,
+  },
+  footerLink: {
+    color: "#6b7280",
+    textDecoration: "none",
   },
 };

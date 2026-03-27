@@ -10,7 +10,9 @@ interface SyncRoutesConfig {
   authMiddleware: RequestHandler;
   delegationMiddleware: RequestHandler;
   /** Optional factory for testing — defaults to creating a real FirefliesClient */
-  createClient?: (apiKey: string) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
+  createClient?: (
+    apiKey: string,
+  ) => Pick<FirefliesClient, "listTranscripts" | "listAllTranscripts" | "getTranscript">;
   /** Delay between API calls in ms (default 800). Set to 0 for tests. */
   syncDelayMs?: number;
 }
@@ -48,7 +50,8 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
-        message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+        message:
+          "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
       });
       return;
     }
@@ -69,7 +72,10 @@ export function createSyncRouter(config: SyncRoutesConfig) {
 
       // 4. List transcripts (lightweight)
       const summaries = await client.listTranscripts(limit);
-      console.log(`[sync] Fireflies returned ${summaries.length} transcripts:`, summaries.map(s => ({ id: s.id, title: s.title })));
+      console.log(
+        `[sync] Fireflies returned ${summaries.length} transcripts:`,
+        summaries.map((s) => ({ id: s.id, title: s.title })),
+      );
 
       if (summaries.length === 0) {
         res.json({
@@ -153,7 +159,9 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     res.flushHeaders();
 
     let aborted = false;
-    req.on("close", () => { aborted = true; });
+    req.on("close", () => {
+      aborted = true;
+    });
 
     const sendEvent = (type: string, data: unknown) => {
       if (aborted) return;
@@ -163,7 +171,8 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     try {
       // 1. Read Fireflies API key
       const keyResult = await access.kv.get(FIREFLIES_KEY_PATH);
-      const apiKey = keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
+      const apiKey =
+        keyResult.ok && keyResult.data.data != null ? String(keyResult.data.data) : null;
       if (!apiKey) {
         sendEvent("error", { message: "No Fireflies API key configured." });
         res.end();
@@ -193,7 +202,10 @@ export function createSyncRouter(config: SyncRoutesConfig) {
       sendEvent("status", { phase: "listing", message: "Fetching transcript list..." });
 
       // 4. Paginate through all transcripts
-      if (aborted) { res.end(); return; }
+      if (aborted) {
+        res.end();
+        return;
+      }
 
       const paginationResult = await client.listAllTranscripts({
         batchSize: 25,
@@ -201,7 +213,11 @@ export function createSyncRouter(config: SyncRoutesConfig) {
         knownIds: mode === "incremental" ? knownIds : undefined,
         delayMs,
         onProgress: (info) => {
-          sendEvent("progress", { phase: "listing", batch: info.batch, totalListed: info.totalSoFar });
+          sendEvent("progress", {
+            phase: "listing",
+            batch: info.batch,
+            totalListed: info.totalSoFar,
+          });
         },
       });
 
@@ -276,7 +292,8 @@ export function createSyncRouter(config: SyncRoutesConfig) {
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
-        message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+        message:
+          "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
       });
       return;
     }
@@ -330,7 +347,11 @@ export function createSyncRouter(config: SyncRoutesConfig) {
                 ? metaResult.data.rows[0][0]
                 : (metaResult.data.rows[0] as any).metadata;
               if (raw) {
-                try { metadata = JSON.parse(String(raw)); } catch { /* ignore malformed JSON */ }
+                try {
+                  metadata = JSON.parse(String(raw));
+                } catch {
+                  /* ignore malformed JSON */
+                }
               }
             }
             metadata.keywords = keywords;

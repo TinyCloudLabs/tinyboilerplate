@@ -223,7 +223,7 @@ describe("Webhook Integration Tests", () => {
       "/api/webhooks",
       createWebhookRouter({
         backendKV,
-        tryGetDelegatedAccess: async () => (delegationActive ? mockAccess as any : null),
+        tryGetDelegatedAccess: async () => (delegationActive ? (mockAccess as any) : null),
         authMiddleware: mockAuthMiddleware,
         delegationMiddleware,
         syncFn: syncSingleTranscript,
@@ -428,18 +428,18 @@ describe("Webhook Integration Tests", () => {
       mockAccess.sql._insertedRows.push({
         table: "conversation",
         values: [
-          "existing-conv-id",      // id
+          "existing-conv-id", // id
           "Already Synced Meeting", // title
-          "fireflies",             // source
-          "already-synced",        // source_id
+          "fireflies", // source
+          "already-synced", // source_id
           "https://app.fireflies.ai/view/already-synced", // source_url
-          "2026-01-01T00:00:00Z",  // started_at
-          "2026-01-01T00:30:00Z",  // ended_at
-          1800,                    // duration_secs
-          "Overview text",         // summary
-          "{}",                    // metadata
-          "2026-01-01T00:00:00Z",  // created_at
-          "2026-01-01T00:00:00Z",  // updated_at
+          "2026-01-01T00:00:00Z", // started_at
+          "2026-01-01T00:30:00Z", // ended_at
+          1800, // duration_secs
+          "Overview text", // summary
+          "{}", // metadata
+          "2026-01-01T00:00:00Z", // created_at
+          "2026-01-01T00:00:00Z", // updated_at
         ],
       });
 

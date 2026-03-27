@@ -51,7 +51,10 @@ function formatDuration(secs: number): string {
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString("en-US", {
-    weekday: "short", month: "short", day: "numeric", year: "numeric",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -93,8 +96,14 @@ function renderSummary(text: string): string {
 }
 
 const SPEAKER_COLORS = [
-  "#6366f1", "#06b6d4", "#f59e0b", "#10b981",
-  "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6",
+  "#6366f1",
+  "#06b6d4",
+  "#f59e0b",
+  "#10b981",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
 ];
 
 function getSpeakerColor(name: string, map: Map<string, number>): string {
@@ -105,7 +114,11 @@ function getSpeakerColor(name: string, map: Map<string, number>): string {
 
 // ── Component ────────────────────────────────────────────────────────
 
-export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversationId, onBack }) => {
+export const ConversationDetail: FC<ConversationDetailProps> = ({
+  api,
+  conversationId,
+  onBack,
+}) => {
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +126,8 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api.get<DetailResponse>(`/api/conversations/${conversationId}`)
+    api
+      .get<DetailResponse>(`/api/conversations/${conversationId}`)
       .then((res) => setData(res))
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
@@ -135,7 +149,9 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
   if (error) {
     return (
       <div>
-        <button style={s.backBtn} onClick={onBack}>&larr; Back</button>
+        <button style={s.backBtn} onClick={onBack}>
+          &larr; Back
+        </button>
         <div style={s.errorCard}>{error}</div>
       </div>
     );
@@ -149,7 +165,9 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
 
   return (
     <section style={s.container}>
-      <button style={s.backBtn} onClick={onBack}>&larr; Back to conversations</button>
+      <button style={s.backBtn} onClick={onBack}>
+        &larr; Back to conversations
+      </button>
 
       {/* Header */}
       <div style={s.header}>
@@ -161,7 +179,9 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
           {participants.length > 0 && (
             <>
               <span style={s.metaDot}>&middot;</span>
-              <span style={s.metaText}>{participants.length} participant{participants.length !== 1 ? "s" : ""}</span>
+              <span style={s.metaText}>
+                {participants.length} participant{participants.length !== 1 ? "s" : ""}
+              </span>
             </>
           )}
         </div>
@@ -192,7 +212,10 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
       {conversation.summary && (
         <div style={s.summaryCard}>
           <h3 style={s.sectionLabel}>Summary</h3>
-          <div style={s.summaryText} dangerouslySetInnerHTML={{ __html: renderSummary(conversation.summary) }} />
+          <div
+            style={s.summaryText}
+            dangerouslySetInnerHTML={{ __html: renderSummary(conversation.summary) }}
+          />
         </div>
       )}
 
@@ -206,7 +229,11 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({ api, conversat
             {blocks.map((block, i) => {
               const color = getSpeakerColor(block.speakerName, speakerMap);
               return (
-                <div key={i} data-testid="transcript-block" style={{ ...s.block, borderLeftColor: color }}>
+                <div
+                  key={i}
+                  data-testid="transcript-block"
+                  style={{ ...s.block, borderLeftColor: color }}
+                >
                   <div style={s.blockHeader}>
                     {block.speakerName && (
                       <span style={{ ...s.speakerName, color }}>{block.speakerName}</span>

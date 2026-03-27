@@ -38,16 +38,18 @@ function formatDate(isoString: string): string {
 /** Strip markdown artifacts and collapse to a clean plain-text snippet. */
 function cleanSummary(str: string, max: number): string {
   const clean = str
-    .replace(/\*\*(.+?)\*\*/g, "$1")   // bold
-    .replace(/^[-*]\s+/gm, "")          // bullet prefixes
-    .replace(/\n+/g, " ")               // newlines → spaces
-    .replace(/\s{2,}/g, " ")            // collapse whitespace
+    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+    .replace(/^[-*]\s+/gm, "") // bullet prefixes
+    .replace(/\n+/g, " ") // newlines → spaces
+    .replace(/\s{2,}/g, " ") // collapse whitespace
     .trim();
   return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
 }
 
 export const ConversationList: FC<ConversationListProps> = ({
-  api, onSelectConversation, refreshKey,
+  api,
+  onSelectConversation,
+  refreshKey,
 }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [total, setTotal] = useState(0);
@@ -123,7 +125,9 @@ export const ConversationList: FC<ConversationListProps> = ({
   return (
     <section style={s.card}>
       <div style={s.headerRow}>
-        <span style={s.countLabel}>{total} conversation{total !== 1 ? "s" : ""}</span>
+        <span style={s.countLabel}>
+          {total} conversation{total !== 1 ? "s" : ""}
+        </span>
       </div>
 
       <ul style={s.list}>
@@ -136,11 +140,11 @@ export const ConversationList: FC<ConversationListProps> = ({
             <div style={s.meta}>
               <span>{formatDuration(c.duration_secs)}</span>
               <span style={s.metaDot}>&middot;</span>
-              <span>{c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}</span>
+              <span>
+                {c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}
+              </span>
             </div>
-            {c.summary && (
-              <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>
-            )}
+            {c.summary && <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>}
           </li>
         ))}
       </ul>

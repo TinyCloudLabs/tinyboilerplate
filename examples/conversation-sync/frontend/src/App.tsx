@@ -82,19 +82,28 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!api) { setHasKey(null); return; }
-    api.get<{ exists: boolean }>("/api/config/fireflies-key/exists")
+    if (!api) {
+      setHasKey(null);
+      return;
+    }
+    api
+      .get<{ exists: boolean }>("/api/config/fireflies-key/exists")
       .then((res) => setHasKey(res.exists))
       .catch(() => setHasKey(false));
   }, [api]);
 
   useEffect(() => {
     if (!api || hasKey !== true) return;
-    api.get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>("/api/webhooks/fireflies/pending")
+    api
+      .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
+        "/api/webhooks/fireflies/pending",
+      )
       .then((result) => {
         const count = result.processed?.length ?? 0;
         if (count > 0) {
-          setPendingBanner(`Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`);
+          setPendingBanner(
+            `Processed ${count} new transcript${count === 1 ? "" : "s"} from webhooks`,
+          );
           setRefreshKey((k) => k + 1);
         }
       })
@@ -103,8 +112,11 @@ export function App() {
 
   useEffect(() => {
     if (!api || hasKey !== true) return;
-    api.post<{ updated: number; still_missing: number }>("/api/sync/backfill-summaries")
-      .then((result) => { if (result.updated > 0) setRefreshKey((k) => k + 1); })
+    api
+      .post<{ updated: number; still_missing: number }>("/api/sync/backfill-summaries")
+      .then((result) => {
+        if (result.updated > 0) setRefreshKey((k) => k + 1);
+      })
       .catch((err) => console.error("[backfill]", err));
   }, [api, hasKey]);
 
@@ -114,12 +126,21 @@ export function App() {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const { address: addr, web3Provider, tokens } = await openKeySignIn({
+      const {
+        address: addr,
+        web3Provider,
+        tokens,
+      } = await openKeySignIn({
         host: OPENKEY_HOST,
         clientId: OPENKEY_CLIENT_ID,
         redirectUri: window.location.origin,
       });
-      tokenStoreRef.current.setTokens(tokens.accessToken, tokens.refreshToken ?? "", tokens.expiresIn, addr);
+      tokenStoreRef.current.setTokens(
+        tokens.accessToken,
+        tokens.refreshToken ?? "",
+        tokens.expiresIn,
+        addr,
+      );
       const tcwInstance = await createAndSignIn(web3Provider, {
         tinycloudHosts: [TINYCLOUD_HOST],
         autoCreateSpace: true,
@@ -196,7 +217,9 @@ export function App() {
         {pendingBanner && (
           <div style={s.pendingBanner}>
             <span>{pendingBanner}</span>
-            <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>&times;</button>
+            <button style={s.bannerDismiss} onClick={() => setPendingBanner(null)}>
+              &times;
+            </button>
           </div>
         )}
 
@@ -228,9 +251,13 @@ export function App() {
 
       <footer style={s.footer}>
         Powered by{" "}
-        <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>TinyCloud</a>
+        <a href="https://tinycloud.xyz" target="_blank" rel="noreferrer" style={s.footerLink}>
+          TinyCloud
+        </a>
         {" & "}
-        <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>OpenKey</a>
+        <a href="https://openkey.so" target="_blank" rel="noreferrer" style={s.footerLink}>
+          OpenKey
+        </a>
       </footer>
     </div>
   );

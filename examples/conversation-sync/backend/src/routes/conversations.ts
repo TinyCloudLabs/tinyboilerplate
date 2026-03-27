@@ -52,9 +52,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       await ensureSchema(access);
 
       // Total count
-      const countResult = await access.sql.query(
-        `SELECT COUNT(*) AS total FROM conversation`,
-      );
+      const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
       let total = 0;
       if (countResult.ok && countResult.data.rows?.[0]) {
         const countRow = rowToObject(
@@ -106,10 +104,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
         return;
       }
 
-      const row = rowToObject(
-        convoResult.data.rows[0] as unknown[],
-        convoResult.data.columns,
-      );
+      const row = rowToObject(convoResult.data.rows[0] as unknown[], convoResult.data.columns);
 
       // Parse metadata from JSON string
       let metadata: Record<string, unknown> = {};
@@ -127,20 +122,29 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
         [id],
       );
       const participants = participantsResult.ok
-        ? rowsToObjects(participantsResult.data.rows as unknown[][], participantsResult.data.columns)
+        ? rowsToObjects(
+            participantsResult.data.rows as unknown[][],
+            participantsResult.data.columns,
+          )
         : [];
 
       // Load transcript blob from KV
       const kvKey = `/app.conversations/transcript/${id}`;
       console.log(`[conversations] Loading transcript from KV: ${kvKey}`);
       const kvResult = await access.kv.get(kvKey);
-      console.log(`[conversations] KV result ok=${kvResult.ok}, hasData=${kvResult.ok && kvResult.data?.data != null}, type=${kvResult.ok ? typeof kvResult.data?.data : 'n/a'}`);
+      console.log(
+        `[conversations] KV result ok=${kvResult.ok}, hasData=${kvResult.ok && kvResult.data?.data != null}, type=${kvResult.ok ? typeof kvResult.data?.data : "n/a"}`,
+      );
       let transcript: unknown = null;
       if (kvResult.ok && kvResult.data.data) {
         const raw = kvResult.data.data;
         // KV may return already-parsed object or a JSON string
         if (typeof raw === "string") {
-          try { transcript = JSON.parse(raw); } catch { transcript = null; }
+          try {
+            transcript = JSON.parse(raw);
+          } catch {
+            transcript = null;
+          }
         } else {
           transcript = raw;
         }

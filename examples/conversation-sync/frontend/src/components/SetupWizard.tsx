@@ -81,14 +81,23 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           <h3 style={s.stepTitle}>Get Your API Key</h3>
           <p style={s.stepDesc}>
             Go to{" "}
-            <a href="https://app.fireflies.ai/integrations" target="_blank" rel="noreferrer" style={s.link}>
+            <a
+              href="https://app.fireflies.ai/integrations"
+              target="_blank"
+              rel="noreferrer"
+              style={s.link}
+            >
               app.fireflies.ai
-            </a>
-            {" "}&rarr; Integrations &rarr; Fireflies API &rarr; copy your API key.
+            </a>{" "}
+            &rarr; Integrations &rarr; Fireflies API &rarr; copy your API key.
           </p>
           <div style={s.btnRow}>
-            <button style={s.btnGhost} onClick={() => setStep("welcome")}>Back</button>
-            <button style={s.btnPrimary} onClick={() => setStep("input")}>Next</button>
+            <button style={s.btnGhost} onClick={() => setStep("welcome")}>
+              Back
+            </button>
+            <button style={s.btnPrimary} onClick={() => setStep("input")}>
+              Next
+            </button>
           </div>
         </div>
       )}
@@ -104,7 +113,9 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
             style={s.input}
           />
           <div style={s.btnRow}>
-            <button style={s.btnGhost} onClick={() => setStep("instructions")}>Back</button>
+            <button style={s.btnGhost} onClick={() => setStep("instructions")}>
+              Back
+            </button>
             <button
               style={{ ...s.btnPrimary, ...(apiKey.trim() === "" || saving ? s.btnDisabled : {}) }}
               disabled={apiKey.trim() === "" || saving}
@@ -127,12 +138,20 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
                   <p style={s.successSub}>{userInfo.email}</p>
                 </div>
               </div>
-              <button style={s.btnPrimary} onClick={() => setStep("webhook")}>Continue</button>
+              <button style={s.btnPrimary} onClick={() => setStep("webhook")}>
+                Continue
+              </button>
             </>
           ) : (
             <>
               <div style={s.errorCard}>{testError}</div>
-              <button style={s.btnGhost} onClick={() => { setTestError(null); setStep("input"); }}>
+              <button
+                style={s.btnGhost}
+                onClick={() => {
+                  setTestError(null);
+                  setStep("input");
+                }}
+              >
                 Try Again
               </button>
             </>
@@ -170,7 +189,11 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               type="text"
               placeholder="16-32 characters"
               value={webhookSecret}
-              onChange={(e) => { setWebhookSecret(e.target.value); setWebhookError(null); setWebhookSaved(false); }}
+              onChange={(e) => {
+                setWebhookSecret(e.target.value);
+                setWebhookError(null);
+                setWebhookSaved(false);
+              }}
               style={{ ...s.input, flex: 1, marginBottom: 0 }}
             />
             <button
@@ -178,7 +201,11 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               onClick={() => {
                 const arr = new Uint8Array(24);
                 crypto.getRandomValues(arr);
-                setWebhookSecret(Array.from(arr, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 32));
+                setWebhookSecret(
+                  Array.from(arr, (b) => b.toString(36).padStart(2, "0"))
+                    .join("")
+                    .slice(0, 32),
+                );
                 setWebhookError(null);
                 setWebhookSaved(false);
               }}
@@ -202,9 +229,14 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           </div>
 
           <div style={s.btnRow}>
-            <button style={s.btnGhost} onClick={() => setStep("done")}>Skip</button>
+            <button style={s.btnGhost} onClick={() => setStep("done")}>
+              Skip
+            </button>
             <button
-              style={{ ...s.btnPrimary, ...(webhookSecret.length < 16 || webhookSaving ? s.btnDisabled : {}) }}
+              style={{
+                ...s.btnPrimary,
+                ...(webhookSecret.length < 16 || webhookSaving ? s.btnDisabled : {}),
+              }}
               disabled={webhookSecret.length < 16 || webhookSaving}
               onClick={async () => {
                 setWebhookSaving(true);
@@ -222,7 +254,9 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               {webhookSaving ? "Saving\u2026" : "Save Secret"}
             </button>
             {webhookSaved && (
-              <button style={s.btnPrimary} onClick={() => setStep("done")}>Continue</button>
+              <button style={s.btnPrimary} onClick={() => setStep("done")}>
+                Continue
+              </button>
             )}
           </div>
         </div>
@@ -237,7 +271,9 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
               <p style={s.successSub}>Your first sync is ready.</p>
             </div>
           </div>
-          <button style={s.btnPrimary} onClick={onComplete}>Start Syncing</button>
+          <button style={s.btnPrimary} onClick={onComplete}>
+            Start Syncing
+          </button>
         </div>
       )}
     </section>

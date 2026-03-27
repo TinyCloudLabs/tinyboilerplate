@@ -33,8 +33,12 @@ function createMockSQL() {
 
   return {
     _calls: calls,
-    _setDedupSourceIds(ids: string[]) { dedupRows = ids; },
-    _setExecuteFail(fail: boolean) { shouldFailExecute = fail; },
+    _setDedupSourceIds(ids: string[]) {
+      dedupRows = ids;
+    },
+    _setExecuteFail(fail: boolean) {
+      shouldFailExecute = fail;
+    },
     query: async (sql: string, params?: any[]) => {
       calls.push({ method: "query", sql, params });
 

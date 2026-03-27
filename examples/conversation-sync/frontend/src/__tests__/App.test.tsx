@@ -12,10 +12,18 @@ const mockApiClient = { get: mockGet, post: mockPost, put: mockPut, del: mockDel
 
 vi.mock("@tinyboilerplate/client", () => {
   class MockTokenStore {
-    hasTokens() { return true; }
-    isExpired() { return false; }
-    getAddress() { return "0xabc123"; }
-    getAccessToken() { return "mock-token"; }
+    hasTokens() {
+      return true;
+    }
+    isExpired() {
+      return false;
+    }
+    getAddress() {
+      return "0xabc123";
+    }
+    getAccessToken() {
+      return "mock-token";
+    }
     setTokens() {}
     clear() {}
   }
@@ -42,7 +50,9 @@ function createMockStorage(): Storage {
     setItem: (key: string, value: string) => store.set(key, value),
     removeItem: (key: string) => store.delete(key),
     clear: () => store.clear(),
-    get length() { return store.size; },
+    get length() {
+      return store.size;
+    },
     key: (index: number) => [...store.keys()][index] ?? null,
   };
 }
@@ -161,7 +171,9 @@ describe("App auto-process pending", () => {
       }
       if (url === "/api/webhooks/fireflies/pending") {
         return Promise.resolve({
-          processed: [{ status: "created", meetingId: "m1", conversationId: "c1", title: "Meeting 1" }],
+          processed: [
+            { status: "created", meetingId: "m1", conversationId: "c1", title: "Meeting 1" },
+          ],
           skipped: [],
           errors: [],
         });

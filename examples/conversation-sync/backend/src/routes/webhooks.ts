@@ -21,7 +21,11 @@ interface WebhookRoutesConfig {
   /** Delegation middleware for pending endpoints */
   delegationMiddleware?: RequestHandler;
   /** Override for testing */
-  syncFn?: (meetingId: string, access: DelegatedAccess, client: Pick<FirefliesClient, "getTranscript">) => Promise<SyncSingleResult>;
+  syncFn?: (
+    meetingId: string,
+    access: DelegatedAccess,
+    client: Pick<FirefliesClient, "getTranscript">,
+  ) => Promise<SyncSingleResult>;
   /** Override for testing */
   createClient?: (apiKey: string) => Pick<FirefliesClient, "getTranscript">;
 }
@@ -75,7 +79,9 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       // 2. Verify HMAC signature
       const signatureHeader = req.headers["x-hub-signature"] as string | undefined;
       if (!signatureHeader || !verifyFirefliesSignature(rawBody, signatureHeader, secret)) {
-        console.log(`[webhook] signature verification failed — header x-hub-signature: ${signatureHeader ? signatureHeader.substring(0, 15) + "..." : "missing"}`);
+        console.log(
+          `[webhook] signature verification failed — header x-hub-signature: ${signatureHeader ? signatureHeader.substring(0, 15) + "..." : "missing"}`,
+        );
         res.status(401).json({
           error: "invalid_signature",
           message: "Invalid or missing HMAC signature",
@@ -103,7 +109,9 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
       const eventType = (raw.eventType as string) ?? (raw.event as string) ?? undefined;
       const meetingId = (raw.meetingId as string) ?? (raw.meeting_id as string) ?? undefined;
 
-      console.log(`[webhook] signature valid, event=${eventType}, meetingId=${meetingId ?? "none"}`);
+      console.log(
+        `[webhook] signature valid, event=${eventType}, meetingId=${meetingId ?? "none"}`,
+      );
 
       // 4. Ignore events we don't handle (return 200 to prevent retries)
       // Accepted events:
@@ -143,9 +151,8 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
 
         // 7. Read Fireflies API key from user's KV
         const apiKeyResult = await access.kv.get(FIREFLIES_KEY_PATH);
-        const apiKey = apiKeyResult.ok && apiKeyResult.data.data
-          ? String(apiKeyResult.data.data)
-          : null;
+        const apiKey =
+          apiKeyResult.ok && apiKeyResult.data.data ? String(apiKeyResult.data.data) : null;
 
         if (!apiKey) {
           console.log(`[webhook] no Fireflies API key found — queuing meetingId=${meetingId}`);
@@ -171,8 +178,15 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
               res.status(500).json({ status: "error", error: result.error });
               return;
             }
-            console.log(`[webhook] summary event triggered full sync meetingId=${result.meetingId} → conversationId=${result.conversationId}`);
-            res.json({ status: "processed", meetingId: result.meetingId, conversationId: result.conversationId, title: result.title });
+            console.log(
+              `[webhook] summary event triggered full sync meetingId=${result.meetingId} → conversationId=${result.conversationId}`,
+            );
+            res.json({
+              status: "processed",
+              meetingId: result.meetingId,
+              conversationId: result.conversationId,
+              title: result.title,
+            });
           } else if (updated === "updated") {
             console.log(`[webhook] summary updated for meetingId=${meetingId}`);
             res.json({ status: "processed", meetingId, summary_updated: true });
@@ -188,8 +202,15 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
             res.status(500).json({ status: "error", error: result.error });
             return;
           }
-          console.log(`[webhook] processed meetingId=${result.meetingId} → conversationId=${result.conversationId}`);
-          res.json({ status: "processed", meetingId: result.meetingId, conversationId: result.conversationId, title: result.title });
+          console.log(
+            `[webhook] processed meetingId=${result.meetingId} → conversationId=${result.conversationId}`,
+          );
+          res.json({
+            status: "processed",
+            meetingId: result.meetingId,
+            conversationId: result.conversationId,
+            title: result.title,
+          });
         }
       } catch (err) {
         console.error(`[webhook] error processing meetingId=${meetingId}:`, err);
@@ -206,74 +227,62 @@ export function createWebhookRouter(config: WebhookRoutesConfig) {
     const delegation = config.delegationMiddleware;
 
     // GET /fireflies/pending — process all pending items
-    router.get(
-      "/fireflies/pending",
-      auth,
-      delegation,
-      async (req: Request, res: Response) => {
-        const access = req.delegatedAccess!;
+    router.get("/fireflies/pending", auth, delegation, async (req: Request, res: Response) => {
+      const access = req.delegatedAccess!;
 
-        // 1. Read pending queue
-        const pending = await readPendingQueue(backendKV);
-        if (pending.length === 0) {
-          res.json({ processed: [], skipped: [], errors: [] });
-          return;
+      // 1. Read pending queue
+      const pending = await readPendingQueue(backendKV);
+      if (pending.length === 0) {
+        res.json({ processed: [], skipped: [], errors: [] });
+        return;
+      }
+
+      // 2. Get Fireflies API key from user's KV
+      const apiKeyResult = await access.kv.get(FIREFLIES_KEY_PATH);
+      const apiKey =
+        apiKeyResult.ok && apiKeyResult.data.data ? String(apiKeyResult.data.data) : null;
+
+      if (!apiKey) {
+        res.status(400).json({
+          error: "no_api_key",
+          message: "Fireflies API key not configured",
+        });
+        return;
+      }
+
+      // 3. Process each pending item
+      await ensureSchema(access);
+      const client = makeClient(apiKey);
+
+      const processed: SyncSingleResult[] = [];
+      const skipped: SyncSingleResult[] = [];
+      const errors: SyncSingleResult[] = [];
+      const remaining: PendingItem[] = [];
+
+      for (const item of pending) {
+        const result = await doSync(item.meetingId, access, client);
+        if (result.status === "created") {
+          processed.push(result);
+        } else if (result.status === "skipped") {
+          skipped.push(result);
+        } else {
+          errors.push(result);
+          remaining.push(item);
         }
+      }
 
-        // 2. Get Fireflies API key from user's KV
-        const apiKeyResult = await access.kv.get(FIREFLIES_KEY_PATH);
-        const apiKey =
-          apiKeyResult.ok && apiKeyResult.data.data
-            ? String(apiKeyResult.data.data)
-            : null;
+      // 4. Update queue — only failed items remain
+      await backendKV.put(PENDING_KV_KEY, JSON.stringify(remaining));
 
-        if (!apiKey) {
-          res.status(400).json({
-            error: "no_api_key",
-            message: "Fireflies API key not configured",
-          });
-          return;
-        }
-
-        // 3. Process each pending item
-        await ensureSchema(access);
-        const client = makeClient(apiKey);
-
-        const processed: SyncSingleResult[] = [];
-        const skipped: SyncSingleResult[] = [];
-        const errors: SyncSingleResult[] = [];
-        const remaining: PendingItem[] = [];
-
-        for (const item of pending) {
-          const result = await doSync(item.meetingId, access, client);
-          if (result.status === "created") {
-            processed.push(result);
-          } else if (result.status === "skipped") {
-            skipped.push(result);
-          } else {
-            errors.push(result);
-            remaining.push(item);
-          }
-        }
-
-        // 4. Update queue — only failed items remain
-        await backendKV.put(PENDING_KV_KEY, JSON.stringify(remaining));
-
-        res.json({ processed, skipped, errors });
-      },
-    );
+      res.json({ processed, skipped, errors });
+    });
 
     // DELETE /fireflies/pending — clear all pending items
-    router.delete(
-      "/fireflies/pending",
-      auth,
-      delegation,
-      async (_req: Request, res: Response) => {
-        const pending = await readPendingQueue(backendKV);
-        await backendKV.put(PENDING_KV_KEY, JSON.stringify([]));
-        res.json({ cleared: pending.length });
-      },
-    );
+    router.delete("/fireflies/pending", auth, delegation, async (_req: Request, res: Response) => {
+      const pending = await readPendingQueue(backendKV);
+      await backendKV.put(PENDING_KV_KEY, JSON.stringify([]));
+      res.json({ cleared: pending.length });
+    });
   }
 
   return router;
@@ -322,7 +331,11 @@ async function updateSummary(
   // Merge summary data into metadata
   let metadata: Record<string, unknown> = {};
   if (rawMeta) {
-    try { metadata = JSON.parse(String(rawMeta)); } catch { /* ignore malformed JSON */ }
+    try {
+      metadata = JSON.parse(String(rawMeta));
+    } catch {
+      /* ignore malformed JSON */
+    }
   }
   metadata.keywords = transcript.summary?.keywords ?? [];
   metadata.meeting_type = transcript.summary?.meeting_type ?? null;

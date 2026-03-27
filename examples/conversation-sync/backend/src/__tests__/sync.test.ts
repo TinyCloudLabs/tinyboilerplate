@@ -3,7 +3,12 @@ import express from "express";
 import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
 import { createSyncRouter } from "../routes/sync.js";
-import type { TranscriptSummary, FullTranscript, PaginationOptions, PaginationResult } from "../services/fireflies-client.js";
+import type {
+  TranscriptSummary,
+  FullTranscript,
+  PaginationOptions,
+  PaginationResult,
+} from "../services/fireflies-client.js";
 
 // ── Mock KV Store (matches real SDK: returns Result objects) ─────────
 
@@ -35,7 +40,9 @@ function createMockSQL() {
 
   return {
     _calls: calls,
-    _setDedupRows(rows: Array<{ source_id: string }>) { dedupRows = rows; },
+    _setDedupRows(rows: Array<{ source_id: string }>) {
+      dedupRows = rows;
+    },
     query: async (sql: string, params?: any[]) => {
       calls.push({ method: "query", sql, params });
 
@@ -77,7 +84,9 @@ function createMockSQL() {
 
 // ── Mock Fireflies Client Factory ────────────────────────────────────
 
-function createMockTranscriptSummary(overrides: Partial<TranscriptSummary> = {}): TranscriptSummary {
+function createMockTranscriptSummary(
+  overrides: Partial<TranscriptSummary> = {},
+): TranscriptSummary {
   return {
     id: overrides.id ?? "ff-1",
     title: overrides.title ?? "Test Meeting",
@@ -143,11 +152,20 @@ function createMockClientFactory() {
   let lastApiKey: string | null = null;
 
   return {
-    setListResult(transcripts: TranscriptSummary[]) { listResult = transcripts; },
+    setListResult(transcripts: TranscriptSummary[]) {
+      listResult = transcripts;
+    },
     /** Set paginated batches for listAllTranscripts tests */
-    setListBatches(batches: TranscriptSummary[][]) { listBatches = batches; listCallIndex = 0; },
-    setGetResult(id: string, result: FullTranscript | Error) { getResults.set(id, result); },
-    getLastApiKey() { return lastApiKey; },
+    setListBatches(batches: TranscriptSummary[][]) {
+      listBatches = batches;
+      listCallIndex = 0;
+    },
+    setGetResult(id: string, result: FullTranscript | Error) {
+      getResults.set(id, result);
+    },
+    getLastApiKey() {
+      return lastApiKey;
+    },
     factory(apiKey: string) {
       lastApiKey = apiKey;
       return {
@@ -270,7 +288,11 @@ function parseSSEText(text: string): ParsedSSEEvent[] {
       else if (line.startsWith("data: ")) data = line.slice(6);
     }
     if (data) {
-      try { events.push({ type, data: JSON.parse(data) }); } catch { /* skip malformed */ }
+      try {
+        events.push({ type, data: JSON.parse(data) });
+      } catch {
+        /* skip malformed */
+      }
     }
   }
   return events;
@@ -308,9 +330,18 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
       createMockTranscriptSummary({ id: "ff-3", title: "Meeting 3" }),
     ];
     clientFactory.setListResult(summaries);
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
-    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
+    );
+    clientFactory.setGetResult(
+      "ff-3",
+      createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
+    );
 
     // No existing transcripts in SQL
     mockSQL._setDedupRows([]);
@@ -346,8 +377,14 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
     ];
     clientFactory.setListResult(summaries);
     // Only set up getTranscript for ff-2 and ff-3 — ff-1 should not be fetched
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
-    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
+    );
+    clientFactory.setGetResult(
+      "ff-3",
+      createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
+    );
 
     // ff-1 already exists in DB
     mockSQL._setDedupRows([{ source_id: "ff-1" }]);
@@ -410,9 +447,15 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
     ];
     clientFactory.setListResult(summaries);
 
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
+    );
     clientFactory.setGetResult("ff-2", new Error("Fireflies API timeout"));
-    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+    clientFactory.setGetResult(
+      "ff-3",
+      createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
+    );
 
     mockSQL._setDedupRows([]);
 
@@ -564,7 +607,10 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
 
     // Find conversation INSERT calls
     const conversationInserts = mockSQL._calls.filter(
-      (c) => c.sql.includes("INSERT") && c.sql.includes("conversation") && !c.sql.includes("participant"),
+      (c) =>
+        c.sql.includes("INSERT") &&
+        c.sql.includes("conversation") &&
+        !c.sql.includes("participant"),
     );
     expect(conversationInserts.length).toBeGreaterThanOrEqual(1);
 
@@ -593,7 +639,10 @@ describe("Sync Routes — POST /api/sync/fireflies", () => {
 
     // Find the conversation INSERT and check its params contain stringified metadata
     const conversationInsert = mockSQL._calls.find(
-      (c) => c.sql.includes("INSERT") && c.sql.includes("conversation") && !c.sql.includes("participant"),
+      (c) =>
+        c.sql.includes("INSERT") &&
+        c.sql.includes("conversation") &&
+        !c.sql.includes("participant"),
     );
     expect(conversationInsert).toBeDefined();
 
@@ -712,8 +761,14 @@ describe("Sync Routes — GET /api/sync/fireflies/stream", () => {
       createMockTranscriptSummary({ id: "ff-2", title: "Meeting 2" }),
     ];
     clientFactory.setListResult(summaries);
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
+    );
     mockSQL._setDedupRows([]);
 
     const res = await fetch(`http://localhost:${port}/api/sync/fireflies/stream`);
@@ -736,7 +791,10 @@ describe("Sync Routes — GET /api/sync/fireflies/stream", () => {
       createMockTranscriptSummary({ id: "ff-2", title: "Meeting 2" }),
     ];
     clientFactory.setListResult(summaries);
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
+    );
 
     // ff-1 already in DB
     mockSQL._setDedupRows([{ source_id: "ff-1" }]);
@@ -759,15 +817,23 @@ describe("Sync Routes — GET /api/sync/fireflies/stream", () => {
       createMockTranscriptSummary({ id: "ff-2", title: "Meeting 2" }),
     ];
     clientFactory.setListResult(summaries);
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
+    );
     mockSQL._setDedupRows([]);
 
     const res = await fetch(`http://localhost:${port}/api/sync/fireflies/stream`);
     const text = await res.text();
     const events = parseSSEText(text);
 
-    const progressEvents = events.filter((e) => e.type === "progress" && e.data.phase === "syncing");
+    const progressEvents = events.filter(
+      (e) => e.type === "progress" && e.data.phase === "syncing",
+    );
     expect(progressEvents.length).toBeGreaterThanOrEqual(2);
 
     // Last progress should show current = total
@@ -795,14 +861,21 @@ describe("Sync Routes — GET /api/sync/fireflies/stream", () => {
       createMockTranscriptSummary({ id: "ff-1", title: "Meeting 1" }),
       createMockTranscriptSummary({ id: "ff-2", title: "Meeting 2" }),
     ];
-    const batch2 = [
-      createMockTranscriptSummary({ id: "ff-3", title: "Meeting 3" }),
-    ];
+    const batch2 = [createMockTranscriptSummary({ id: "ff-3", title: "Meeting 3" })];
     clientFactory.setListBatches([batch1, batch2]);
 
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }));
-    clientFactory.setGetResult("ff-3", createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({ id: "ff-2", title: "Meeting 2" }),
+    );
+    clientFactory.setGetResult(
+      "ff-3",
+      createMockFullTranscript({ id: "ff-3", title: "Meeting 3" }),
+    );
     mockSQL._setDedupRows([]);
 
     const res = await fetch(`http://localhost:${port}/api/sync/fireflies/stream?mode=full`);
@@ -823,7 +896,10 @@ describe("Sync Routes — GET /api/sync/fireflies/stream", () => {
       createMockTranscriptSummary({ id: "ff-2", title: "Meeting 2" }),
     ];
     clientFactory.setListResult(summaries);
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({ id: "ff-1", title: "Meeting 1" }),
+    );
     clientFactory.setGetResult("ff-2", new Error("Fireflies API timeout"));
     mockSQL._setDedupRows([]);
 
@@ -851,10 +927,21 @@ describe("Sync Routes — SSE pagination integration (75 meetings)", () => {
   // Generate 75 fake meetings with realistic data
   function generateMeetings(count: number) {
     const titles = [
-      "Sprint Planning", "Design Review", "1:1 with Sam", "All Hands",
-      "Product Sync", "Engineering Standup", "Retrospective", "Demo Day",
-      "Architecture Review", "Customer Call", "Hiring Debrief", "OKR Check-in",
-      "Incident Postmortem", "Release Planning", "Strategy Session",
+      "Sprint Planning",
+      "Design Review",
+      "1:1 with Sam",
+      "All Hands",
+      "Product Sync",
+      "Engineering Standup",
+      "Retrospective",
+      "Demo Day",
+      "Architecture Review",
+      "Customer Call",
+      "Hiring Debrief",
+      "OKR Check-in",
+      "Incident Postmortem",
+      "Release Planning",
+      "Strategy Session",
     ];
     const summaries: TranscriptSummary[] = [];
     const fullTranscripts = new Map<string, FullTranscript>();
@@ -877,10 +964,21 @@ describe("Sync Routes — SSE pagination integration (75 meetings)", () => {
           ],
           sentences: [
             {
-              index: 0, speaker_id: "s1", speaker_name: "Roman",
-              text: `Discussion point ${i + 1}`, raw_text: `Discussion point ${i + 1}`,
-              start_time: 0, end_time: 5,
-              ai_filters: { task: false, pricing: false, metric: false, question: false, date_and_time: false, sentiment: "neutral" },
+              index: 0,
+              speaker_id: "s1",
+              speaker_name: "Roman",
+              text: `Discussion point ${i + 1}`,
+              raw_text: `Discussion point ${i + 1}`,
+              start_time: 0,
+              end_time: 5,
+              ai_filters: {
+                task: false,
+                pricing: false,
+                metric: false,
+                question: false,
+                date_and_time: false,
+                sentiment: "neutral",
+              },
             },
           ],
           summary: {
@@ -934,10 +1032,14 @@ describe("Sync Routes — SSE pagination integration (75 meetings)", () => {
     const statusEvents = events.filter((e) => e.type === "status");
     expect(statusEvents.length).toBeGreaterThanOrEqual(2); // listing + syncing
 
-    const listingProgress = events.filter((e) => e.type === "progress" && e.data.phase === "listing");
+    const listingProgress = events.filter(
+      (e) => e.type === "progress" && e.data.phase === "listing",
+    );
     expect(listingProgress.length).toBe(3); // one per batch
 
-    const syncingProgress = events.filter((e) => e.type === "progress" && e.data.phase === "syncing");
+    const syncingProgress = events.filter(
+      (e) => e.type === "progress" && e.data.phase === "syncing",
+    );
     expect(syncingProgress.length).toBe(75); // one per transcript
 
     // Verify progress counts up correctly
@@ -972,8 +1074,8 @@ describe("Sync Routes — SSE pagination integration (75 meetings)", () => {
 
     // Pagination: batch 1 = newest 25 (all new), batch 2 has some known -> early exit
     clientFactory.setListBatches([
-      summaries.slice(0, 25),   // all new
-      summaries.slice(25, 50),  // all known -> triggers early exit
+      summaries.slice(0, 25), // all new
+      summaries.slice(25, 50), // all known -> triggers early exit
     ]);
 
     // Only need getTranscript for the new 25
@@ -993,7 +1095,9 @@ describe("Sync Routes — SSE pagination integration (75 meetings)", () => {
     expect(complete!.data.conversations).toHaveLength(25);
 
     // Should have only 2 listing batches (early exit on batch 2)
-    const listingProgress = events.filter((e) => e.type === "progress" && e.data.phase === "listing");
+    const listingProgress = events.filter(
+      (e) => e.type === "progress" && e.data.phase === "listing",
+    );
     expect(listingProgress.length).toBe(2);
   });
 

@@ -13,7 +13,7 @@ export const normalizeFireflies: NormalizeFn<FullTranscript> = (raw) => {
 
   // Build a lookup from attendee displayName → email for best-effort matching
   const emailByName = new Map<string, string>();
-  for (const attendee of (raw.meeting_attendees ?? [])) {
+  for (const attendee of raw.meeting_attendees ?? []) {
     emailByName.set(attendee.displayName, attendee.email);
   }
 

@@ -290,7 +290,10 @@ describe("Conversations Routes — GET /api/conversations/:id", () => {
         ended_at: "2026-03-20T10:30:00Z",
         duration_secs: 1800,
         summary: "Team discussed sprint goals",
-        metadata: JSON.stringify({ audio_url: "https://audio.example.com/ff-123.mp3", organizer_email: "roman@example.com" }),
+        metadata: JSON.stringify({
+          audio_url: "https://audio.example.com/ff-123.mp3",
+          organizer_email: "roman@example.com",
+        }),
         created_at: "2026-03-20T12:00:00Z",
         updated_at: "2026-03-20T12:00:00Z",
       },

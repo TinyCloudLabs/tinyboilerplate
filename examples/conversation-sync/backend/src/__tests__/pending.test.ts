@@ -87,10 +87,7 @@ describe("GET /api/webhooks/fireflies/pending", () => {
   let mockAccess: ReturnType<typeof createMockAccess>;
   let syncFn: ReturnType<typeof mock>;
 
-  function createApp(overrides?: {
-    authMiddleware?: any;
-    delegationMiddleware?: any;
-  }) {
+  function createApp(overrides?: { authMiddleware?: any; delegationMiddleware?: any }) {
     const delegationMiddleware =
       overrides?.delegationMiddleware ??
       ((req: Request, _res: Response, next: NextFunction) => {
@@ -296,10 +293,7 @@ describe("DELETE /api/webhooks/fireflies/pending", () => {
   let backendKV: ReturnType<typeof createMockBackendKV>;
   let mockAccess: ReturnType<typeof createMockAccess>;
 
-  function createApp(overrides?: {
-    authMiddleware?: any;
-    delegationMiddleware?: any;
-  }) {
+  function createApp(overrides?: { authMiddleware?: any; delegationMiddleware?: any }) {
     const delegationMiddleware =
       overrides?.delegationMiddleware ??
       ((req: Request, _res: Response, next: NextFunction) => {
@@ -374,10 +368,7 @@ describe("DELETE /api/webhooks/fireflies/pending", () => {
   });
 
   it("clears all pending items and returns count", async () => {
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("m1", "m2", "m3")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("m1", "m2", "m3")));
 
     const res = await deletePending();
     expect(res.status).toBe(200);
@@ -386,10 +377,7 @@ describe("DELETE /api/webhooks/fireflies/pending", () => {
   });
 
   it("empties the pending queue in KV", async () => {
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("m1", "m2")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("m1", "m2")));
 
     await deletePending();
 

@@ -27,7 +27,6 @@ import { createSyncRouter } from "./routes/sync.js";
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
 
-
 // ── Environment ──────────────────────────────────────────────────────
 
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
@@ -74,11 +73,12 @@ async function main() {
   const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
   const tryGetDelegatedAccess = async () => {
     const subResult = await backendKV.get(WEBHOOK_USER_SUB_PATH);
-    const sub = subResult.ok && (subResult as any).data?.data
-      ? String((subResult as any).data.data)
-      : null;
+    const sub =
+      subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
     if (!sub) {
-      console.log("[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user");
+      console.log(
+        "[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user",
+      );
       return null;
     }
     console.log(`[webhook] resolving delegation for sub=${sub}`);
@@ -93,7 +93,9 @@ async function main() {
     // Load from persistent store
     const stored = await delegationStore.load(sub);
     if (!stored) {
-      console.log("[webhook] no delegation in store for this sub — user needs to sign in and delegate");
+      console.log(
+        "[webhook] no delegation in store for this sub — user needs to sign in and delegate",
+      );
       return null;
     }
     if (new Date(stored.expiresAt).getTime() <= Date.now()) {

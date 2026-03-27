@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { ConversationList } from "../components/ConversationList";
 import type { ApiClient } from "@tinyboilerplate/client";
 
@@ -27,7 +21,8 @@ const CONVERSATIONS = [
     source_url: "https://app.fireflies.ai/view/01ABC",
     started_at: "2026-03-20T14:00:00Z",
     duration_secs: 1800,
-    summary: "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
+    summary:
+      "Discussed roadmap priorities and assigned tasks for the upcoming sprint cycle with the full team.",
     created_at: "2026-03-20T15:00:00Z",
     participant_count: 4,
   },
@@ -75,9 +70,7 @@ describe("ConversationList", () => {
     });
     api = mockApi({ get: getMock });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -85,9 +78,7 @@ describe("ConversationList", () => {
       expect(screen.getByText("Quick Standup")).toBeInTheDocument();
     });
 
-    expect(getMock).toHaveBeenCalledWith(
-      "/api/conversations?limit=20&offset=0",
-    );
+    expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=0");
   });
 
   it("shows loading state while fetching", async () => {
@@ -99,9 +90,7 @@ describe("ConversationList", () => {
     );
     api = mockApi({ get: getMock });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
 
@@ -116,17 +105,11 @@ describe("ConversationList", () => {
       get: vi.fn().mockResolvedValue({ conversations: [], total: 0 }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/no conversations yet/i),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/click sync to import from fireflies/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/click sync to import from fireflies/i)).toBeInTheDocument();
     });
   });
 
@@ -138,9 +121,7 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("30 min")).toBeInTheDocument(); // 1800s
@@ -157,9 +138,7 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("4 participants")).toBeInTheDocument();
@@ -177,9 +156,7 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       // Should show truncated text with ellipsis
@@ -196,9 +173,7 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("Quick Standup")).toBeInTheDocument();
@@ -215,9 +190,7 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -236,14 +209,10 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /load more/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /load more/i })).toBeInTheDocument();
     });
   });
 
@@ -255,17 +224,13 @@ describe("ConversationList", () => {
       }),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
     });
 
-    expect(
-      screen.queryByRole("button", { name: /load more/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
   });
 
   it("loads next page when Load More is clicked", async () => {
@@ -293,9 +258,7 @@ describe("ConversationList", () => {
       });
     api = mockApi({ get: getMock });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -308,9 +271,7 @@ describe("ConversationList", () => {
     });
 
     // Should have fetched with offset=3 (first page had 3 items)
-    expect(getMock).toHaveBeenCalledWith(
-      "/api/conversations?limit=20&offset=3",
-    );
+    expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=3");
 
     // All 4 conversations should be visible
     expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
@@ -322,9 +283,7 @@ describe("ConversationList", () => {
       get: vi.fn().mockRejectedValue(new Error("Network error")),
     });
 
-    render(
-      <ConversationList api={api} onSelectConversation={onSelectConversation} />,
-    );
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
@@ -339,19 +298,13 @@ describe("ConversationList", () => {
         total: 3,
       })
       .mockResolvedValueOnce({
-        conversations: [
-          { ...CONVERSATIONS[0], title: "Updated Sprint Planning" },
-        ],
+        conversations: [{ ...CONVERSATIONS[0], title: "Updated Sprint Planning" }],
         total: 1,
       });
     api = mockApi({ get: getMock });
 
     const { rerender } = render(
-      <ConversationList
-        api={api}
-        onSelectConversation={onSelectConversation}
-        refreshKey={0}
-      />,
+      <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={0} />,
     );
 
     await waitFor(() => {
@@ -359,17 +312,11 @@ describe("ConversationList", () => {
     });
 
     rerender(
-      <ConversationList
-        api={api}
-        onSelectConversation={onSelectConversation}
-        refreshKey={1}
-      />,
+      <ConversationList api={api} onSelectConversation={onSelectConversation} refreshKey={1} />,
     );
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Updated Sprint Planning"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Updated Sprint Planning")).toBeInTheDocument();
     });
 
     expect(getMock).toHaveBeenCalledTimes(2);

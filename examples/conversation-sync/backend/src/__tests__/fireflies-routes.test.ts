@@ -33,8 +33,12 @@ function createMockClientFactory() {
   let lastApiKey: string | null = null;
 
   return {
-    setGetUserResult(fn: () => Promise<any>) { getUserResult = fn; },
-    getLastApiKey() { return lastApiKey; },
+    setGetUserResult(fn: () => Promise<any>) {
+      getUserResult = fn;
+    },
+    getLastApiKey() {
+      return lastApiKey;
+    },
     factory(apiKey: string) {
       lastApiKey = apiKey;
       return {

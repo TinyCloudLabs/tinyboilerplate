@@ -105,7 +105,9 @@ function createMockFullTranscript(overrides: Partial<FullTranscript> = {}): Full
     organizer_email: overrides.organizer_email ?? "test@example.com",
     transcript_url: overrides.transcript_url ?? "https://app.fireflies.ai/view/ff-1",
     speakers: overrides.speakers ?? [{ id: "s1", name: "Alice" }],
-    meeting_attendees: overrides.meeting_attendees ?? [{ displayName: "Alice", email: "alice@example.com" }],
+    meeting_attendees: overrides.meeting_attendees ?? [
+      { displayName: "Alice", email: "alice@example.com" },
+    ],
     sentences: overrides.sentences ?? [],
     summary: overrides.summary ?? {
       keywords: ["planning"],
@@ -235,30 +237,42 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
       { id: "conv-1", source_id: "ff-1" },
       { id: "conv-2", source_id: "ff-2" },
     ]);
-    mockSQL._setMetadata("conv-1", JSON.stringify({ audio_url: "https://audio.example.com/ff-1.mp3" }));
-    mockSQL._setMetadata("conv-2", JSON.stringify({ audio_url: "https://audio.example.com/ff-2.mp3" }));
+    mockSQL._setMetadata(
+      "conv-1",
+      JSON.stringify({ audio_url: "https://audio.example.com/ff-1.mp3" }),
+    );
+    mockSQL._setMetadata(
+      "conv-2",
+      JSON.stringify({ audio_url: "https://audio.example.com/ff-2.mp3" }),
+    );
 
     // Both now have summaries on Fireflies
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({
-      id: "ff-1",
-      summary: {
-        keywords: ["roadmap"],
-        action_items: [],
-        overview: "Discussed Q3 roadmap",
-        shorthand_bullet: "- Roadmap",
-        meeting_type: "planning",
-      },
-    }));
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({
-      id: "ff-2",
-      summary: {
-        keywords: ["standup"],
-        action_items: [],
-        overview: "Daily standup sync",
-        shorthand_bullet: "- Standup",
-        meeting_type: "standup",
-      },
-    }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({
+        id: "ff-1",
+        summary: {
+          keywords: ["roadmap"],
+          action_items: [],
+          overview: "Discussed Q3 roadmap",
+          shorthand_bullet: "- Roadmap",
+          meeting_type: "planning",
+        },
+      }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({
+        id: "ff-2",
+        summary: {
+          keywords: ["standup"],
+          action_items: [],
+          overview: "Daily standup sync",
+          shorthand_bullet: "- Standup",
+          meeting_type: "standup",
+        },
+      }),
+    );
 
     const res = await fetch(`http://localhost:${port}/api/sync/backfill-summaries`, {
       method: "POST",
@@ -271,8 +285,8 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
     expect(body.still_missing).toBe(0);
 
     // Verify UPDATE calls were made
-    const updateCalls = mockSQL._calls.filter(
-      (c) => c.sql.includes("UPDATE conversation SET summary"),
+    const updateCalls = mockSQL._calls.filter((c) =>
+      c.sql.includes("UPDATE conversation SET summary"),
     );
     expect(updateCalls).toHaveLength(2);
 
@@ -295,16 +309,19 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
     mockSQL._setMissingRows([{ id: "conv-1", source_id: "ff-1" }]);
     mockSQL._setMetadata("conv-1", JSON.stringify({}));
 
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({
-      id: "ff-1",
-      summary: {
-        keywords: ["retro"],
-        action_items: [],
-        overview: "Sprint retrospective",
-        shorthand_bullet: "- Retro",
-        meeting_type: "retro",
-      },
-    }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({
+        id: "ff-1",
+        summary: {
+          keywords: ["retro"],
+          action_items: [],
+          overview: "Sprint retrospective",
+          shorthand_bullet: "- Retro",
+          meeting_type: "retro",
+        },
+      }),
+    );
 
     const res = await fetch(`http://localhost:${port}/api/sync/backfill-summaries`, {
       method: "POST",
@@ -330,26 +347,32 @@ describe("Backfill Summaries — POST /api/sync/backfill-summaries", () => {
     ]);
 
     // ff-1 now has a summary, ff-2 still does not
-    clientFactory.setGetResult("ff-1", createMockFullTranscript({
-      id: "ff-1",
-      summary: {
-        keywords: ["demo"],
-        action_items: [],
-        overview: "Product demo meeting",
-        shorthand_bullet: "- Demo",
-        meeting_type: "demo",
-      },
-    }));
-    clientFactory.setGetResult("ff-2", createMockFullTranscript({
-      id: "ff-2",
-      summary: {
-        keywords: [],
-        action_items: [],
-        overview: "", // empty overview = still no summary
-        shorthand_bullet: "",
-        meeting_type: "",
-      },
-    }));
+    clientFactory.setGetResult(
+      "ff-1",
+      createMockFullTranscript({
+        id: "ff-1",
+        summary: {
+          keywords: ["demo"],
+          action_items: [],
+          overview: "Product demo meeting",
+          shorthand_bullet: "- Demo",
+          meeting_type: "demo",
+        },
+      }),
+    );
+    clientFactory.setGetResult(
+      "ff-2",
+      createMockFullTranscript({
+        id: "ff-2",
+        summary: {
+          keywords: [],
+          action_items: [],
+          overview: "", // empty overview = still no summary
+          shorthand_bullet: "",
+          meeting_type: "",
+        },
+      }),
+    );
 
     mockSQL._setMetadata("conv-1", JSON.stringify({}));
 

@@ -34,7 +34,8 @@ export function createFirefliesRouter(config: FirefliesRoutesConfig) {
     if (!apiKey) {
       res.status(404).json({
         error: "no_api_key",
-        message: "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
+        message:
+          "No Fireflies API key configured. Store one first via PUT /api/config/fireflies-key.",
       });
       return;
     }

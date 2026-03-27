@@ -81,13 +81,9 @@ describe("normalizeFireflies", () => {
     expect(result.conversation.title).toBe("Team standup");
     expect(result.conversation.source).toBe("fireflies");
     expect(result.conversation.source_id).toBe("ff-abc-123");
-    expect(result.conversation.source_url).toBe(
-      "https://app.fireflies.ai/view/ff-abc-123",
-    );
+    expect(result.conversation.source_url).toBe("https://app.fireflies.ai/view/ff-abc-123");
     expect(result.conversation.duration_secs).toBe(1800);
-    expect(result.conversation.summary).toBe(
-      "Daily standup covering sprint progress.",
-    );
+    expect(result.conversation.summary).toBe("Daily standup covering sprint progress.");
   });
 
   it("converts started_at from epoch ms to ISO 8601", () => {
@@ -112,9 +108,7 @@ describe("normalizeFireflies", () => {
     raw.summary.overview = "A discussion about quarterly goals.";
     const result = normalizeFireflies(raw);
 
-    expect(result.conversation.summary).toBe(
-      "A discussion about quarterly goals.",
-    );
+    expect(result.conversation.summary).toBe("A discussion about quarterly goals.");
   });
 
   it("metadata includes audio_url, organizer_email, keywords, meeting_type", () => {
@@ -178,9 +172,7 @@ describe("normalizeFireflies", () => {
     });
     const result = normalizeFireflies(raw);
 
-    const unknown = result.participants.find(
-      (p) => p.name === "Unknown Speaker",
-    );
+    const unknown = result.participants.find((p) => p.name === "Unknown Speaker");
     expect(unknown?.email).toBeNull();
   });
 
@@ -225,10 +217,7 @@ describe("normalizeFireflies", () => {
     }
 
     // All IDs should be unique
-    const allIds = [
-      result.conversation.id,
-      ...result.participants.map((p) => p.id),
-    ];
+    const allIds = [result.conversation.id, ...result.participants.map((p) => p.id)];
     const uniqueIds = new Set(allIds);
     expect(uniqueIds.size).toBe(allIds.length);
   });

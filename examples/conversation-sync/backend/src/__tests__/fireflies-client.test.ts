@@ -2,9 +2,7 @@ import { describe, it, expect, beforeEach, mock, afterEach } from "bun:test";
 
 // ── Mock fetch ──────────────────────────────────────────────────────
 
-const mockFetch = mock<typeof globalThis.fetch>(() =>
-  Promise.resolve(new Response("{}"))
-);
+const mockFetch = mock<typeof globalThis.fetch>(() => Promise.resolve(new Response("{}")));
 
 const originalFetch = globalThis.fetch;
 
@@ -54,7 +52,7 @@ describe("FirefliesClient", () => {
   describe("request format", () => {
     it("sends POST requests to the Fireflies GraphQL endpoint", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } })
+        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } }),
       );
 
       await client.getUser();
@@ -66,7 +64,7 @@ describe("FirefliesClient", () => {
 
     it("includes correct headers with bearer token", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } })
+        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } }),
       );
 
       await client.getUser();
@@ -88,9 +86,7 @@ describe("FirefliesClient", () => {
     };
 
     it("sends the correct GraphQL query", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { user: mockUserData } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { user: mockUserData } }));
 
       await client.getUser();
 
@@ -103,9 +99,7 @@ describe("FirefliesClient", () => {
     });
 
     it("returns parsed user data", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { user: mockUserData } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { user: mockUserData } }));
 
       const result = await client.getUser();
 
@@ -136,9 +130,7 @@ describe("FirefliesClient", () => {
     ];
 
     it("sends the correct GraphQL query with variables", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: mockTranscripts } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcripts: mockTranscripts } }));
 
       await client.listTranscripts(10, 5);
 
@@ -155,9 +147,7 @@ describe("FirefliesClient", () => {
     });
 
     it("returns parsed transcript array", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: mockTranscripts } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcripts: mockTranscripts } }));
 
       const result = await client.listTranscripts(10, 5);
 
@@ -166,9 +156,7 @@ describe("FirefliesClient", () => {
     });
 
     it("works with default (no arguments)", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: mockTranscripts } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcripts: mockTranscripts } }));
 
       await client.listTranscripts();
 
@@ -225,9 +213,7 @@ describe("FirefliesClient", () => {
     };
 
     it("sends the correct GraphQL query with id variable", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcript: mockFullTranscript } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcript: mockFullTranscript } }));
 
       await client.getTranscript("t1");
 
@@ -244,9 +230,7 @@ describe("FirefliesClient", () => {
     });
 
     it("returns the full parsed transcript", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcript: mockFullTranscript } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcript: mockFullTranscript } }));
 
       const result = await client.getTranscript("t1");
 
@@ -274,11 +258,11 @@ describe("FirefliesClient", () => {
     it("paginates through multiple batches", async () => {
       // Batch 1: full batch of 2
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } }),
       );
       // Batch 2: partial batch (last page)
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } }),
       );
 
       const result = await client.listAllTranscripts({ batchSize: 2, delayMs: 0 });
@@ -290,9 +274,7 @@ describe("FirefliesClient", () => {
     });
 
     it("stops on empty first batch", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [] } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcripts: [] } }));
 
       const result = await client.listAllTranscripts({ batchSize: 25, delayMs: 0 });
 
@@ -304,11 +286,11 @@ describe("FirefliesClient", () => {
     it("incremental mode stops when hitting known IDs", async () => {
       // Batch 1: all new
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t3"), makeTranscript("t4")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t3"), makeTranscript("t4")] } }),
       );
       // Batch 2: t2 is known — should stop here, only add t5
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t5"), makeTranscript("t2")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t5"), makeTranscript("t2")] } }),
       );
 
       const result = await client.listAllTranscripts({
@@ -326,10 +308,10 @@ describe("FirefliesClient", () => {
 
     it("full mode ignores known IDs and fetches everything", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } }),
       );
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } }),
       );
 
       const result = await client.listAllTranscripts({
@@ -345,10 +327,10 @@ describe("FirefliesClient", () => {
 
     it("calls onProgress after each batch", async () => {
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t1"), makeTranscript("t2")] } }),
       );
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } })
+        jsonResponse({ data: { transcripts: [makeTranscript("t3")] } }),
       );
 
       const progressCalls: Array<{ batch: number; totalSoFar: number }> = [];
@@ -366,18 +348,14 @@ describe("FirefliesClient", () => {
 
     it("clamps batchSize to range 1–50", async () => {
       // batchSize 0 should become 1
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [] } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcripts: [] } }));
       await client.listAllTranscripts({ batchSize: 0, delayMs: 0 });
 
       const body1 = lastRequestBody();
       expect(body1.variables?.limit).toBe(1);
 
       // batchSize 100 should become 50
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { transcripts: [] } })
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: { transcripts: [] } }));
       await client.listAllTranscripts({ batchSize: 100, delayMs: 0 });
 
       const body2 = lastRequestBody();
@@ -389,9 +367,7 @@ describe("FirefliesClient", () => {
 
   describe("error handling", () => {
     it("throws on HTTP error with status code", async () => {
-      mockFetch.mockResolvedValueOnce(
-        jsonResponse({ message: "Unauthorized" }, 401)
-      );
+      mockFetch.mockResolvedValueOnce(jsonResponse({ message: "Unauthorized" }, 401));
 
       expect(client.getUser()).rejects.toThrow("401");
     });
@@ -400,11 +376,8 @@ describe("FirefliesClient", () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           data: null,
-          errors: [
-            { message: "Rate limit exceeded" },
-            { message: "Another error" },
-          ],
-        })
+          errors: [{ message: "Rate limit exceeded" }, { message: "Another error" }],
+        }),
       );
 
       expect(client.getUser()).rejects.toThrow("Rate limit exceeded");
@@ -419,11 +392,11 @@ describe("FirefliesClient", () => {
     it("retries on HTTP 429 and succeeds", async () => {
       // First call: 429
       mockFetch.mockResolvedValueOnce(
-        new Response("Rate limited", { status: 429, headers: { "Retry-After": "1" } })
+        new Response("Rate limited", { status: 429, headers: { "Retry-After": "1" } }),
       );
       // Second call: success
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } })
+        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } }),
       );
 
       const result = await client.getUser();
@@ -436,12 +409,14 @@ describe("FirefliesClient", () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           data: null,
-          errors: [{ message: "Rate limit. retry after 2026-01-01T00:00:01Z", code: "too_many_requests" }],
-        })
+          errors: [
+            { message: "Rate limit. retry after 2026-01-01T00:00:01Z", code: "too_many_requests" },
+          ],
+        }),
       );
       // Second call: success
       mockFetch.mockResolvedValueOnce(
-        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } })
+        jsonResponse({ data: { user: { name: "A", email: "a@b.com", is_admin: false } } }),
       );
 
       const result = await client.getUser();
@@ -453,7 +428,7 @@ describe("FirefliesClient", () => {
       // All 3 attempts return 429
       for (let i = 0; i < 3; i++) {
         mockFetch.mockResolvedValueOnce(
-          new Response("Rate limited", { status: 429, headers: { "Retry-After": "1" } })
+          new Response("Rate limited", { status: 429, headers: { "Retry-After": "1" } }),
         );
       }
 

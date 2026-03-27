@@ -16,7 +16,13 @@ function truncate(str: string, headLen: number, tailLen: number): string {
 }
 
 export const AuthPanel: FC<AuthPanelProps> = ({
-  isSignedIn, address, did, loading, error, onSignIn, onSignOut,
+  isSignedIn,
+  address,
+  did,
+  loading,
+  error,
+  onSignIn,
+  onSignOut,
 }) => {
   return (
     <section style={s.card}>
@@ -50,7 +56,9 @@ export const AuthPanel: FC<AuthPanelProps> = ({
             <span style={s.infoLabel}>DID</span>
             <code style={s.infoValue}>{truncate(did ?? "", 18, 8)}</code>
           </div>
-          <button onClick={onSignOut} style={s.btnGhost}>Sign Out</button>
+          <button onClick={onSignOut} style={s.btnGhost}>
+            Sign Out
+          </button>
         </div>
       )}
 

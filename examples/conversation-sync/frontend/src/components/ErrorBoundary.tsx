@@ -30,9 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div style={s.card}>
             <span style={s.icon}>!</span>
             <h2 style={s.heading}>Something went wrong</h2>
-            <p style={s.message}>
-              {this.state.error?.message || "An unexpected error occurred."}
-            </p>
+            <p style={s.message}>{this.state.error?.message || "An unexpected error occurred."}</p>
             <div style={s.btnRow}>
               <button
                 onClick={() => this.setState({ hasError: false, error: null })}

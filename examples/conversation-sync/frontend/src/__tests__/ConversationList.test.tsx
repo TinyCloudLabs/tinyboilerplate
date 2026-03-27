@@ -92,11 +92,11 @@ describe("ConversationList", () => {
 
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByText("Loading conversations")).toBeInTheDocument();
 
     resolveGet({ conversations: [], total: 0 });
     await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading conversations")).not.toBeInTheDocument();
     });
   });
 
@@ -109,7 +109,9 @@ describe("ConversationList", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
-      expect(screen.getByText(/click sync to import from fireflies/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/sync your first meetings from fireflies above/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -147,7 +149,7 @@ describe("ConversationList", () => {
     });
   });
 
-  it("truncates summary to ~100 chars", async () => {
+  it("truncates and cleans summary text", async () => {
     const longSummary = "A".repeat(150);
     api = mockApi({
       get: vi.fn().mockResolvedValue({
@@ -159,9 +161,9 @@ describe("ConversationList", () => {
     render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
 
     await waitFor(() => {
-      // Should show truncated text with ellipsis
-      const summaryEl = screen.getByText(/A+…$/);
-      expect(summaryEl.textContent!.length).toBeLessThanOrEqual(104); // 100 + "…" + some tolerance
+      // cleanSummary uses max=120, so truncated text + ellipsis
+      const summaryEl = screen.getByText(/A+\u2026$/);
+      expect(summaryEl.textContent!.length).toBeLessThanOrEqual(120);
     });
   });
 
@@ -287,6 +289,21 @@ describe("ConversationList", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows conversation count header", async () => {
+    api = mockApi({
+      get: vi.fn().mockResolvedValue({
+        conversations: CONVERSATIONS,
+        total: 3,
+      }),
+    });
+
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/3 conversations/i)).toBeInTheDocument();
     });
   });
 

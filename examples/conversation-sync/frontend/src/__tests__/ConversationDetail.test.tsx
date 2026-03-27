@@ -113,11 +113,11 @@ describe("ConversationDetail", () => {
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByText("Loading conversation")).toBeInTheDocument();
 
     resolveGet(DETAIL_RESPONSE);
     await waitFor(() => {
-      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading conversation")).not.toBeInTheDocument();
     });
   });
 
@@ -132,18 +132,17 @@ describe("ConversationDetail", () => {
     });
   });
 
-  it("renders participant names", async () => {
+  it("renders participant names as chips", async () => {
     api = mockApi({ get: vi.fn().mockResolvedValue(DETAIL_RESPONSE) });
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
 
     await waitFor(() => {
-      // Participants shown as comma-separated list in header
-      expect(screen.getByText("Alice, Bob")).toBeInTheDocument();
+      expect(screen.getByText("2 participants")).toBeInTheDocument();
     });
   });
 
-  it("renders summary section", async () => {
+  it("renders summary section with HTML", async () => {
     api = mockApi({ get: vi.fn().mockResolvedValue(DETAIL_RESPONSE) });
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
@@ -183,15 +182,15 @@ describe("ConversationDetail", () => {
     expect(blocks.length).toBe(3);
   });
 
-  it("formats timestamps as mm:ss", async () => {
+  it("formats timestamps as m:ss", async () => {
     api = mockApi({ get: vi.fn().mockResolvedValue(DETAIL_RESPONSE) });
 
     render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
 
     await waitFor(() => {
-      expect(screen.getByText("00:00")).toBeInTheDocument(); // start_time 0
-      expect(screen.getByText("00:10")).toBeInTheDocument(); // start_time 10
-      expect(screen.getByText("01:05")).toBeInTheDocument(); // start_time 65
+      expect(screen.getByText("0:00")).toBeInTheDocument(); // start_time 0
+      expect(screen.getByText("0:10")).toBeInTheDocument(); // start_time 10
+      expect(screen.getByText("1:05")).toBeInTheDocument(); // start_time 65
     });
   });
 

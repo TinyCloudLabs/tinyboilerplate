@@ -9,6 +9,8 @@ import { persistConversation } from "../services/persist-conversation.js";
 import { ensureSchema } from "../schema.js";
 import { GoogleAuthRevokedError } from "../services/google-auth.js";
 import type { SyncSingleResult } from "../services/google-meet-sync.js";
+import { checkAndRenewSubscription as defaultCheckAndRenew } from "../services/pubsub-manager.js";
+import type { SubscriptionMetadata, RenewalResult } from "../services/pubsub-manager.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -45,6 +47,8 @@ export interface GoogleMeetPushConfig {
     access: DelegatedAccess,
     client: MeetClient,
   ) => Promise<SyncSingleResult>;
+  /** Override for testing — check and renew subscription */
+  checkAndRenew?: (metadata: SubscriptionMetadata, accessToken: string) => Promise<RenewalResult>;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -52,6 +56,7 @@ export interface GoogleMeetPushConfig {
 const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
 const PENDING_KV_KEY = "/app.webhooks/pending/google-meet";
 const FAILED_KV_KEY = "/app.webhooks/failed/google-meet";
+const SUBSCRIPTION_KV_KEY = "/app.webhooks/config/google-meet-subscription";
 const TRANSCRIPT_EVENT_TYPE = "google.workspace.meet.transcript.v2.fileGenerated";
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -185,6 +190,7 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
     createClient = (accessToken, onTokenRefresh, refreshToken) =>
       new GoogleMeetClient(accessToken, onTokenRefresh, refreshToken),
     syncConference = defaultSyncConference,
+    checkAndRenew = defaultCheckAndRenew,
   } = config;
 
   const router = Router();
@@ -404,6 +410,102 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
       const pending = await readPendingQueue(backendKV);
       await backendKV.put(PENDING_KV_KEY, JSON.stringify([]));
       res.json({ cleared: pending.length });
+    });
+
+    // GET /check — check subscription health, renew if needed
+    router.get("/check", auth, delegation, async (req: Request, res: Response) => {
+      // 1. Read subscription metadata from backend KV
+      const metaResult = await backendKV.get(SUBSCRIPTION_KV_KEY);
+      if (!metaResult.ok || !metaResult.data.data) {
+        res.json({ status: "not_configured" });
+        return;
+      }
+
+      let metadata: SubscriptionMetadata;
+      try {
+        metadata = JSON.parse(metaResult.data.data);
+      } catch {
+        res.json({ status: "not_configured" });
+        return;
+      }
+
+      // 2. Read Google tokens from user KV
+      const access = req.delegatedAccess!;
+      const tokensResult = await access.kv.get(GOOGLE_TOKENS_PATH);
+      const tokensRaw = tokensResult.ok && tokensResult.data.data ? tokensResult.data.data : null;
+
+      if (!tokensRaw) {
+        res.status(400).json({ error: "no_google_tokens", message: "Google tokens not configured" });
+        return;
+      }
+
+      let tokens: { access_token: string };
+      try {
+        tokens = JSON.parse(tokensRaw);
+      } catch {
+        res.status(400).json({ error: "no_google_tokens", message: "Invalid Google token data" });
+        return;
+      }
+
+      // 3. Check and renew
+      const result = await checkAndRenew(metadata, tokens.access_token);
+
+      if (result.status === "active") {
+        res.json({ status: "active", expiresAt: metadata.expiresAt });
+      } else if (result.status === "renewed" && result.metadata) {
+        // Update metadata in backend KV
+        await backendKV.put(SUBSCRIPTION_KV_KEY, JSON.stringify(result.metadata));
+        res.json({ status: "renewed", expiresAt: result.metadata.expiresAt });
+      } else {
+        // lapsed
+        res.json({ status: "lapsed", message: "Subscription expired. Please reconnect Google Meet to resume automatic syncing." });
+      }
+    });
+  }
+
+  // ── Auth-only endpoints ───────────────────────────────────────────
+
+  if (config.authMiddleware) {
+    const auth = config.authMiddleware;
+
+    // GET /status — webhook configuration status (auth only, no delegation)
+    router.get("/status", auth, async (_req: Request, res: Response) => {
+      // 1. Read subscription metadata
+      const metaResult = await backendKV.get(SUBSCRIPTION_KV_KEY);
+      let subscriptionActive = false;
+      let expiresAt: string | null = null;
+
+      if (metaResult.ok && metaResult.data.data) {
+        try {
+          const metadata: SubscriptionMetadata = JSON.parse(metaResult.data.data);
+          expiresAt = metadata.expiresAt;
+          subscriptionActive = new Date(metadata.expiresAt).getTime() > Date.now();
+        } catch {
+          // Invalid metadata — treat as not configured
+        }
+      }
+
+      // 2. Count pending
+      let pendingCount = 0;
+      const pendingResult = await backendKV.get(PENDING_KV_KEY);
+      if (pendingResult.ok && pendingResult.data.data) {
+        try {
+          const pending = JSON.parse(pendingResult.data.data);
+          pendingCount = Array.isArray(pending) ? pending.length : 0;
+        } catch {}
+      }
+
+      // 3. Count failed
+      let failedCount = 0;
+      const failedResult = await backendKV.get(FAILED_KV_KEY);
+      if (failedResult.ok && failedResult.data.data) {
+        try {
+          const failed = JSON.parse(failedResult.data.data);
+          failedCount = Array.isArray(failed) ? failed.length : 0;
+        } catch {}
+      }
+
+      res.json({ enabled: true, subscriptionActive, expiresAt, pendingCount, failedCount });
     });
   }
 

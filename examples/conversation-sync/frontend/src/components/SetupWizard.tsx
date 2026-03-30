@@ -1,6 +1,7 @@
-import { useState, type FC } from "react";
+import { useState, useEffect, type FC } from "react";
 import type { ApiClient } from "@tinyboilerplate/client";
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 type Step = "welcome" | "instructions" | "input" | "test" | "webhook" | "done";
@@ -15,10 +16,25 @@ type Step = "welcome" | "instructions" | "input" | "test" | "webhook" | "done";
 >>>>>>> 64c2d6d (TC-1315: Add Setup Wizard Step 3 for webhook configuration)
 =======
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+=======
+type Step =
+  | "picker"
+  | "welcome"
+  | "instructions"
+  | "input"
+  | "test"
+  | "webhook"
+  | "done"
+  | "google-connect"
+  | "google-success";
+
+const FIREFLIES_STEPS: Step[] = ["welcome", "instructions", "input", "test", "webhook", "done"];
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
 
 interface SetupWizardProps {
   api: ApiClient;
   onComplete: () => void;
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   backendUrl?: string;
@@ -27,6 +43,11 @@ interface SetupWizardProps {
 =======
   backendUrl?: string;
 >>>>>>> 64c2d6d (TC-1315: Add Setup Wizard Step 3 for webhook configuration)
+=======
+  onGoogleMeetComplete?: () => void;
+  backendUrl?: string;
+  showGoogleMeet?: boolean;
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
 }
 
 interface UserInfo {
@@ -34,6 +55,7 @@ interface UserInfo {
   email: string;
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl = "" }) => {
@@ -44,6 +66,16 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete }) => {
 export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl = "" }) => {
 >>>>>>> 64c2d6d (TC-1315: Add Setup Wizard Step 3 for webhook configuration)
   const [step, setStep] = useState<Step>("welcome");
+=======
+export const SetupWizard: FC<SetupWizardProps> = ({
+  api,
+  onComplete,
+  onGoogleMeetComplete,
+  backendUrl = "",
+  showGoogleMeet,
+}) => {
+  const [step, setStep] = useState<Step>("picker");
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
@@ -63,12 +95,39 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
   const [webhookSaved, setWebhookSaved] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
 
+  // Google OAuth state
+  const [connecting, setConnecting] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
   const webhookUrl = `${backendUrl}/api/webhooks/fireflies`;
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   const stepIndex = STEPS.indexOf(step);
+=======
+  const stepIndex = FIREFLIES_STEPS.indexOf(step);
+  const isFirefliesFlow = stepIndex >= 0;
+
+  // Listen for postMessage from Google OAuth popup
+  useEffect(() => {
+    if (step !== "google-connect") return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "google-auth-success") {
+        setStep("google-success");
+        setConnecting(false);
+      } else if (event.data?.type === "google-auth-error") {
+        setGoogleError(event.data.message || "Authentication failed");
+        setConnecting(false);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [step]);
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
 
 =======
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
@@ -91,26 +150,119 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
     }
   };
 
+  const handleGoogleConnect = async () => {
+    setConnecting(true);
+    setGoogleError(null);
+    try {
+      const { authUrl } = await api.get<{ authUrl: string }>("/api/auth/google");
+      window.open(authUrl, "google-auth", "width=500,height=600,popup=yes");
+    } catch (err) {
+      setGoogleError(err instanceof Error ? err.message : String(err));
+      setConnecting(false);
+    }
+  };
+
   return (
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     <section style={s.card}>
-      {/* Step dots */}
-      <div style={s.stepDots}>
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
+      {/* Step dots — only for Fireflies flow */}
+      {isFirefliesFlow && (
+        <div style={s.stepDots}>
+          {FIREFLIES_STEPS.map((_, i) => (
+            <div
+              key={i}
+              style={{
+                ...s.dot,
+                ...(i <= stepIndex ? s.dotActive : {}),
+                ...(i === stepIndex ? s.dotCurrent : {}),
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Source Picker ─────────────────────────────────────────── */}
+
+      {step === "picker" && (
+        <div style={s.stepContent}>
+          <h3 style={s.stepTitle}>Connect a Source</h3>
+          <p style={s.stepDesc}>Choose a transcript source to get started.</p>
+          <div style={s.pickerRow}>
+            <div style={s.pickerCard}>
+              <h4 style={s.pickerCardTitle}>Fireflies</h4>
+              <p style={s.pickerCardDesc}>Sync meeting transcripts from Fireflies.ai</p>
+              <button style={s.btnPrimary} onClick={() => setStep("welcome")}>
+                Connect Fireflies
+              </button>
+            </div>
+            {showGoogleMeet && (
+              <div style={s.pickerCard}>
+                <h4 style={s.pickerCardTitle}>Google Meet</h4>
+                <p style={s.pickerCardDesc}>Sync transcripts from Google Meet recordings</p>
+                <button
+                  style={{ ...s.btnPrimary, background: "#059669" }}
+                  onClick={() => setStep("google-connect")}
+                >
+                  Connect Google
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Google Connect ───────────────────────────────────────── */}
+
+      {step === "google-connect" && (
+        <div style={s.stepContent}>
+          <h3 style={s.stepTitle}>Connect Google Account</h3>
+          <p style={s.stepDesc}>Sign in with Google to access your meeting transcripts.</p>
+          <button
             style={{
-              ...s.dot,
-              ...(i <= stepIndex ? s.dotActive : {}),
-              ...(i === stepIndex ? s.dotCurrent : {}),
+              ...s.btnPrimary,
+              background: "#059669",
+              ...(connecting ? s.btnDisabled : {}),
             }}
+<<<<<<< HEAD
           />
         ))}
       </div>
 <<<<<<< HEAD
+=======
+            disabled={connecting}
+            onClick={handleGoogleConnect}
+          >
+            {connecting ? "Connecting\u2026" : "Connect with Google"}
+          </button>
+          {googleError && <div style={s.errorCard}>{googleError}</div>}
+          <button style={s.btnGhost} onClick={() => setStep("picker")}>
+            Back
+          </button>
+        </div>
+      )}
+
+      {/* ── Google Success ───────────────────────────────────────── */}
+
+      {step === "google-success" && (
+        <div style={s.stepContent}>
+          <div style={s.successCard}>
+            <span style={s.checkmark}>&#10003;</span>
+            <div>
+              <p style={s.successTitle}>Google account connected</p>
+              <p style={s.successSub}>Your Google Meet transcripts are ready to sync.</p>
+            </div>
+          </div>
+          <button style={s.btnPrimary} onClick={() => onGoogleMeetComplete?.()}>
+            Start Syncing
+          </button>
+        </div>
+      )}
+
+      {/* ── Fireflies: Welcome ───────────────────────────────────── */}
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
 
       {step === "welcome" && (
         <div style={s.stepContent}>
@@ -123,6 +275,8 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           </button>
         </div>
       )}
+
+      {/* ── Fireflies: Instructions ──────────────────────────────── */}
 
       {step === "instructions" && (
         <div style={s.stepContent}>
@@ -174,6 +328,8 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
         </div>
       )}
 
+      {/* ── Fireflies: Input ─────────────────────────────────────── */}
+
       {step === "input" && (
         <div style={s.stepContent}>
           <h3 style={s.stepTitle}>Paste API Key</h3>
@@ -198,6 +354,8 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           </div>
         </div>
       )}
+
+      {/* ── Fireflies: Test ──────────────────────────────────────── */}
 
       {step === "test" && (
         <div style={s.stepContent}>
@@ -339,6 +497,8 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
         </div>
       )}
 
+      {/* ── Fireflies: Webhook ───────────────────────────────────── */}
+
       {step === "webhook" && (
         <div style={s.stepContent}>
           <h3 style={s.stepTitle}>Webhook Setup</h3>
@@ -442,6 +602,8 @@ export const SetupWizard: FC<SetupWizardProps> = ({ api, onComplete, backendUrl 
           </div>
         </div>
       )}
+
+      {/* ── Fireflies: Done ──────────────────────────────────────── */}
 
       {step === "done" && (
         <div style={s.stepContent}>
@@ -1085,5 +1247,31 @@ const styles: Record<string, React.CSSProperties> = {
   btnDisabled: {
     opacity: 0.4,
     cursor: "not-allowed",
+  },
+  pickerRow: {
+    display: "flex",
+    gap: 12,
+  },
+  pickerCard: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 8,
+    padding: "16px",
+    border: "1px solid #e2e4e9",
+    borderRadius: 10,
+  },
+  pickerCardTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "#18181b",
+    margin: 0,
+  },
+  pickerCardDesc: {
+    fontSize: 13,
+    color: "#6b7280",
+    margin: 0,
+    lineHeight: 1.4,
+    flex: 1,
   },
 };

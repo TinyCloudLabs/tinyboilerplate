@@ -80,19 +80,24 @@ describe("SyncControl", () => {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> eafdd67 (test: update frontend tests for redesigned components)
   it("renders Sync All and Reset buttons", () => {
+=======
+  it("renders Sync Fireflies and Reset buttons when hasFireflies is true", () => {
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
     render(
       <SyncControl
         api={api}
         backendUrl="http://localhost:3001"
         getAccessToken={getAccessToken}
         onSyncComplete={onSyncComplete}
+        hasFireflies={true}
       />,
 <<<<<<< HEAD
     );
-    expect(screen.getByRole("button", { name: /sync all/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync fireflies/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /reset/i })).toBeInTheDocument();
   });
 
@@ -132,6 +137,7 @@ describe("SyncControl", () => {
         backendUrl="http://localhost:3001"
         getAccessToken={getAccessToken}
         onSyncComplete={onSyncComplete}
+        hasFireflies={true}
       />,
     );
 
@@ -178,6 +184,7 @@ describe("SyncControl", () => {
         backendUrl="http://localhost:3001"
         getAccessToken={getAccessToken}
         onSyncComplete={onSyncComplete}
+        hasFireflies={true}
       />,
     );
 
@@ -520,5 +527,52 @@ describe("SyncControl", () => {
       />,
     );
     expect(screen.getByText(/10 min ago/i)).toBeInTheDocument();
+  });
+
+  // ── New source-specific button tests ─────────────────────────────
+
+  it("shows Sync Fireflies button when hasFireflies is true", () => {
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={true}
+        hasGoogleMeet={false}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /sync fireflies/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /sync google meet/i })).not.toBeInTheDocument();
+  });
+
+  it("shows Sync Google Meet button when hasGoogleMeet is true", () => {
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={false}
+        hasGoogleMeet={true}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /sync fireflies/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync google meet/i })).toBeInTheDocument();
+  });
+
+  it("shows both sync buttons when both sources connected", () => {
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={true}
+        hasGoogleMeet={true}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /sync fireflies/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync google meet/i })).toBeInTheDocument();
   });
 });

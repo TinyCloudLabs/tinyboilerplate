@@ -87,10 +87,16 @@ describe("App auto-process pending", () => {
     vi.clearAllMocks();
     vi.stubGlobal("localStorage", createMockStorage());
 
-    // Default: fireflies key exists, webhook status OK, no pending
+    // Default: backfill returns no updates
+    mockPost.mockResolvedValue({ updated: 0, still_missing: 0 });
+
+    // Default: fireflies key exists, google-meet not connected, webhook status OK, no pending
     mockGet.mockImplementation((url: string) => {
       if (url === "/api/config/fireflies-key/exists") {
         return Promise.resolve({ exists: true });
+      }
+      if (url === "/api/config/google-meet/connected") {
+        return Promise.resolve({ connected: false });
       }
       if (url === "/api/config/webhook-status") {
         return Promise.resolve({ configured: true, pendingCount: 0, webhookUrl: "" });
@@ -122,6 +128,9 @@ describe("App auto-process pending", () => {
     mockGet.mockImplementation((url: string) => {
       if (url === "/api/config/fireflies-key/exists") {
         return Promise.resolve({ exists: true });
+      }
+      if (url === "/api/config/google-meet/connected") {
+        return Promise.resolve({ connected: false });
       }
       if (url === "/api/config/webhook-status") {
         return Promise.resolve({ configured: true, pendingCount: 0, webhookUrl: "" });
@@ -164,6 +173,9 @@ describe("App auto-process pending", () => {
       if (url === "/api/config/fireflies-key/exists") {
         return Promise.resolve({ exists: true });
       }
+      if (url === "/api/config/google-meet/connected") {
+        return Promise.resolve({ connected: false });
+      }
       if (url === "/api/config/webhook-status") {
         return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
       }
@@ -188,6 +200,9 @@ describe("App auto-process pending", () => {
     mockGet.mockImplementation((url: string) => {
       if (url === "/api/config/fireflies-key/exists") {
         return Promise.resolve({ exists: true });
+      }
+      if (url === "/api/config/google-meet/connected") {
+        return Promise.resolve({ connected: false });
       }
       if (url === "/api/config/webhook-status") {
         return Promise.resolve({ configured: true, pendingCount: 0, webhookUrl: "" });
@@ -221,6 +236,13 @@ describe("App auto-process pending", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/processed 1 new transcript from webhooks/i)).toBeInTheDocument();
+    });
+  });
+
+  it("checks google-meet connected status after session restore", async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith("/api/config/google-meet/connected");
     });
   });
 });

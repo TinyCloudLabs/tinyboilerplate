@@ -28,6 +28,7 @@ import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
 import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
 import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
+import { createGoogleAuthRouter } from "./routes/google-auth.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -179,6 +180,29 @@ async function main() {
       delegationMiddleware,
       backendKV,
       frontendUrl: FRONTEND_URL,
+    }),
+  );
+
+  // Google OAuth routes
+  app.use(
+    "/api/auth/google",
+    createGoogleAuthRouter({
+      authMiddleware,
+      delegationMiddleware,
+      resolveDelegation: async (sub: string) => {
+        let access = delegationCache.get(sub);
+        if (access) return access;
+        const stored = await delegationStore.load(sub);
+        if (!stored || new Date(stored.expiresAt).getTime() <= Date.now()) return null;
+        try {
+          const delegation = deserializeDelegation(stored.serialized);
+          access = await node.useDelegation(delegation);
+          delegationCache.set(sub, access);
+          return access;
+        } catch {
+          return null;
+        }
+      },
     }),
   );
 

@@ -323,6 +323,7 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({
 
         {conversation.source_url && (
           <a href={conversation.source_url} target="_blank" rel="noreferrer" style={s.externalLink}>
+<<<<<<< HEAD
 =======
     <section>
       <button style={styles.backButton} onClick={onBack}>
@@ -384,6 +385,14 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({
           <a href={conversation.source_url} target="_blank" rel="noreferrer" style={s.externalLink}>
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
             View on Fireflies &rarr;
+=======
+            {conversation.source === "google-meet"
+              ? "View transcript"
+              : conversation.source === "fireflies"
+                ? "View on Fireflies"
+                : "View source"}{" "}
+            &rarr;
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
           </a>
         )}
       </div>

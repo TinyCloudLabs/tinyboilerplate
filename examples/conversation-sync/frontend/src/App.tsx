@@ -39,6 +39,7 @@ const OPENKEY_HOST = import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
 const OPENKEY_CLIENT_ID = import.meta.env.VITE_OPENKEY_CLIENT_ID;
 const TINYCLOUD_HOST = import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // ── App ─────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ export function App() {
 =======
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [hasGoogleMeet, setHasGoogleMeet] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
@@ -132,6 +134,17 @@ export function App() {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+  useEffect(() => {
+    if (!api) {
+      setHasGoogleMeet(null);
+      return;
+    }
+    api
+      .get<{ connected: boolean }>("/api/config/google-meet/connected")
+      .then((res) => setHasGoogleMeet(res.connected))
+      .catch(() => setHasGoogleMeet(false));
+  }, [api]);
+
   useEffect(() => {
     if (!api || hasKey !== true) return;
 =======
@@ -279,6 +292,7 @@ export function App() {
     setApi(null);
     setAuthError(null);
     setHasKey(null);
+    setHasGoogleMeet(null);
   }, [tcw]);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -289,7 +303,10 @@ export function App() {
     <div style={s.shell}>
       <header style={s.header}>
         <h1 style={s.logo}>Conversation Sync</h1>
-        <span style={s.badge}>Fireflies</span>
+        {hasKey && <span style={s.badge}>Fireflies</span>}
+        {hasGoogleMeet && (
+          <span style={{ ...s.badge, color: "#059669", background: "#ecfdf5" }}>Google Meet</span>
+        )}
       </header>
 
       <main style={s.main}>
@@ -303,15 +320,26 @@ export function App() {
           onSignOut={handleSignOut}
         />
 
+<<<<<<< HEAD
         {isSignedIn && hasKey === false && (
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
 >>>>>>> 64c2d6d (TC-1315: Add Setup Wizard Step 3 for webhook configuration)
           <SetupWizard api={api} onComplete={() => setHasKey(true)} backendUrl={BACKEND_URL} />
+=======
+        {isSignedIn && hasKey === false && hasGoogleMeet === false && (
+          <SetupWizard
+            api={api}
+            onComplete={() => setHasKey(true)}
+            onGoogleMeetComplete={() => setHasGoogleMeet(true)}
+            backendUrl={BACKEND_URL}
+            showGoogleMeet={!!GOOGLE_CLIENT_ID}
+          />
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
         )}
 
-        {isSignedIn && hasKey === true && selectedConversationId && (
+        {isSignedIn && (hasKey === true || hasGoogleMeet === true) && selectedConversationId && (
           <ConversationDetail
             api={api}
             conversationId={selectedConversationId}
@@ -349,19 +377,22 @@ export function App() {
           </div>
         )}
 
-        {isSignedIn && hasKey === true && !selectedConversationId && (
+        {isSignedIn && (hasKey === true || hasGoogleMeet === true) && !selectedConversationId && (
           <>
             <SyncControl
               api={api}
               backendUrl={BACKEND_URL}
               getAccessToken={() => tokenStoreRef.current.getAccessToken()}
               onSyncComplete={() => setRefreshKey((k) => k + 1)}
+              hasFireflies={hasKey === true}
+              hasGoogleMeet={hasGoogleMeet === true}
             />
             <ConversationList
               api={api}
               onSelectConversation={setSelectedConversationId}
               refreshKey={refreshKey}
             />
+<<<<<<< HEAD
 <<<<<<< HEAD
             <button
               style={s.disconnectLink}
@@ -372,6 +403,30 @@ export function App() {
             >
               Disconnect Fireflies
             </button>
+=======
+            {hasKey && (
+              <button
+                style={s.disconnectLink}
+                onClick={async () => {
+                  await api.del("/api/config/fireflies-key");
+                  setHasKey(false);
+                }}
+              >
+                Disconnect Fireflies
+              </button>
+            )}
+            {hasGoogleMeet && (
+              <button
+                style={s.disconnectLink}
+                onClick={async () => {
+                  await api.del("/api/config/google-meet");
+                  setHasGoogleMeet(false);
+                }}
+              >
+                Disconnect Google Meet
+              </button>
+            )}
+>>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
           </>
 =======
           <SetupWizard api={api} onComplete={() => setHasKey(true)} />

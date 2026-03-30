@@ -26,6 +26,8 @@ import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
+import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
+import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -193,6 +195,24 @@ async function main() {
   app.use(
     "/api/sync",
     createSyncRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
+
+  // Google Meet sync routes
+  app.use(
+    "/api/sync/google-meet",
+    createGoogleMeetSyncRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
+
+  // Google Meet connection status
+  app.use(
+    "/api/google-meet",
+    createGoogleMeetStatusRouter({
       authMiddleware,
       delegationMiddleware,
     }),

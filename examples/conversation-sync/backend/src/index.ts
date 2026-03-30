@@ -22,32 +22,13 @@ import { createDelegationMiddleware } from "./middleware/delegation.js";
 import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
 import { createConfigRouter } from "./routes/config.js";
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
-<<<<<<< HEAD
-=======
-=======
-import { createFirefliesRouter } from "./routes/fireflies.js";
->>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
-=======
->>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
-=======
-import { createConversationsRouter } from "./routes/conversations.js";
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
->>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
+import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
+import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 
-<<<<<<< HEAD
->>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
-
-=======
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
 // ── Environment ──────────────────────────────────────────────────────
 
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
@@ -94,8 +75,6 @@ async function main() {
   const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
   const tryGetDelegatedAccess = async () => {
     const subResult = await backendKV.get(WEBHOOK_USER_SUB_PATH);
-<<<<<<< HEAD
-<<<<<<< HEAD
     const sub =
       subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
     if (!sub) {
@@ -125,61 +104,13 @@ async function main() {
       console.log(`[webhook] delegation expired at ${stored.expiresAt}`);
       return null;
     }
-=======
-    const sub = subResult.ok && (subResult as any).data?.data
-      ? String((subResult as any).data.data)
-      : null;
-=======
-    const sub =
-      subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-    if (!sub) {
-      console.log(
-        "[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user",
-      );
-      return null;
-    }
-    console.log(`[webhook] resolving delegation for sub=${sub}`);
-
-    // Check cache first
-    let access = delegationCache.get(sub);
-    if (access) {
-      console.log("[webhook] delegation found in cache");
-      return access;
-    }
-
-    // Load from persistent store
-    const stored = await delegationStore.load(sub);
-<<<<<<< HEAD
-    if (!stored) return null;
-    if (new Date(stored.expiresAt).getTime() <= Date.now()) return null;
->>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
-=======
-    if (!stored) {
-      console.log(
-        "[webhook] no delegation in store for this sub — user needs to sign in and delegate",
-      );
-      return null;
-    }
-    if (new Date(stored.expiresAt).getTime() <= Date.now()) {
-      console.log(`[webhook] delegation expired at ${stored.expiresAt}`);
-      return null;
-    }
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
     // Activate delegation
     try {
       const delegation = deserializeDelegation(stored.serialized);
       access = await node.useDelegation(delegation);
       delegationCache.set(sub, access);
-<<<<<<< HEAD
-<<<<<<< HEAD
       console.log("[webhook] delegation activated from store");
-=======
->>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
-=======
-      console.log("[webhook] delegation activated from store");
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
       return access;
     } catch (err) {
       console.error("[webhook] failed to activate delegation:", err);
@@ -192,8 +123,6 @@ async function main() {
   app.use(cors({ origin: FRONTEND_URL }));
 
   // Webhook routes — mounted before express.json() so raw body is preserved for HMAC verification
-<<<<<<< HEAD
-<<<<<<< HEAD
   // Auth + delegation middleware passed for pending queue endpoints (GET/DELETE)
   app.use(
     "/api/webhooks",
@@ -203,22 +132,6 @@ async function main() {
       authMiddleware: authMiddleware as any,
       delegationMiddleware: delegationMiddleware as any,
     }),
-=======
-  app.use(
-    "/api/webhooks",
-    createWebhookRouter({ backendKV, tryGetDelegatedAccess }),
->>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
-=======
-  // Auth + delegation middleware passed for pending queue endpoints (GET/DELETE)
-  app.use(
-    "/api/webhooks",
-    createWebhookRouter({
-      backendKV,
-      tryGetDelegatedAccess,
-      authMiddleware: authMiddleware as any,
-      delegationMiddleware: delegationMiddleware as any,
-    }),
->>>>>>> 983fcc0 (TC-1314: Pending webhook queue store, process, and clear endpoints)
   );
 
   app.use(express.json());
@@ -258,33 +171,12 @@ async function main() {
     }),
   );
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
   // Config routes (Fireflies API key + webhook config)
-=======
-  // Config routes (Fireflies API key management)
->>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
-=======
-  // Backend KV accessor (for webhook config stored in backend's own space)
-  const backendKV = {
-    get: (key: string) => withSessionRefresh(node, () => node.kv.get(key)),
-    put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
-  };
-
-=======
->>>>>>> 3b90c5b (TC-1313: Add POST /api/webhooks/fireflies endpoint with HMAC verification)
-  // Config routes (Fireflies API key + webhook config)
->>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
   app.use(
     "/api/config",
     createConfigRouter({
       authMiddleware,
       delegationMiddleware,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
       backendKV,
       frontendUrl: FRONTEND_URL,
     }),
@@ -308,10 +200,24 @@ async function main() {
     }),
   );
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
+  // Google Meet sync routes
+  app.use(
+    "/api/sync/google-meet",
+    createGoogleMeetSyncRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
+
+  // Google Meet connection status
+  app.use(
+    "/api/google-meet",
+    createGoogleMeetStatusRouter({
+      authMiddleware,
+      delegationMiddleware,
+    }),
+  );
+
   // Conversations routes (read-only list and detail)
   app.use(
     "/api/conversations",
@@ -320,30 +226,7 @@ async function main() {
       delegationMiddleware,
     }),
   );
-<<<<<<< HEAD
-=======
-    }),
-  );
 
-<<<<<<< HEAD
-  // TODO: Mount conversation-sync routes here
->>>>>>> 3e0b0dc (TC-1301: Add config endpoints for Fireflies API key (PUT/DELETE/GET exists))
-=======
-  // Fireflies proxy routes (connection test)
-  app.use(
-    "/api/fireflies",
-    createFirefliesRouter({
-      authMiddleware,
-      delegationMiddleware,
-    }),
-  );
->>>>>>> 7021a2e (TC-1302: Add GET /api/fireflies/user proxy endpoint (connection test))
-
-=======
->>>>>>> 8a34956 (TC-1303: Implement POST /api/sync/fireflies with pre-fetch dedup)
-=======
-
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
   // 7. OpenAPI docs
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const spec = loadYaml(readFileSync(resolve(__dirname, "../openapi.yaml"), "utf-8")) as object;

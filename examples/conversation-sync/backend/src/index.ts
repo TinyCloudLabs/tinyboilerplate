@@ -173,6 +173,8 @@ async function main() {
         tryGetDelegatedAccess: tryGetGoogleMeetAccess,
         expectedAudience: pubSubConfig.pushUrl,
         expectedEmail: pubSubConfig.serviceAccountEmail,
+        authMiddleware: authMiddleware as any,
+        delegationMiddleware: delegationMiddleware as any,
       }),
     );
   }

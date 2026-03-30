@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Request, Response } from "express";
+import type { Request, Response, RequestHandler } from "express";
 import type { DelegatedAccess } from "@tinyboilerplate/server";
 import { verifyPubSubToken } from "../services/pubsub-verify.js";
 import { GoogleMeetClient } from "../services/google-meet-client.js";
@@ -8,6 +8,7 @@ import { normalizeGoogleMeet } from "../adapters/google-meet.js";
 import { persistConversation } from "../services/persist-conversation.js";
 import { ensureSchema } from "../schema.js";
 import { GoogleAuthRevokedError } from "../services/google-auth.js";
+import type { SyncSingleResult } from "../services/google-meet-sync.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -26,6 +27,10 @@ export interface GoogleMeetPushConfig {
   tryGetDelegatedAccess: () => Promise<DelegatedAccess | null>;
   expectedAudience: string;
   expectedEmail: string;
+  /** Auth middleware for pending endpoints */
+  authMiddleware?: RequestHandler;
+  /** Delegation middleware for pending endpoints */
+  delegationMiddleware?: RequestHandler;
   /** Override for testing */
   verifyToken?: (authHeader: string, aud: string, email: string) => boolean;
   /** Override for testing */
@@ -34,6 +39,12 @@ export interface GoogleMeetPushConfig {
     onTokenRefresh?: (newToken: string) => Promise<void>,
     refreshToken?: string,
   ) => MeetClient;
+  /** Override for testing — processes a conference by name */
+  syncConference?: (
+    conferenceRecordName: string,
+    access: DelegatedAccess,
+    client: MeetClient,
+  ) => Promise<SyncSingleResult>;
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -101,6 +112,67 @@ async function storeFailed(backendKV: BackendKV, conferenceRecordName: string, e
   await backendKV.put(FAILED_KV_KEY, JSON.stringify(failed));
 }
 
+// ── Exported Helpers ─────────────────────────────────────────────────
+
+export async function readPendingQueue(backendKV: BackendKV): Promise<PendingItem[]> {
+  const result = await backendKV.get(PENDING_KV_KEY);
+  if (!result.ok || !result.data.data) return [];
+  try {
+    const parsed = JSON.parse(result.data.data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Default sync implementation ─────────────────────────────────────
+
+async function defaultSyncConference(
+  conferenceRecordName: string,
+  access: DelegatedAccess,
+  client: MeetClient,
+): Promise<SyncSingleResult> {
+  // Inline implementation that mirrors syncSingleConference but takes a name string
+  try {
+    // 1. Dedup
+    const dedupResult = await access.sql.query(
+      `SELECT source_id FROM conversation WHERE source = 'google-meet' AND source_id = ?`,
+      [conferenceRecordName],
+    );
+    if (dedupResult.ok && dedupResult.data.rows) {
+      for (const row of dedupResult.data.rows) {
+        const val = Array.isArray(row) ? row[0] : (row as any).source_id;
+        if (String(val) === conferenceRecordName) {
+          return { status: "skipped", conferenceRecordName };
+        }
+      }
+    }
+
+    // 2. Fetch conference record + full conference
+    const conferenceRecord = await client.getConferenceRecord(conferenceRecordName);
+    const fullConference = await client.getFullConference(conferenceRecord);
+
+    if (fullConference.entries.length === 0) {
+      return { status: "skipped", conferenceRecordName };
+    }
+
+    // 3. Normalize + persist
+    const normalized = normalizeGoogleMeet(fullConference);
+    await persistConversation(access, normalized);
+
+    return {
+      status: "created",
+      conferenceRecordName,
+      conversationId: normalized.conversation.id,
+      title: normalized.conversation.title ?? undefined,
+      startedAt: normalized.conversation.started_at ?? undefined,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { status: "error", conferenceRecordName, error: message };
+  }
+}
+
 // ── Route ────────────────────────────────────────────────────────────
 
 export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
@@ -112,6 +184,7 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
     verifyToken = verifyPubSubToken,
     createClient = (accessToken, onTokenRefresh, refreshToken) =>
       new GoogleMeetClient(accessToken, onTokenRefresh, refreshToken),
+    syncConference = defaultSyncConference,
   } = config;
 
   const router = Router();
@@ -258,6 +331,81 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
       res.json({ status: "error", conferenceRecordName, error: errorMessage });
     }
   });
+
+  // ── Pending queue endpoints (require auth + delegation) ──────────
+
+  if (config.authMiddleware && config.delegationMiddleware) {
+    const auth = config.authMiddleware;
+    const delegation = config.delegationMiddleware;
+
+    // GET /pending — process all pending items
+    router.get("/pending", auth, delegation, async (req: Request, res: Response) => {
+      const access = req.delegatedAccess!;
+
+      // 1. Read pending queue
+      const pending = await readPendingQueue(backendKV);
+      if (pending.length === 0) {
+        res.json({ processed: [], skipped: [], errors: [] });
+        return;
+      }
+
+      // 2. Read Google tokens from user KV
+      const tokensResult = await access.kv.get(GOOGLE_TOKENS_PATH);
+      const tokensRaw = tokensResult.ok && tokensResult.data.data ? tokensResult.data.data : null;
+
+      if (!tokensRaw) {
+        res.status(400).json({ error: "no_google_tokens", message: "Google tokens not configured" });
+        return;
+      }
+
+      let tokens: { access_token: string; refresh_token?: string };
+      try {
+        tokens = JSON.parse(tokensRaw);
+      } catch {
+        res.status(400).json({ error: "no_google_tokens", message: "Invalid Google token data" });
+        return;
+      }
+
+      // 3. Create client
+      await ensureSchema(access);
+      const onTokenRefresh = async (newToken: string) => {
+        const updated = { ...tokens, access_token: newToken };
+        await access.kv.put(GOOGLE_TOKENS_PATH, JSON.stringify(updated));
+      };
+      const client = createClient(tokens.access_token, onTokenRefresh, tokens.refresh_token);
+
+      // 4. Process each pending item
+      const processed: SyncSingleResult[] = [];
+      const skipped: SyncSingleResult[] = [];
+      const errors: SyncSingleResult[] = [];
+      const remaining: PendingItem[] = [];
+
+      for (const item of pending) {
+        const result = await syncConference(item.conferenceRecordName, access, client);
+        if (result.status === "created") {
+          processed.push(result);
+        } else if (result.status === "skipped") {
+          skipped.push(result);
+        } else {
+          errors.push(result);
+          remaining.push(item);
+          await storeFailed(backendKV, item.conferenceRecordName, result.error ?? "unknown error");
+        }
+      }
+
+      // 5. Update queue — only failed items remain
+      await backendKV.put(PENDING_KV_KEY, JSON.stringify(remaining));
+
+      res.json({ processed, skipped, errors });
+    });
+
+    // DELETE /pending — clear all pending items
+    router.delete("/pending", auth, delegation, async (_req: Request, res: Response) => {
+      const pending = await readPendingQueue(backendKV);
+      await backendKV.put(PENDING_KV_KEY, JSON.stringify([]));
+      res.json({ cleared: pending.length });
+    });
+  }
 
   return router;
 }

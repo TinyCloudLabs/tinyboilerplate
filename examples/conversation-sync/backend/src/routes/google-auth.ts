@@ -126,42 +126,6 @@ export function createGoogleAuthRouter(config: GoogleAuthRoutesConfig) {
   return router;
 }
 
-// ── Config Router (connected status + disconnect) ────────────────────
-
-export function createGoogleMeetConfigRouter(config: {
-  authMiddleware: RequestHandler;
-  delegationMiddleware: RequestHandler;
-}) {
-  const { authMiddleware, delegationMiddleware } = config;
-  const router = Router();
-
-  router.use(authMiddleware);
-
-  // ── GET /connected — check if Google tokens exist ─────────────────
-  router.get("/connected", delegationMiddleware, async (req: Request, res: Response) => {
-    try {
-      const result = await req.delegatedAccess!.kv.get(GOOGLE_TOKENS_PATH);
-      res.json({ connected: result.ok && result.data.data != null });
-    } catch (err) {
-      console.error("[google-meet-config] failed to check connection:", err);
-      res.status(500).json({ error: "check_failed", message: "Failed to check connection" });
-    }
-  });
-
-  // ── DELETE / — disconnect (delete tokens) ─────────────────────────
-  router.delete("/", delegationMiddleware, async (req: Request, res: Response) => {
-    try {
-      await req.delegatedAccess!.kv.delete(GOOGLE_TOKENS_PATH);
-      res.json({ ok: true });
-    } catch (err) {
-      console.error("[google-meet-config] failed to disconnect:", err);
-      res.status(500).json({ error: "disconnect_failed", message: "Failed to disconnect" });
-    }
-  });
-
-  return router;
-}
-
 // ── HTML Responses ──────────────────────────────────────────────────
 
 function successHtml(): string {

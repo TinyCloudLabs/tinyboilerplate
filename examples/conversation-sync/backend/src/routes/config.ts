@@ -18,6 +18,7 @@ interface ConfigRoutesConfig {
 // ── Constants ────────────────────────────────────────────────────────
 
 const FIREFLIES_KEY_PATH = "/app.conversations/config/fireflies-key";
+const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
 const WEBHOOK_SECRET_PATH = "/app.webhooks/config/fireflies-secret";
 const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
 const WEBHOOK_PENDING_PATH = "/app.webhooks/pending/fireflies";
@@ -82,6 +83,30 @@ export function createConfigRouter(config: ConfigRoutesConfig) {
         error: "check_failed",
         message: "Failed to check API key existence",
       });
+    }
+  });
+
+  // ── Google Meet connection routes (auth + delegation) ──────────────
+
+  // ── GET /api/config/google-meet/connected — check token existence ─
+  router.get("/google-meet/connected", delegationMiddleware, async (req: Request, res: Response) => {
+    try {
+      const result = await req.delegatedAccess!.kv.get(GOOGLE_TOKENS_PATH);
+      res.json({ connected: result.ok && result.data.data != null });
+    } catch (err) {
+      console.error("[config] failed to check google-meet connection:", err);
+      res.status(500).json({ error: "check_failed", message: "Failed to check connection" });
+    }
+  });
+
+  // ── DELETE /api/config/google-meet — disconnect (delete tokens) ───
+  router.delete("/google-meet", delegationMiddleware, async (req: Request, res: Response) => {
+    try {
+      await req.delegatedAccess!.kv.delete(GOOGLE_TOKENS_PATH);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[config] failed to disconnect google-meet:", err);
+      res.status(500).json({ error: "disconnect_failed", message: "Failed to disconnect" });
     }
   });
 

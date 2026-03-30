@@ -20,6 +20,7 @@ interface SetupWizardProps {
   onGoogleMeetComplete?: () => void;
   backendUrl?: string;
   showGoogleMeet?: boolean;
+  initialSource?: "fireflies" | "google-meet";
 }
 
 interface UserInfo {
@@ -33,8 +34,11 @@ export const SetupWizard: FC<SetupWizardProps> = ({
   onGoogleMeetComplete,
   backendUrl = "",
   showGoogleMeet,
+  initialSource,
 }) => {
-  const [step, setStep] = useState<Step>("picker");
+  const [step, setStep] = useState<Step>(
+    initialSource === "google-meet" ? "google-connect" : initialSource === "fireflies" ? "welcome" : "picker",
+  );
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);

@@ -219,15 +219,18 @@ export function App() {
           onSignOut={handleSignOut}
         />
 
-        {isSignedIn && hasKey === false && hasGoogleMeet === false && (
-          <SetupWizard
-            api={api}
-            onComplete={() => setHasKey(true)}
-            onGoogleMeetComplete={() => setHasGoogleMeet(true)}
-            backendUrl={BACKEND_URL}
-            showGoogleMeet={!!GOOGLE_CLIENT_ID}
-          />
-        )}
+        {isSignedIn &&
+          (hasKey === false || (hasGoogleMeet === false && !!GOOGLE_CLIENT_ID)) &&
+          !(hasKey === true && hasGoogleMeet === true) && (
+            <SetupWizard
+              api={api}
+              onComplete={() => setHasKey(true)}
+              onGoogleMeetComplete={() => setHasGoogleMeet(true)}
+              backendUrl={BACKEND_URL}
+              showGoogleMeet={!!GOOGLE_CLIENT_ID}
+              initialSource={hasKey === true ? "google-meet" : hasGoogleMeet === true ? "fireflies" : undefined}
+            />
+          )}
 
         {isSignedIn && (hasKey === true || hasGoogleMeet === true) && selectedConversationId && (
           <ConversationDetail

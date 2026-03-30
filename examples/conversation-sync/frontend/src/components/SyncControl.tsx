@@ -31,6 +31,8 @@ interface SyncControlProps {
   backendUrl: string;
   getAccessToken: () => string | null;
   onSyncComplete: () => void;
+  hasFireflies?: boolean;
+  hasGoogleMeet?: boolean;
 }
 
 // ── SSE parsing ─────────────────────────────────────────────────────
@@ -85,8 +87,14 @@ export const SyncControl: FC<SyncControlProps> = ({
   backendUrl,
   getAccessToken,
   onSyncComplete,
+  hasFireflies: hasFirefliesProp,
+  hasGoogleMeet: hasGoogleMeetProp,
 }) => {
+  const hasFireflies = hasFirefliesProp !== false;
+  const hasGM = hasGoogleMeetProp === true;
+
   const [syncing, setSyncing] = useState(false);
+  const [syncSource, setSyncSource] = useState<"fireflies" | "google-meet" | null>(null);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,8 +120,9 @@ export const SyncControl: FC<SyncControlProps> = ({
   // ── SSE sync handler ──────────────────────────────────────────────
 
   const startStreamSync = useCallback(
-    async (mode: "incremental" | "full") => {
+    async (mode: "incremental" | "full", source: "fireflies" | "google-meet" = "fireflies") => {
       setSyncing(true);
+      setSyncSource(source);
       setResult(null);
       setError(null);
       setProgress({ phase: "listing" });
@@ -123,7 +132,10 @@ export const SyncControl: FC<SyncControlProps> = ({
 
       try {
         const token = getAccessToken() ?? "";
-        const url = `${backendUrl}/api/sync/fireflies/stream?mode=${mode}`;
+        const url =
+          source === "google-meet"
+            ? `${backendUrl}/api/sync/google-meet/stream`
+            : `${backendUrl}/api/sync/fireflies/stream?mode=${mode}`;
         const response = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
@@ -198,13 +210,22 @@ export const SyncControl: FC<SyncControlProps> = ({
         setProgress(null);
       } finally {
         setSyncing(false);
+        setSyncSource(null);
         abortRef.current = null;
       }
     },
     [backendUrl, getAccessToken, onSyncComplete],
   );
 
-  const handleSync = useCallback(() => startStreamSync("incremental"), [startStreamSync]);
+  const handleFirefliesSync = useCallback(
+    () => startStreamSync("incremental", "fireflies"),
+    [startStreamSync],
+  );
+
+  const handleGoogleMeetSync = useCallback(
+    () => startStreamSync("incremental", "google-meet"),
+    [startStreamSync],
+  );
 
   const handleClearAndResync = useCallback(async () => {
     setSyncing(true);
@@ -230,6 +251,9 @@ export const SyncControl: FC<SyncControlProps> = ({
       ? Math.round(((progress.current ?? 0) / progress.total) * 100)
       : 0;
 
+  const listingLabel =
+    syncSource === "google-meet" ? "Scanning Google Meet" : "Scanning Fireflies";
+
   // ── Render ────────────────────────────────────────────────────────
 
   return (
@@ -239,7 +263,7 @@ export const SyncControl: FC<SyncControlProps> = ({
         <div style={s.titleGroup}>
           <h3 style={s.heading}>Sync</h3>
           {lastSync && <span style={s.lastSyncBadge}>{formatTimeAgo(lastSync)}</span>}
-          {webhookStatus?.configured && (
+          {hasFireflies && webhookStatus?.configured && (
             <span style={s.webhookBadge}>
               <span style={s.webhookDot} />
               Live
@@ -250,12 +274,24 @@ export const SyncControl: FC<SyncControlProps> = ({
         <div style={s.buttonGroup}>
           {!syncing ? (
             <>
-              <button style={s.btnPrimary} onClick={handleSync}>
-                Sync All
-              </button>
-              <button style={s.btnDanger} onClick={handleClearAndResync}>
-                Reset
-              </button>
+              {hasFireflies && (
+                <button style={s.btnPrimary} onClick={handleFirefliesSync}>
+                  Sync Fireflies
+                </button>
+              )}
+              {hasGM && (
+                <button
+                  style={{ ...s.btnPrimary, background: "#059669" }}
+                  onClick={handleGoogleMeetSync}
+                >
+                  Sync Google Meet
+                </button>
+              )}
+              {hasFireflies && (
+                <button style={s.btnDanger} onClick={handleClearAndResync}>
+                  Reset
+                </button>
+              )}
             </>
           ) : (
             <button style={s.btnCancel} onClick={handleCancel}>
@@ -270,7 +306,7 @@ export const SyncControl: FC<SyncControlProps> = ({
         <div style={s.phaseCard}>
           <div style={s.phaseRow}>
             <span style={s.phaseDot} />
-            <span style={s.phaseLabel}>Scanning Fireflies</span>
+            <span style={s.phaseLabel}>{listingLabel}</span>
           </div>
           <p style={s.phaseDetail}>
             {progress.totalListed != null ? (
@@ -367,7 +403,7 @@ export const SyncControl: FC<SyncControlProps> = ({
       )}
 
       {/* Webhook pending */}
-      {webhookStatus && webhookStatus.pendingCount > 0 && (
+      {hasFireflies && webhookStatus && webhookStatus.pendingCount > 0 && (
         <div style={s.pendingBanner}>
           <span style={s.statNum}>{webhookStatus.pendingCount}</span>
           <span style={s.pendingText}>transcripts queued from webhook</span>

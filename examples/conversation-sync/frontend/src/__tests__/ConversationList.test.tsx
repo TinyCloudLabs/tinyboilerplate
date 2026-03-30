@@ -110,7 +110,7 @@ describe("ConversationList", () => {
     await waitFor(() => {
       expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/sync your first meetings from fireflies above/i),
+        screen.getByText(/sync your first meetings above/i),
       ).toBeInTheDocument();
     });
   });
@@ -337,5 +337,56 @@ describe("ConversationList", () => {
     });
 
     expect(getMock).toHaveBeenCalledTimes(2);
+  });
+
+  // ── New source filter + badge tests ──────────────────────────────
+
+  it("shows source filter chips", async () => {
+    api = mockApi({
+      get: vi.fn().mockResolvedValue({ conversations: CONVERSATIONS, total: 3 }),
+    });
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^all$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /fireflies/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /google meet/i })).toBeInTheDocument();
+    });
+  });
+
+  it("filters by source when filter chip is clicked", async () => {
+    const getMock = vi.fn()
+      .mockResolvedValueOnce({ conversations: CONVERSATIONS, total: 3 })
+      .mockResolvedValueOnce({ conversations: [CONVERSATIONS[0]], total: 1 });
+    api = mockApi({ get: getMock });
+
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Sprint Planning")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /fireflies/i }));
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/conversations?limit=20&offset=0&source=fireflies");
+    });
+  });
+
+  it("shows source badge on conversation rows", async () => {
+    const mixedConversations = [
+      ...CONVERSATIONS.slice(0, 1),
+      { ...CONVERSATIONS[1], source: "google-meet" },
+    ];
+    api = mockApi({
+      get: vi.fn().mockResolvedValue({ conversations: mixedConversations, total: 2 }),
+    });
+
+    render(<ConversationList api={api} onSelectConversation={onSelectConversation} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("FF")).toBeInTheDocument();
+      expect(screen.getByText("GM")).toBeInTheDocument();
+    });
   });
 });

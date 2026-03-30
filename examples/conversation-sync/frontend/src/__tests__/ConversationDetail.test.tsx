@@ -259,4 +259,22 @@ describe("ConversationDetail", () => {
       expect(screen.getByText(/network error/i)).toBeInTheDocument();
     });
   });
+
+  // ── New dynamic source link test ─────────────────────────────────
+
+  it("shows 'View transcript' for Google Meet source", async () => {
+    const gmResponse = {
+      ...DETAIL_RESPONSE,
+      conversation: { ...DETAIL_RESPONSE.conversation, source: "google-meet", source_url: "https://docs.google.com/document/d/123" },
+    };
+    api = mockApi({ get: vi.fn().mockResolvedValue(gmResponse) });
+
+    render(<ConversationDetail api={api} conversationId="01ABC" onBack={onBack} />);
+
+    await waitFor(() => {
+      const link = screen.getByText(/view transcript/i);
+      expect(link).toBeInTheDocument();
+      expect(link.closest("a")).toHaveAttribute("href", "https://docs.google.com/document/d/123");
+    });
+  });
 });

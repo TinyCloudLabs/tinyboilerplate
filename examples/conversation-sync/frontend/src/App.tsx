@@ -25,6 +25,7 @@ const OPENKEY_HOST = import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
 const OPENKEY_CLIENT_ID = import.meta.env.VITE_OPENKEY_CLIENT_ID;
 const TINYCLOUD_HOST = import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // ── App ─────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [hasGoogleMeet, setHasGoogleMeet] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
@@ -90,6 +92,17 @@ export function App() {
       .get<{ exists: boolean }>("/api/config/fireflies-key/exists")
       .then((res) => setHasKey(res.exists))
       .catch(() => setHasKey(false));
+  }, [api]);
+
+  useEffect(() => {
+    if (!api) {
+      setHasGoogleMeet(null);
+      return;
+    }
+    api
+      .get<{ connected: boolean }>("/api/config/google-meet/connected")
+      .then((res) => setHasGoogleMeet(res.connected))
+      .catch(() => setHasGoogleMeet(false));
   }, [api]);
 
   useEffect(() => {
@@ -178,6 +191,7 @@ export function App() {
     setApi(null);
     setAuthError(null);
     setHasKey(null);
+    setHasGoogleMeet(null);
   }, [tcw]);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -188,7 +202,10 @@ export function App() {
     <div style={s.shell}>
       <header style={s.header}>
         <h1 style={s.logo}>Conversation Sync</h1>
-        <span style={s.badge}>Fireflies</span>
+        {hasKey && <span style={s.badge}>Fireflies</span>}
+        {hasGoogleMeet && (
+          <span style={{ ...s.badge, color: "#059669", background: "#ecfdf5" }}>Google Meet</span>
+        )}
       </header>
 
       <main style={s.main}>
@@ -202,11 +219,17 @@ export function App() {
           onSignOut={handleSignOut}
         />
 
-        {isSignedIn && hasKey === false && (
-          <SetupWizard api={api} onComplete={() => setHasKey(true)} backendUrl={BACKEND_URL} />
+        {isSignedIn && hasKey === false && hasGoogleMeet === false && (
+          <SetupWizard
+            api={api}
+            onComplete={() => setHasKey(true)}
+            onGoogleMeetComplete={() => setHasGoogleMeet(true)}
+            backendUrl={BACKEND_URL}
+            showGoogleMeet={!!GOOGLE_CLIENT_ID}
+          />
         )}
 
-        {isSignedIn && hasKey === true && selectedConversationId && (
+        {isSignedIn && (hasKey === true || hasGoogleMeet === true) && selectedConversationId && (
           <ConversationDetail
             api={api}
             conversationId={selectedConversationId}
@@ -223,28 +246,43 @@ export function App() {
           </div>
         )}
 
-        {isSignedIn && hasKey === true && !selectedConversationId && (
+        {isSignedIn && (hasKey === true || hasGoogleMeet === true) && !selectedConversationId && (
           <>
             <SyncControl
               api={api}
               backendUrl={BACKEND_URL}
               getAccessToken={() => tokenStoreRef.current.getAccessToken()}
               onSyncComplete={() => setRefreshKey((k) => k + 1)}
+              hasFireflies={hasKey === true}
+              hasGoogleMeet={hasGoogleMeet === true}
             />
             <ConversationList
               api={api}
               onSelectConversation={setSelectedConversationId}
               refreshKey={refreshKey}
             />
-            <button
-              style={s.disconnectLink}
-              onClick={async () => {
-                await api.del("/api/config/fireflies-key");
-                setHasKey(false);
-              }}
-            >
-              Disconnect Fireflies
-            </button>
+            {hasKey && (
+              <button
+                style={s.disconnectLink}
+                onClick={async () => {
+                  await api.del("/api/config/fireflies-key");
+                  setHasKey(false);
+                }}
+              >
+                Disconnect Fireflies
+              </button>
+            )}
+            {hasGoogleMeet && (
+              <button
+                style={s.disconnectLink}
+                onClick={async () => {
+                  await api.del("/api/config/google-meet");
+                  setHasGoogleMeet(false);
+                }}
+              >
+                Disconnect Google Meet
+              </button>
+            )}
           </>
         )}
       </main>

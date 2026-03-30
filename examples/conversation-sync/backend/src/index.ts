@@ -29,6 +29,7 @@ import { createWebhookRouter } from "./routes/webhooks.js";
 import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
 import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 import { createGoogleAuthRouter } from "./routes/google-auth.js";
+import { initGoogleMeetWebhooks } from "./services/google-meet-webhooks.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -52,6 +53,10 @@ async function main() {
     privateKey: BACKEND_PRIVATE_KEY,
     host: TINYCLOUD_HOST,
   });
+
+  // 1b. Initialize Google Meet webhook infrastructure (Pub/Sub topic + subscription)
+  // Gracefully skipped if GOOGLE_SERVICE_ACCOUNT_KEY / GOOGLE_PUBSUB_PUSH_URL are not set
+  await initGoogleMeetWebhooks();
 
   // 2. Create delegation infrastructure
   const delegationStore = new DelegationStore(node);

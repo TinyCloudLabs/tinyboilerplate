@@ -29,7 +29,8 @@ import { createWebhookRouter } from "./routes/webhooks.js";
 import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
 import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 import { createGoogleAuthRouter } from "./routes/google-auth.js";
-import { initGoogleMeetWebhooks } from "./services/google-meet-webhooks.js";
+import { initGoogleMeetWebhooks, isGoogleMeetWebhooksEnabled } from "./services/google-meet-webhooks.js";
+import { parsePubSubConfig, createMeetSubscription } from "./services/pubsub-manager.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -189,6 +190,7 @@ async function main() {
   );
 
   // Google OAuth routes
+  const pubSubConfig = parsePubSubConfig();
   app.use(
     "/api/auth/google",
     createGoogleAuthRouter({
@@ -208,6 +210,10 @@ async function main() {
           return null;
         }
       },
+      backendKV,
+      isWebhooksEnabled: isGoogleMeetWebhooksEnabled,
+      createMeetSubscription,
+      pubSubProjectId: pubSubConfig?.projectId,
     }),
   );
 

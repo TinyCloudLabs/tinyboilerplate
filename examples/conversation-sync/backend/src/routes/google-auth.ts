@@ -6,8 +6,14 @@ import {
   exchangeCode as defaultExchangeCode,
 } from "../services/google-auth.js";
 import type { GoogleTokenResponse } from "../services/google-auth.js";
+import type { SubscriptionMetadata } from "../services/pubsub-manager.js";
 
 // ── Types ────────────────────────────────────────────────────────────
+
+interface BackendKV {
+  get: (key: string) => Promise<any>;
+  put: (key: string, value: string) => Promise<any>;
+}
 
 interface GoogleAuthRoutesConfig {
   authMiddleware: RequestHandler;
@@ -16,6 +22,15 @@ interface GoogleAuthRoutesConfig {
   /** Injectable for testing */
   buildAuthUrl?: (redirectUri: string, state: string) => string;
   exchangeCode?: (code: string, redirectUri: string) => Promise<GoogleTokenResponse>;
+  fetchGoogleUserInfo?: (accessToken: string) => Promise<{ sub: string }>;
+  /** Backend KV for storing subscription metadata (webhook config) */
+  backendKV?: BackendKV;
+  /** Whether Google Meet webhooks are enabled */
+  isWebhooksEnabled?: () => boolean;
+  /** Create a Workspace Events subscription */
+  createMeetSubscription?: (projectId: string, googleUserId: string, accessToken: string) => Promise<SubscriptionMetadata>;
+  /** GCP project ID for Pub/Sub topic path */
+  pubSubProjectId?: string;
 }
 
 interface StateEntry {
@@ -26,7 +41,21 @@ interface StateEntry {
 // ── Constants ────────────────────────────────────────────────────────
 
 const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
+const SUBSCRIPTION_KV_PATH = "/app.webhooks/config/google-meet-subscription";
+const USER_SUB_KV_PATH = "/app.webhooks/config/google-meet-user-sub";
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+
+async function defaultFetchGoogleUserInfo(accessToken: string): Promise<{ sub: string }> {
+  const res = await fetch(GOOGLE_USERINFO_URL, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Google userinfo request failed: ${res.status} ${res.statusText}`);
+  }
+  return res.json() as Promise<{ sub: string }>;
+}
 
 // ── State Store ──────────────────────────────────────────────────────
 
@@ -62,6 +91,11 @@ export function createGoogleAuthRouter(config: GoogleAuthRoutesConfig) {
     resolveDelegation,
     buildAuthUrl = defaultBuildAuthUrl,
     exchangeCode = defaultExchangeCode,
+    fetchGoogleUserInfo = defaultFetchGoogleUserInfo,
+    backendKV,
+    isWebhooksEnabled,
+    createMeetSubscription,
+    pubSubProjectId,
   } = config;
   const router = Router();
 
@@ -113,6 +147,16 @@ export function createGoogleAuthRouter(config: GoogleAuthRoutesConfig) {
       const tokens = await exchangeCode(code, redirectUri);
       console.log("[google-auth] got tokens, has refresh_token:", !!tokens.refresh_token);
 
+      // Fetch Google user ID from userinfo endpoint
+      let googleUserId: string | undefined;
+      try {
+        const userInfo = await fetchGoogleUserInfo(tokens.access_token);
+        googleUserId = userInfo.sub;
+        console.log("[google-auth] got Google user ID:", googleUserId);
+      } catch (err) {
+        console.warn("[google-auth] failed to fetch userinfo, continuing without googleUserId:", err);
+      }
+
       // Resolve user's delegated access to store tokens in their KV
       console.log("[google-auth] resolving delegation for sub:", stateEntry.sub);
       const access = await resolveDelegation(stateEntry.sub);
@@ -122,10 +166,24 @@ export function createGoogleAuthRouter(config: GoogleAuthRoutesConfig) {
         return;
       }
 
-      // Store tokens in user's KV
+      // Store tokens (with googleUserId if available) in user's KV
+      const tokenData = googleUserId ? { ...tokens, googleUserId } : tokens;
       console.log("[google-auth] storing tokens in KV...");
-      const putResult = await access.kv.put(GOOGLE_TOKENS_PATH, JSON.stringify(tokens));
+      const putResult = await access.kv.put(GOOGLE_TOKENS_PATH, JSON.stringify(tokenData));
       console.log("[google-auth] KV put result:", JSON.stringify(putResult));
+
+      // Create Workspace Events subscription if webhooks are enabled
+      if (googleUserId && isWebhooksEnabled?.() && createMeetSubscription && backendKV && pubSubProjectId) {
+        try {
+          console.log("[google-auth] creating Workspace Events subscription...");
+          const metadata = await createMeetSubscription(pubSubProjectId, googleUserId, tokens.access_token);
+          await backendKV.put(SUBSCRIPTION_KV_PATH, JSON.stringify(metadata));
+          await backendKV.put(USER_SUB_KV_PATH, stateEntry.sub);
+          console.log("[google-auth] subscription created:", metadata.subscriptionName);
+        } catch (err) {
+          console.warn("[google-auth] failed to create subscription, manual sync still available:", err);
+        }
+      }
 
       console.log("[google-auth] SUCCESS — tokens stored");
       res.status(200).send(successHtml());

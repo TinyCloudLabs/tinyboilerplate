@@ -321,6 +321,7 @@ export function App() {
         />
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         {isSignedIn && hasKey === false && (
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -338,6 +339,20 @@ export function App() {
           />
 >>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
         )}
+=======
+        {isSignedIn &&
+          (hasKey === false || (hasGoogleMeet === false && !!GOOGLE_CLIENT_ID)) &&
+          !(hasKey === true && hasGoogleMeet === true) && (
+            <SetupWizard
+              api={api}
+              onComplete={() => setHasKey(true)}
+              onGoogleMeetComplete={() => setHasGoogleMeet(true)}
+              backendUrl={BACKEND_URL}
+              showGoogleMeet={!!GOOGLE_CLIENT_ID}
+              initialSource={hasKey === true ? "google-meet" : hasGoogleMeet === true ? "fireflies" : undefined}
+            />
+          )}
+>>>>>>> 5f9bdb2 (fix: setup wizard visibility when one source connected + KV token parsing)
 
         {isSignedIn && (hasKey === true || hasGoogleMeet === true) && selectedConversationId && (
           <ConversationDetail

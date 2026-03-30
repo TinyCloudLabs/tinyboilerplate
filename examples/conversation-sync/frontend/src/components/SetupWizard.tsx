@@ -47,7 +47,11 @@ interface SetupWizardProps {
   onGoogleMeetComplete?: () => void;
   backendUrl?: string;
   showGoogleMeet?: boolean;
+<<<<<<< HEAD
 >>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
+=======
+  initialSource?: "fireflies" | "google-meet";
+>>>>>>> 5f9bdb2 (fix: setup wizard visibility when one source connected + KV token parsing)
 }
 
 interface UserInfo {
@@ -73,9 +77,16 @@ export const SetupWizard: FC<SetupWizardProps> = ({
   onGoogleMeetComplete,
   backendUrl = "",
   showGoogleMeet,
+  initialSource,
 }) => {
+<<<<<<< HEAD
   const [step, setStep] = useState<Step>("picker");
 >>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
+=======
+  const [step, setStep] = useState<Step>(
+    initialSource === "google-meet" ? "google-connect" : initialSource === "fireflies" ? "welcome" : "picker",
+  );
+>>>>>>> 5f9bdb2 (fix: setup wizard visibility when one source connected + KV token parsing)
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);

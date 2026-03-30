@@ -54,7 +54,13 @@ async function readTokens(access: any): Promise<StoredTokens | null> {
   const result = await access.kv.get(GOOGLE_TOKENS_PATH);
   if (!result.ok || result.data.data == null) return null;
   try {
-    return JSON.parse(String(result.data.data));
+    const raw = result.data.data;
+    // KV may return data as string, object, or Uint8Array
+    if (typeof raw === "object" && raw !== null && !(raw instanceof Uint8Array)) {
+      return raw as StoredTokens;
+    }
+    const str = raw instanceof Uint8Array ? new TextDecoder().decode(raw) : String(raw);
+    return JSON.parse(str);
   } catch {
     return null;
   }
@@ -199,12 +205,16 @@ export function createGoogleMeetSyncRouter(config: GoogleMeetSyncRoutesConfig) {
 
     try {
       // 1. Read tokens
+      const rawResult = await access.kv.get(GOOGLE_TOKENS_PATH);
+      console.log("[google-meet-sync] raw KV get result:", JSON.stringify({ ok: rawResult.ok, hasData: rawResult.data?.data != null, type: typeof rawResult.data?.data, preview: JSON.stringify(rawResult.data?.data)?.slice(0, 200) }));
       const tokens = await readTokens(access);
       if (!tokens) {
+        console.log("[google-meet-sync] no tokens found at", GOOGLE_TOKENS_PATH);
         sendEvent("error", { message: "No Google tokens configured. Connect your account first." });
         res.end();
         return;
       }
+      console.log("[google-meet-sync] tokens loaded, has refresh_token:", !!tokens.refresh_token);
 
       await ensureSchema(access);
       const client = createClientWithTokenRefresh(tokens, access, makeClient);

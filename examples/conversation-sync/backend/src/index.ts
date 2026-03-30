@@ -26,6 +26,7 @@ import { createFirefliesRouter } from "./routes/fireflies.js";
 import { createSyncRouter } from "./routes/sync.js";
 import { createConversationsRouter } from "./routes/conversations.js";
 import { createWebhookRouter } from "./routes/webhooks.js";
+import { createGoogleMeetPushRouter } from "./routes/google-meet-webhooks.js";
 import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
 import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 import { createGoogleAuthRouter } from "./routes/google-auth.js";
@@ -142,6 +143,40 @@ async function main() {
   );
 
   app.use(express.json());
+
+  // Google Meet push endpoint — after JSON parsing, before CSRF (public, OIDC-verified)
+  const pubSubConfig = parsePubSubConfig();
+  if (pubSubConfig) {
+    const GOOGLE_MEET_USER_SUB_PATH = "/app.webhooks/config/google-meet-user-sub";
+    const tryGetGoogleMeetAccess = async () => {
+      const subResult = await backendKV.get(GOOGLE_MEET_USER_SUB_PATH);
+      const sub = subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
+      if (!sub) return null;
+      let access = delegationCache.get(sub);
+      if (access) return access;
+      const stored = await delegationStore.load(sub);
+      if (!stored || new Date(stored.expiresAt).getTime() <= Date.now()) return null;
+      try {
+        const delegation = deserializeDelegation(stored.serialized);
+        access = await node.useDelegation(delegation);
+        delegationCache.set(sub, access);
+        return access;
+      } catch {
+        return null;
+      }
+    };
+
+    app.use(
+      "/api/webhooks/google-meet",
+      createGoogleMeetPushRouter({
+        backendKV,
+        tryGetDelegatedAccess: tryGetGoogleMeetAccess,
+        expectedAudience: pubSubConfig.pushUrl,
+        expectedEmail: pubSubConfig.serviceAccountEmail,
+      }),
+    );
+  }
+
   app.use(createCsrfMiddleware());
 
   // 5. Rate limiting
@@ -190,7 +225,6 @@ async function main() {
   );
 
   // Google OAuth routes
-  const pubSubConfig = parsePubSubConfig();
   app.use(
     "/api/auth/google",
     createGoogleAuthRouter({

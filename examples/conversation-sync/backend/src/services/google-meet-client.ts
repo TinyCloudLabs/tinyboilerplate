@@ -108,6 +108,10 @@ export class GoogleMeetClient {
     );
   }
 
+  async getConferenceRecord(name: string): Promise<ConferenceRecord> {
+    return this.fetchWithRetry(`${BASE_URL}/${name}`) as Promise<ConferenceRecord>;
+  }
+
   async getFullConference(conferenceRecord: ConferenceRecord): Promise<FullConference> {
     const [participants, transcripts] = await Promise.all([
       this.listParticipants(conferenceRecord.name),

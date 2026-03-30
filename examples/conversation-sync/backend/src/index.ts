@@ -31,7 +31,7 @@ import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
 import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 import { createGoogleAuthRouter } from "./routes/google-auth.js";
 import { initGoogleMeetWebhooks, isGoogleMeetWebhooksEnabled } from "./services/google-meet-webhooks.js";
-import { parsePubSubConfig, createMeetSubscription } from "./services/pubsub-manager.js";
+import { parsePubSubConfig, createMeetSubscription, deleteMeetSubscription } from "./services/pubsub-manager.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -223,6 +223,7 @@ async function main() {
       delegationMiddleware,
       backendKV,
       frontendUrl: FRONTEND_URL,
+      deleteSubscription: deleteMeetSubscription,
     }),
   );
 

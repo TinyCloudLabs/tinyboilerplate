@@ -226,6 +226,57 @@ describe("Config Routes", () => {
     });
   });
 
+  // ── Google Meet config routes ────────────────────────────────────
+
+  const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
+
+  describe("GET /api/config/google-meet/connected", () => {
+    it("returns connected: false when no tokens stored", async () => {
+      const res = await fetch(`http://localhost:${port}/api/config/google-meet/connected`);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ connected: false });
+    });
+
+    it("returns connected: true when tokens exist", async () => {
+      mockKV._data.set(
+        GOOGLE_TOKENS_PATH,
+        JSON.stringify({ access_token: "ya29.x", refresh_token: "1//x" }),
+      );
+
+      const res = await fetch(`http://localhost:${port}/api/config/google-meet/connected`);
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ connected: true });
+    });
+  });
+
+  describe("DELETE /api/config/google-meet", () => {
+    it("deletes tokens from KV and returns ok", async () => {
+      mockKV._data.set(
+        GOOGLE_TOKENS_PATH,
+        JSON.stringify({ access_token: "ya29.x", refresh_token: "1//x" }),
+      );
+
+      const res = await fetch(`http://localhost:${port}/api/config/google-meet`, {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      expect(mockKV._data.has(GOOGLE_TOKENS_PATH)).toBe(false);
+    });
+
+    it("succeeds even when no tokens exist", async () => {
+      const res = await fetch(`http://localhost:${port}/api/config/google-meet`, {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+    });
+  });
+
   // ── Auth/Delegation required ──────────────────────────────────────
 
   describe("Auth and delegation enforcement", () => {

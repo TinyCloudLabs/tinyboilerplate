@@ -204,6 +204,22 @@ describe("SyncControl", () => {
   });
 
   it("shows Sync Google Meet button when hasGoogleMeet is true", () => {
+    // When hasGoogleMeet is true, the component also fetches GM webhook status
+    const getMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config/webhook-status")
+        return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
+      if (url === "/api/webhooks/google-meet/status")
+        return Promise.resolve({
+          enabled: false,
+          subscriptionActive: false,
+          expiresAt: null,
+          pendingCount: 0,
+          failedCount: 0,
+        });
+      return Promise.resolve({});
+    });
+    api = mockApi({ get: getMock });
+
     render(
       <SyncControl
         api={api}
@@ -219,6 +235,22 @@ describe("SyncControl", () => {
   });
 
   it("shows both sync buttons when both sources connected", () => {
+    // When hasGoogleMeet is true, the component also fetches GM webhook status
+    const getMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config/webhook-status")
+        return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
+      if (url === "/api/webhooks/google-meet/status")
+        return Promise.resolve({
+          enabled: false,
+          subscriptionActive: false,
+          expiresAt: null,
+          pendingCount: 0,
+          failedCount: 0,
+        });
+      return Promise.resolve({});
+    });
+    api = mockApi({ get: getMock });
+
     render(
       <SyncControl
         api={api}
@@ -231,5 +263,165 @@ describe("SyncControl", () => {
     );
     expect(screen.getByRole("button", { name: /sync fireflies/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sync google meet/i })).toBeInTheDocument();
+  });
+
+  // ── Google Meet webhook status tests ────────────────────────────────
+
+  it("fetches Google Meet webhook status when hasGoogleMeet is true", async () => {
+    const getMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config/webhook-status")
+        return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
+      if (url === "/api/webhooks/google-meet/status")
+        return Promise.resolve({
+          enabled: true,
+          subscriptionActive: false,
+          expiresAt: null,
+          pendingCount: 0,
+          failedCount: 0,
+        });
+      return Promise.resolve({});
+    });
+    api = mockApi({ get: getMock });
+
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasGoogleMeet={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/webhooks/google-meet/status");
+    });
+  });
+
+  it("shows Live badge with expiry for Google Meet when subscription is active", async () => {
+    const fiveDaysFromNow = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    const getMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config/webhook-status")
+        return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
+      if (url === "/api/webhooks/google-meet/status")
+        return Promise.resolve({
+          enabled: true,
+          subscriptionActive: true,
+          expiresAt: fiveDaysFromNow,
+          pendingCount: 0,
+          failedCount: 0,
+        });
+      return Promise.resolve({});
+    });
+    api = mockApi({ get: getMock });
+
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={false}
+        hasGoogleMeet={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/live/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/5d/i)).toBeInTheDocument();
+  });
+
+  it("shows pending count for Google Meet transcripts", async () => {
+    const getMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config/webhook-status")
+        return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
+      if (url === "/api/webhooks/google-meet/status")
+        return Promise.resolve({
+          enabled: true,
+          subscriptionActive: true,
+          expiresAt: null,
+          pendingCount: 2,
+          failedCount: 0,
+        });
+      return Promise.resolve({});
+    });
+    api = mockApi({ get: getMock });
+
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={false}
+        hasGoogleMeet={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/google meet transcripts waiting/i)).toBeInTheDocument();
+    });
+  });
+
+  it("hides Google Meet webhook UI when not enabled", async () => {
+    const getMock = vi.fn().mockImplementation((url: string) => {
+      if (url === "/api/config/webhook-status")
+        return Promise.resolve({ configured: false, pendingCount: 0, webhookUrl: "" });
+      if (url === "/api/webhooks/google-meet/status")
+        return Promise.resolve({
+          enabled: false,
+          subscriptionActive: false,
+          expiresAt: null,
+          pendingCount: 0,
+          failedCount: 0,
+        });
+      return Promise.resolve({});
+    });
+    api = mockApi({ get: getMock });
+
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={false}
+        hasGoogleMeet={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/webhooks/google-meet/status");
+    });
+
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/google meet transcripts waiting/i)).not.toBeInTheDocument();
+  });
+
+  it("does not fetch Google Meet status when hasGoogleMeet is false", async () => {
+    const getMock = vi.fn().mockResolvedValue({
+      configured: false,
+      pendingCount: 0,
+      webhookUrl: "",
+    });
+    api = mockApi({ get: getMock });
+
+    render(
+      <SyncControl
+        api={api}
+        backendUrl="http://localhost:3001"
+        getAccessToken={getAccessToken}
+        onSyncComplete={onSyncComplete}
+        hasFireflies={true}
+        hasGoogleMeet={false}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/config/webhook-status");
+    });
+
+    expect(getMock).not.toHaveBeenCalledWith("/api/webhooks/google-meet/status");
   });
 });

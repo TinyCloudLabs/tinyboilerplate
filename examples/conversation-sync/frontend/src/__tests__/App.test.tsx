@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -79,6 +79,12 @@ describe("App auto-process pending", () => {
         return Promise.resolve({ configured: true, pendingCount: 0, webhookUrl: "" });
       }
       if (url === "/api/webhooks/fireflies/pending") {
+        return Promise.resolve({ processed: [], skipped: [], errors: [] });
+      }
+      if (url === "/api/webhooks/google-meet/check") {
+        return Promise.resolve({ status: "not_configured" });
+      }
+      if (url === "/api/webhooks/google-meet/pending") {
         return Promise.resolve({ processed: [], skipped: [], errors: [] });
       }
       if (url.startsWith("/api/conversations")) {
@@ -210,6 +216,155 @@ describe("App auto-process pending", () => {
     render(<App />);
     await waitFor(() => {
       expect(mockGet).toHaveBeenCalledWith("/api/config/google-meet/connected");
+    });
+  });
+});
+
+// ── Google Meet Webhook Tests ─────────────────────────────────────────
+
+/**
+ * Helper: builds a mockGet implementation with Google Meet connected
+ * and optional overrides for check / pending endpoints.
+ */
+function gmMockGet(overrides: Record<string, unknown> = {}) {
+  return (url: string) => {
+    if (url === "/api/config/fireflies-key/exists") {
+      return Promise.resolve({ exists: true });
+    }
+    if (url === "/api/config/google-meet/connected") {
+      return Promise.resolve({ connected: true });
+    }
+    if (url === "/api/config/webhook-status") {
+      return Promise.resolve({ configured: true, pendingCount: 0, webhookUrl: "" });
+    }
+    if (url === "/api/webhooks/fireflies/pending") {
+      return Promise.resolve({ processed: [], skipped: [], errors: [] });
+    }
+    if (url === "/api/webhooks/google-meet/check") {
+      return Promise.resolve(overrides["google-meet/check"] ?? { status: "not_configured" });
+    }
+    if (url === "/api/webhooks/google-meet/pending") {
+      return Promise.resolve(
+        overrides["google-meet/pending"] ?? { processed: [], skipped: [], errors: [] },
+      );
+    }
+    if (url.startsWith("/api/conversations")) {
+      return Promise.resolve({ conversations: [], total: 0 });
+    }
+    return Promise.resolve({});
+  };
+}
+
+describe("Google Meet webhook check", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("localStorage", createMockStorage());
+    mockPost.mockResolvedValue({ updated: 0, still_missing: 0 });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("calls Google Meet webhook check after session restore when Google Meet is connected", async () => {
+    mockGet.mockImplementation(gmMockGet());
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith("/api/webhooks/google-meet/check");
+    });
+  });
+
+  it("shows lapsed banner when webhook check returns lapsed status", async () => {
+    mockGet.mockImplementation(gmMockGet({ "google-meet/check": { status: "lapsed" } }));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/real-time sync was inactive/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText("Sync Now")).toBeInTheDocument();
+  });
+
+  it("does not show lapsed banner when webhook check returns active", async () => {
+    mockGet.mockImplementation(gmMockGet({ "google-meet/check": { status: "active" } }));
+
+    render(<App />);
+
+    // Wait for the check call to complete
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith("/api/webhooks/google-meet/check");
+    });
+
+    expect(screen.queryByText(/real-time sync was inactive/i)).not.toBeInTheDocument();
+  });
+
+  it("Sync Now button on lapsed banner triggers manual sync", async () => {
+    mockGet.mockImplementation(gmMockGet({ "google-meet/check": { status: "lapsed" } }));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Sync Now")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Sync Now"));
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith("/api/sync/google-meet");
+    });
+  });
+
+  it("dismiss button hides lapsed banner", async () => {
+    mockGet.mockImplementation(gmMockGet({ "google-meet/check": { status: "lapsed" } }));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/real-time sync was inactive/i)).toBeInTheDocument();
+    });
+
+    // The dismiss button renders as × character
+    const dismissBtn = screen.getAllByRole("button").find(
+      (btn) => btn.textContent === "\u00d7",
+    );
+    expect(dismissBtn).toBeTruthy();
+    fireEvent.click(dismissBtn!);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/real-time sync was inactive/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("calls Google Meet pending endpoint when Google Meet is connected", async () => {
+    mockGet.mockImplementation(gmMockGet());
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith("/api/webhooks/google-meet/pending");
+    });
+  });
+
+  it("shows banner when Google Meet pending items processed", async () => {
+    mockGet.mockImplementation(
+      gmMockGet({
+        "google-meet/pending": {
+          processed: [{ id: 1 }, { id: 2 }],
+          skipped: [],
+          errors: [],
+        },
+      }),
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/processed 2 google meet transcripts from webhooks/i),
+      ).toBeInTheDocument();
     });
   });
 });

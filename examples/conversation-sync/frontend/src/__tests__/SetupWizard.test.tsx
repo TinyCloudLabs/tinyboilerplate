@@ -100,6 +100,30 @@ describe("SetupWizard", () => {
     vi.spyOn(window, "open").mockRestore();
   });
 
+  it("Google success step shows real-time sync message", async () => {
+    const getMock = vi.fn().mockResolvedValue({ authUrl: "https://accounts.google.com/auth" });
+    api = mockApi({ get: getMock });
+    vi.spyOn(window, "open").mockReturnValue(null);
+
+    render(<SetupWizard api={api} onComplete={onComplete} onGoogleMeetComplete={vi.fn()} showGoogleMeet={true} />);
+    fireEvent.click(screen.getByRole("button", { name: /connect google/i }));
+    fireEvent.click(screen.getByRole("button", { name: /connect with google/i }));
+
+    await waitFor(() => {
+      expect(getMock).toHaveBeenCalledWith("/api/auth/google");
+    });
+
+    window.dispatchEvent(new MessageEvent("message", {
+      data: { type: "google-auth-success" },
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/real-time sync is active/i)).toBeInTheDocument();
+    });
+
+    vi.spyOn(window, "open").mockRestore();
+  });
+
   it("calls onGoogleMeetComplete when clicking Start Syncing on Google success", async () => {
     const googleComplete = vi.fn();
     const getMock = vi.fn().mockResolvedValue({ authUrl: "https://accounts.google.com/auth" });

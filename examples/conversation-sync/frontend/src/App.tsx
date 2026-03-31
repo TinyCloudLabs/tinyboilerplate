@@ -60,6 +60,7 @@ export function App() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   const [hasKey, setHasKey] = useState<boolean | null>(null); // null = loading
 <<<<<<< HEAD
@@ -70,6 +71,9 @@ export function App() {
 >>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
 =======
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
+=======
+  const [gmLapsedBanner, setGmLapsedBanner] = useState(false);
+>>>>>>> 5839a4f (TC-1336: Frontend — webhook status, lapsed banner, pending processing)
 
   const tokenStoreRef = useRef(new TokenStore());
   const restoreAttemptedRef = useRef(false);
@@ -200,6 +204,7 @@ export function App() {
       .catch((err) => console.error("[backfill]", err));
   }, [api, hasKey]);
 
+<<<<<<< HEAD
 =======
 >>>>>>> 6a82158 (TC-1305: Build SetupWizard component (5-step guided API key onboarding))
 =======
@@ -214,6 +219,36 @@ export function App() {
   }, [api, hasKey]);
 
 >>>>>>> fa5f0e1 (TC-1316: Frontend auto-process pending on load + webhook status in SyncControl)
+=======
+  useEffect(() => {
+    if (!api || hasGoogleMeet !== true) return;
+    api
+      .get<{ status: string }>("/api/webhooks/google-meet/check")
+      .then((res) => {
+        if (res.status === "lapsed") setGmLapsedBanner(true);
+      })
+      .catch(() => {});
+  }, [api, hasGoogleMeet]);
+
+  useEffect(() => {
+    if (!api || hasGoogleMeet !== true) return;
+    api
+      .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
+        "/api/webhooks/google-meet/pending",
+      )
+      .then((result) => {
+        const count = result.processed?.length ?? 0;
+        if (count > 0) {
+          setPendingBanner(
+            `Processed ${count} Google Meet transcript${count === 1 ? "" : "s"} from webhooks`,
+          );
+          setRefreshKey((k) => k + 1);
+        }
+      })
+      .catch((err) => console.error("[gm-pending]", err));
+  }, [api, hasGoogleMeet]);
+
+>>>>>>> 5839a4f (TC-1336: Frontend — webhook status, lapsed banner, pending processing)
   // ── Sign In ───────────────────────────────────────────────────────
 
   const handleSignIn = useCallback(async () => {
@@ -293,6 +328,7 @@ export function App() {
     setAuthError(null);
     setHasKey(null);
     setHasGoogleMeet(null);
+    setGmLapsedBanner(false);
   }, [tcw]);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -389,6 +425,28 @@ export function App() {
               &times;
             </button>
 >>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
+          </div>
+        )}
+
+        {gmLapsedBanner && (
+          <div style={s.lapsedBanner}>
+            <span>Real-time sync was inactive. Some meetings may not have been captured.</span>
+            <div style={s.lapsedActions}>
+              <button
+                style={s.lapsedSyncBtn}
+                onClick={() => {
+                  api?.post("/api/sync/google-meet").then(() => {
+                    setRefreshKey((k) => k + 1);
+                    setGmLapsedBanner(false);
+                  }).catch(() => {});
+                }}
+              >
+                Sync Now
+              </button>
+              <button style={s.bannerDismiss} onClick={() => setGmLapsedBanner(false)}>
+                &times;
+              </button>
+            </div>
           </div>
         )}
 
@@ -626,6 +684,36 @@ const s: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: "0 4px",
     lineHeight: 1,
+  },
+  lapsedBanner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    background: "#fffbeb",
+    border: "1px solid #fde68a",
+    borderLeft: "3px solid #f59e0b",
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#92400e",
+    animation: "fadeSlideIn 0.3s ease-out",
+  },
+  lapsedActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  lapsedSyncBtn: {
+    fontFamily: FONT,
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#fff",
+    background: "#f59e0b",
+    border: "none",
+    borderRadius: 6,
+    padding: "6px 12px",
+    cursor: "pointer",
   },
   disconnectLink: {
     fontFamily: FONT,

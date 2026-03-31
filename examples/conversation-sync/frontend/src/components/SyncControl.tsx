@@ -52,6 +52,17 @@ interface WebhookStatus {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+interface GoogleMeetWebhookStatus {
+  enabled: boolean;
+  subscriptionActive: boolean;
+  expiresAt: string | null;
+  pendingCount: number;
+  failedCount: number;
+}
+
+>>>>>>> 5839a4f (TC-1336: Frontend — webhook status, lapsed banner, pending processing)
 interface SyncControlProps {
   api: ApiClient;
   backendUrl: string;
@@ -150,6 +161,10 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max - 1) + "\u2026" : str;
 }
 
+function daysUntil(isoString: string): number {
+  return Math.max(0, Math.ceil((new Date(isoString).getTime() - Date.now()) / 86_400_000));
+}
+
 // ── Component ───────────────────────────────────────────────────────
 
 export const SyncControl: FC<SyncControlProps> = ({
@@ -176,6 +191,7 @@ export const SyncControl: FC<SyncControlProps> = ({
     localStorage.getItem(LAST_SYNC_KEY),
   );
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(null);
+  const [gmWebhookStatus, setGmWebhookStatus] = useState<GoogleMeetWebhookStatus | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -230,6 +246,14 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
 >>>>>>> ffd94d9 (TC-1306: Build SyncControl component (sync button, progress, limit selector))
 =======
 >>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+  useEffect(() => {
+    if (!hasGM) return;
+    api
+      .get<GoogleMeetWebhookStatus>("/api/webhooks/google-meet/status")
+      .then((status) => setGmWebhookStatus(status))
+      .catch(() => {});
+  }, [api, hasGM]);
+
   useEffect(() => {
     if (!lastSync) return;
     const id = setInterval(() => setLastSync(localStorage.getItem(LAST_SYNC_KEY)), 60_000);
@@ -493,6 +517,12 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
             <span style={s.webhookBadge}>
               <span style={s.webhookDot} />
               Live
+            </span>
+          )}
+          {hasGM && gmWebhookStatus?.enabled && gmWebhookStatus?.subscriptionActive && (
+            <span style={s.webhookBadge}>
+              <span style={s.webhookDot} />
+              Live{gmWebhookStatus.expiresAt ? ` · ${daysUntil(gmWebhookStatus.expiresAt)}d` : ""}
             </span>
           )}
         </div>
@@ -891,6 +921,14 @@ export const SyncControl: FC<SyncControlProps> = ({ api, backendUrl, getAccessTo
         <div style={s.pendingBanner}>
           <span style={s.statNum}>{webhookStatus.pendingCount}</span>
           <span style={s.pendingText}>transcripts queued from webhook</span>
+        </div>
+      )}
+
+      {/* Google Meet pending */}
+      {hasGM && gmWebhookStatus?.enabled && gmWebhookStatus.pendingCount > 0 && (
+        <div style={s.pendingBanner}>
+          <span style={s.statNum}>{gmWebhookStatus.pendingCount}</span>
+          <span style={s.pendingText}>Google Meet transcripts waiting</span>
         </div>
       )}
     </section>

@@ -263,7 +263,7 @@ export const SetupWizard: FC<SetupWizardProps> = ({
             <span style={s.checkmark}>&#10003;</span>
             <div>
               <p style={s.successTitle}>Google account connected</p>
-              <p style={s.successSub}>Your Google Meet transcripts are ready to sync.</p>
+              <p style={s.successSub}>Real-time sync is active — new transcripts will appear automatically.</p>
             </div>
           </div>
           <button style={s.btnPrimary} onClick={() => onGoogleMeetComplete?.()}>

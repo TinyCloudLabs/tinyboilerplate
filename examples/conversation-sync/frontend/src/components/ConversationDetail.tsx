@@ -203,7 +203,12 @@ export const ConversationDetail: FC<ConversationDetailProps> = ({
 
         {conversation.source_url && (
           <a href={conversation.source_url} target="_blank" rel="noreferrer" style={s.externalLink}>
-            View on Fireflies &rarr;
+            {conversation.source === "google-meet"
+              ? "View transcript"
+              : conversation.source === "fireflies"
+                ? "View on Fireflies"
+                : "View source"}{" "}
+            &rarr;
           </a>
         )}
       </div>

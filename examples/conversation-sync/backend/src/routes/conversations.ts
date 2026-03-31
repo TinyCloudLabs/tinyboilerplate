@@ -47,12 +47,17 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
     const limit = Math.max(1, parseInt(req.query.limit as string, 10) || DEFAULT_LIMIT);
     const offset = Math.max(0, parseInt(req.query.offset as string, 10) || DEFAULT_OFFSET);
+    const source = req.query.source as string | undefined;
 
     try {
       await ensureSchema(access);
 
-      // Total count
-      const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
+      // Total count — with optional source filter
+      const countSql = source
+        ? `SELECT COUNT(*) AS total FROM conversation WHERE source = ?`
+        : `SELECT COUNT(*) AS total FROM conversation`;
+      const countParams = source ? [source] : [];
+      const countResult = await access.sql.query(countSql, countParams);
       let total = 0;
       if (countResult.ok && countResult.data.rows?.[0]) {
         const countRow = rowToObject(
@@ -63,14 +68,20 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       }
 
       // Paginated list with participant_count subquery
-      const listResult = await access.sql.query(
-        `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
+      const listSql = source
+        ? `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
+           (SELECT COUNT(*) FROM participant p WHERE p.conversation_id = c.id) AS participant_count
+         FROM conversation c
+         WHERE c.source = ?
+         ORDER BY c.started_at DESC
+         LIMIT ? OFFSET ?`
+        : `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
            (SELECT COUNT(*) FROM participant p WHERE p.conversation_id = c.id) AS participant_count
          FROM conversation c
          ORDER BY c.started_at DESC
-         LIMIT ? OFFSET ?`,
-        [limit, offset],
-      );
+         LIMIT ? OFFSET ?`;
+      const listParams = source ? [source, limit, offset] : [limit, offset];
+      const listResult = await access.sql.query(listSql, listParams);
 
       const conversations = listResult.ok
         ? rowsToObjects(listResult.data.rows as unknown[][], listResult.data.columns)

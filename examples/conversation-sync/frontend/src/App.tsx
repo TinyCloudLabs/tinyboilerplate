@@ -25,6 +25,7 @@ const OPENKEY_HOST = import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
 const OPENKEY_CLIENT_ID = import.meta.env.VITE_OPENKEY_CLIENT_ID;
 const TINYCLOUD_HOST = import.meta.env.VITE_TINYCLOUD_HOST || "https://node.tinycloud.xyz";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // ── App ─────────────────────────────────────────────────────────────
 
@@ -36,9 +37,11 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [hasGoogleMeet, setHasGoogleMeet] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [pendingBanner, setPendingBanner] = useState<string | null>(null);
+  const [gmLapsedBanner, setGmLapsedBanner] = useState(false);
 
   const tokenStoreRef = useRef(new TokenStore());
   const restoreAttemptedRef = useRef(false);
@@ -93,6 +96,17 @@ export function App() {
   }, [api]);
 
   useEffect(() => {
+    if (!api) {
+      setHasGoogleMeet(null);
+      return;
+    }
+    api
+      .get<{ connected: boolean }>("/api/config/google-meet/connected")
+      .then((res) => setHasGoogleMeet(res.connected))
+      .catch(() => setHasGoogleMeet(false));
+  }, [api]);
+
+  useEffect(() => {
     if (!api || hasKey !== true) return;
     api
       .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
@@ -119,6 +133,34 @@ export function App() {
       })
       .catch((err) => console.error("[backfill]", err));
   }, [api, hasKey]);
+
+  useEffect(() => {
+    if (!api || hasGoogleMeet !== true) return;
+    api
+      .get<{ status: string }>("/api/webhooks/google-meet/check")
+      .then((res) => {
+        if (res.status === "lapsed") setGmLapsedBanner(true);
+      })
+      .catch(() => {});
+  }, [api, hasGoogleMeet]);
+
+  useEffect(() => {
+    if (!api || hasGoogleMeet !== true) return;
+    api
+      .get<{ processed: unknown[]; skipped: unknown[]; errors: unknown[] }>(
+        "/api/webhooks/google-meet/pending",
+      )
+      .then((result) => {
+        const count = result.processed?.length ?? 0;
+        if (count > 0) {
+          setPendingBanner(
+            `Processed ${count} Google Meet transcript${count === 1 ? "" : "s"} from webhooks`,
+          );
+          setRefreshKey((k) => k + 1);
+        }
+      })
+      .catch((err) => console.error("[gm-pending]", err));
+  }, [api, hasGoogleMeet]);
 
   // ── Sign In ───────────────────────────────────────────────────────
 
@@ -178,6 +220,8 @@ export function App() {
     setApi(null);
     setAuthError(null);
     setHasKey(null);
+    setHasGoogleMeet(null);
+    setGmLapsedBanner(false);
   }, [tcw]);
 
   // ── Render ────────────────────────────────────────────────────────
@@ -188,7 +232,10 @@ export function App() {
     <div style={s.shell}>
       <header style={s.header}>
         <h1 style={s.logo}>Conversation Sync</h1>
-        <span style={s.badge}>Fireflies</span>
+        {hasKey && <span style={s.badge}>Fireflies</span>}
+        {hasGoogleMeet && (
+          <span style={{ ...s.badge, color: "#059669", background: "#ecfdf5" }}>Google Meet</span>
+        )}
       </header>
 
       <main style={s.main}>
@@ -202,11 +249,20 @@ export function App() {
           onSignOut={handleSignOut}
         />
 
-        {isSignedIn && hasKey === false && (
-          <SetupWizard api={api} onComplete={() => setHasKey(true)} backendUrl={BACKEND_URL} />
-        )}
+        {isSignedIn &&
+          (hasKey === false || (hasGoogleMeet === false && !!GOOGLE_CLIENT_ID)) &&
+          !(hasKey === true && hasGoogleMeet === true) && (
+            <SetupWizard
+              api={api}
+              onComplete={() => setHasKey(true)}
+              onGoogleMeetComplete={() => setHasGoogleMeet(true)}
+              backendUrl={BACKEND_URL}
+              showGoogleMeet={!!GOOGLE_CLIENT_ID}
+              initialSource={hasKey === true ? "google-meet" : hasGoogleMeet === true ? "fireflies" : undefined}
+            />
+          )}
 
-        {isSignedIn && hasKey === true && selectedConversationId && (
+        {isSignedIn && (hasKey === true || hasGoogleMeet === true) && selectedConversationId && (
           <ConversationDetail
             api={api}
             conversationId={selectedConversationId}
@@ -223,28 +279,65 @@ export function App() {
           </div>
         )}
 
-        {isSignedIn && hasKey === true && !selectedConversationId && (
+        {gmLapsedBanner && (
+          <div style={s.lapsedBanner}>
+            <span>Real-time sync was inactive. Some meetings may not have been captured.</span>
+            <div style={s.lapsedActions}>
+              <button
+                style={s.lapsedSyncBtn}
+                onClick={() => {
+                  api?.post("/api/sync/google-meet").then(() => {
+                    setRefreshKey((k) => k + 1);
+                    setGmLapsedBanner(false);
+                  }).catch(() => {});
+                }}
+              >
+                Sync Now
+              </button>
+              <button style={s.bannerDismiss} onClick={() => setGmLapsedBanner(false)}>
+                &times;
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isSignedIn && (hasKey === true || hasGoogleMeet === true) && !selectedConversationId && (
           <>
             <SyncControl
               api={api}
               backendUrl={BACKEND_URL}
               getAccessToken={() => tokenStoreRef.current.getAccessToken()}
               onSyncComplete={() => setRefreshKey((k) => k + 1)}
+              hasFireflies={hasKey === true}
+              hasGoogleMeet={hasGoogleMeet === true}
             />
             <ConversationList
               api={api}
               onSelectConversation={setSelectedConversationId}
               refreshKey={refreshKey}
             />
-            <button
-              style={s.disconnectLink}
-              onClick={async () => {
-                await api.del("/api/config/fireflies-key");
-                setHasKey(false);
-              }}
-            >
-              Disconnect Fireflies
-            </button>
+            {hasKey && (
+              <button
+                style={s.disconnectLink}
+                onClick={async () => {
+                  await api.del("/api/config/fireflies-key");
+                  setHasKey(false);
+                }}
+              >
+                Disconnect Fireflies
+              </button>
+            )}
+            {hasGoogleMeet && (
+              <button
+                style={s.disconnectLink}
+                onClick={async () => {
+                  await api.del("/api/config/google-meet");
+                  setHasGoogleMeet(false);
+                }}
+              >
+                Disconnect Google Meet
+              </button>
+            )}
           </>
         )}
       </main>
@@ -329,6 +422,36 @@ const s: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: "0 4px",
     lineHeight: 1,
+  },
+  lapsedBanner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    background: "#fffbeb",
+    border: "1px solid #fde68a",
+    borderLeft: "3px solid #f59e0b",
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#92400e",
+    animation: "fadeSlideIn 0.3s ease-out",
+  },
+  lapsedActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  lapsedSyncBtn: {
+    fontFamily: FONT,
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#fff",
+    background: "#f59e0b",
+    border: "none",
+    borderRadius: 6,
+    padding: "6px 12px",
+    cursor: "pointer",
   },
   disconnectLink: {
     fontFamily: FONT,

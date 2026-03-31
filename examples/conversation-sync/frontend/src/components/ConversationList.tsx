@@ -56,12 +56,14 @@ export const ConversationList: FC<ConversationListProps> = ({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
 
   const fetchConversations = useCallback(
     async (offset: number, append: boolean) => {
       try {
+        const sourceParam = sourceFilter !== "all" ? `&source=${sourceFilter}` : "";
         const data = await api.get<ConversationsResponse>(
-          `/api/conversations?limit=${PAGE_SIZE}&offset=${offset}`,
+          `/api/conversations?limit=${PAGE_SIZE}&offset=${offset}${sourceParam}`,
         );
         if (append) {
           setConversations((prev) => [...prev, ...data.conversations]);
@@ -74,7 +76,7 @@ export const ConversationList: FC<ConversationListProps> = ({
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api],
+    [api, sourceFilter],
   );
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export const ConversationList: FC<ConversationListProps> = ({
     return (
       <div style={s.emptyCard}>
         <p style={s.emptyTitle}>No conversations yet</p>
-        <p style={s.emptySub}>Sync your first meetings from Fireflies above.</p>
+        <p style={s.emptySub}>Sync your first meetings above.</p>
       </div>
     );
   }
@@ -128,6 +130,20 @@ export const ConversationList: FC<ConversationListProps> = ({
         <span style={s.countLabel}>
           {total} conversation{total !== 1 ? "s" : ""}
         </span>
+        <div style={s.filterRow}>
+          {(["all", "fireflies", "google-meet"] as const).map((src) => (
+            <button
+              key={src}
+              style={{
+                ...s.filterChip,
+                ...(sourceFilter === src ? s.filterChipActive : {}),
+              }}
+              onClick={() => setSourceFilter(src)}
+            >
+              {src === "all" ? "All" : src === "fireflies" ? "Fireflies" : "Google Meet"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <ul style={s.list}>
@@ -135,7 +151,21 @@ export const ConversationList: FC<ConversationListProps> = ({
           <li key={c.id} style={s.row} onClick={() => onSelectConversation(c.id)}>
             <div style={s.rowTop}>
               <span style={s.title}>{c.title}</span>
-              <span style={s.date}>{formatDate(c.started_at)}</span>
+              <div style={s.rowRight}>
+                <span
+                  style={{
+                    ...s.sourceBadge,
+                    ...(c.source === "google-meet" ? s.sourceBadgeGreen : {}),
+                  }}
+                >
+                  {c.source === "fireflies"
+                    ? "FF"
+                    : c.source === "google-meet"
+                      ? "GM"
+                      : c.source}
+                </span>
+                <span style={s.date}>{formatDate(c.started_at)}</span>
+              </div>
             </div>
             <div style={s.meta}>
               <span>{formatDuration(c.duration_secs)}</span>
@@ -176,6 +206,9 @@ const s: Record<string, React.CSSProperties> = {
     overflow: "hidden",
   },
   headerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: "14px 20px 0",
   },
   countLabel: {
@@ -185,6 +218,26 @@ const s: Record<string, React.CSSProperties> = {
     color: "#9ca3af",
     letterSpacing: "0.03em",
     textTransform: "uppercase" as const,
+  },
+  filterRow: {
+    display: "flex",
+    gap: 4,
+  },
+  filterChip: {
+    fontFamily: FONT,
+    fontSize: 11,
+    fontWeight: 500,
+    color: "#6b7280",
+    background: "transparent",
+    border: "1px solid #e2e4e9",
+    borderRadius: 12,
+    padding: "3px 10px",
+    cursor: "pointer",
+  },
+  filterChipActive: {
+    color: "#6366f1",
+    background: "#eef2ff",
+    borderColor: "#c7d2fe",
   },
   list: {
     listStyle: "none",
@@ -209,13 +262,32 @@ const s: Record<string, React.CSSProperties> = {
     color: "#18181b",
     letterSpacing: "-0.01em",
   },
+  rowRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  sourceBadge: {
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: 600,
+    color: "#6366f1",
+    background: "#eef2ff",
+    padding: "1px 6px",
+    borderRadius: 4,
+    letterSpacing: "0.02em",
+  },
+  sourceBadgeGreen: {
+    color: "#059669",
+    background: "#ecfdf5",
+  },
   date: {
     fontFamily: MONO,
     fontSize: 12,
     fontWeight: 400,
     color: "#9ca3af",
     flexShrink: 0,
-    marginLeft: 12,
   },
   meta: {
     display: "flex",

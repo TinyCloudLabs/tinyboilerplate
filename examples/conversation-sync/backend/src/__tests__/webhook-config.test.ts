@@ -30,8 +30,8 @@ function createMockKV() {
 // ── Test Helpers ─────────────────────────────────────────────────────
 
 const TEST_SUB = "test-sub";
-const SECRET_KV_KEY = "/app.webhooks/config/fireflies-secret";
-const PENDING_KV_KEY = "/app.webhooks/pending/fireflies";
+const SECRET_KV_KEY = "xyz.tinycloud.listen/webhooks/config/fireflies-secret";
+const PENDING_KV_KEY = "xyz.tinycloud.listen/webhooks/pending/fireflies";
 
 function mockAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
   req.user = { sub: TEST_SUB };
@@ -195,28 +195,12 @@ describe("Webhook Config Routes", () => {
       expect(body.pendingCount).toBe(0);
     });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     it("returns webhookUrl from backend host (ignores frontendUrl)", async () => {
-=======
-    it("returns webhookUrl from frontendUrl config", async () => {
->>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
-=======
-    it("returns webhookUrl from backend host (ignores frontendUrl)", async () => {
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
       const res = await fetch(`http://localhost:${port}/api/config/webhook-status`);
 
       expect(res.status).toBe(200);
       const body = await res.json();
-<<<<<<< HEAD
-<<<<<<< HEAD
       expect(body.webhookUrl).toBe(`http://localhost:${port}/api/webhooks/fireflies`);
-=======
-      expect(body.webhookUrl).toBe("http://localhost:3001/api/webhooks/fireflies");
->>>>>>> a8cf829 (TC-1312: Add webhook secret config endpoints (backend's own KV))
-=======
-      expect(body.webhookUrl).toBe(`http://localhost:${port}/api/webhooks/fireflies`);
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
     });
 
     it("derives webhookUrl from request host when no frontendUrl", async () => {

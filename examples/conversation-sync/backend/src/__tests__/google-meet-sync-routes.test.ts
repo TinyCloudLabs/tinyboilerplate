@@ -84,9 +84,7 @@ function createMockSQL() {
 
 // ── Mock Conference Factory ──────────────────────────────────────────
 
-function createMockConferenceRecord(
-  overrides: Partial<ConferenceRecord> = {},
-): ConferenceRecord {
+function createMockConferenceRecord(overrides: Partial<ConferenceRecord> = {}): ConferenceRecord {
   return {
     name: overrides.name ?? "conferenceRecords/abc-123",
     startTime: overrides.startTime ?? "2024-03-20T14:00:00Z",
@@ -96,9 +94,7 @@ function createMockConferenceRecord(
   };
 }
 
-function createMockFullConference(
-  conferenceRecord: ConferenceRecord,
-): FullConference {
+function createMockFullConference(conferenceRecord: ConferenceRecord): FullConference {
   return {
     conferenceRecord,
     participants: [
@@ -163,7 +159,7 @@ function createMockGoogleMeetClientFactory() {
 
 // ── Test Helpers ─────────────────────────────────────────────────────
 
-const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
+const GOOGLE_TOKENS_PATH = "config/google-tokens";
 const TEST_TOKENS = JSON.stringify({
   access_token: "test-access-token",
   refresh_token: "test-refresh-token",

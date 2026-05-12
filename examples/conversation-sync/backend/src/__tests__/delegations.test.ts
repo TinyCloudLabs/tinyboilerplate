@@ -2,10 +2,61 @@ import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
 
 // ── Mock @tinycloud/node-sdk BEFORE importing the route ───────────────
 
+const TEST_ADDRESS = "0xTEST";
+const TEST_DID = "did:pkh:eip155:1:0xTEST";
+
+function fullPolicyResources(space = "applications") {
+  return [
+    {
+      service: "tinycloud.kv",
+      space,
+      path: "xyz.tinycloud.listen/",
+      actions: [
+        "tinycloud.kv/get",
+        "tinycloud.kv/put",
+        "tinycloud.kv/del",
+        "tinycloud.kv/list",
+        "tinycloud.kv/metadata",
+      ],
+    },
+    {
+      service: "tinycloud.sql",
+      space,
+      path: "xyz.tinycloud.listen/conversations",
+      actions: ["tinycloud.sql/read", "tinycloud.sql/write"],
+    },
+    {
+      service: "tinycloud.capabilities",
+      space: "applications",
+      path: "",
+      actions: ["tinycloud.capabilities/read"],
+    },
+    {
+      service: "tinycloud.kv",
+      space: "secrets",
+      path: "vault/secrets/FIREFLIES_API_KEY",
+      actions: ["tinycloud.kv/get"],
+    },
+    {
+      service: "tinycloud.kv",
+      space: "secrets",
+      path: `grants/${TEST_DID}/secrets/FIREFLIES_API_KEY`,
+      actions: ["tinycloud.kv/get"],
+    },
+    {
+      service: "tinycloud.capabilities",
+      space: "secrets",
+      path: "",
+      actions: ["tinycloud.capabilities/read"],
+    },
+  ];
+}
+
 const mockDeserializeDelegation = mock((serialized: string) => ({
   expiry: new Date(Date.now() + 86400_000),
   actions: ["tinycloud.kv/get", "tinycloud.kv/put"],
   path: "",
+  resources: fullPolicyResources(),
   ownerAddress: "0xTEST",
   _serialized: serialized,
 }));
@@ -24,15 +75,6 @@ mock.module("@tinycloud/node-sdk", () => ({
   deserializeDelegation: mockDeserializeDelegation,
 }));
 
-const mockFetchUserInfo = mock(async (_issuerUrl: string, _token: string) => ({
-  sub: "test-sub",
-  address: "0xTEST",
-}));
-
-mock.module("@tinyboilerplate/server", () => ({
-  fetchUserInfo: mockFetchUserInfo,
-}));
-
 import express from "express";
 import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
@@ -46,6 +88,8 @@ interface StoredEntry {
   expiresAt: string;
   actions: string[];
   path: string;
+  policyHash?: string;
+  resources?: Array<{ service: string; space?: string; path: string; actions: string[] }>;
 }
 
 function createMockDelegationStore() {
@@ -60,6 +104,8 @@ function createMockDelegationStore() {
         expiresAt: metadata.expiresAt,
         actions: metadata.actions,
         path: metadata.path,
+        policyHash: metadata.policyHash,
+        resources: metadata.resources,
       });
     },
     load: async (identifier: string) => {
@@ -100,11 +146,8 @@ function createMockDelegationCache() {
 
 // ── Test Helpers ──────────────────────────────────────────────────────
 
-const TEST_SUB = "test-sub";
-const TEST_DID = "did:pkh:eip155:1:0xTEST";
-
 function mockAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
-  req.user = { sub: TEST_SUB };
+  req.user = { address: TEST_ADDRESS };
   req.headers.authorization = "Bearer test-token";
   next();
 }
@@ -115,6 +158,12 @@ function createApp(
 ) {
   const mockNode = {
     useDelegation: mockUseDelegation,
+    secrets: {
+      isUnlocked: true,
+      vault: { encryptionIdentity: { privateKey: new Uint8Array(32) } },
+      unlock: async () => ({ ok: true }),
+      lock: () => {},
+    },
   } as any;
 
   const app = express();
@@ -127,7 +176,6 @@ function createApp(
       store: store as any,
       cache: cache as any,
       authMiddleware: mockAuthMiddleware,
-      openKeyIssuerUrl: "https://openkey.test",
     }),
   );
   return app;
@@ -161,7 +209,6 @@ describe("Delegation Routes", () => {
     cache = createMockDelegationCache();
     mockDeserializeDelegation.mockClear();
     mockUseDelegation.mockClear();
-    mockFetchUserInfo.mockClear();
 
     const app = createApp(store, cache);
     const result = await startServer(app);
@@ -199,9 +246,26 @@ describe("Delegation Routes", () => {
       expect(body.expiresAt).toBeDefined();
     });
 
+    it("returns 'none' and removes stale delegations without the current policy hash", async () => {
+      await store.store(TEST_ADDRESS, "old-delegation", {
+        expiresAt: new Date(Date.now() + 1000).toISOString(),
+        actions: [],
+        path: "items/",
+      });
+      cache.set(TEST_ADDRESS, { kv: {}, sql: {} });
+
+      const res = await fetch(`${baseUrl}/api/delegations/status`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe("none");
+
+      expect(await store.load(TEST_ADDRESS)).toBeNull();
+      expect(cache.has(TEST_ADDRESS)).toBe(false);
+    });
+
     it("returns 'expired' for expired delegations", async () => {
       // Manually store an expired delegation
-      await store.store(TEST_SUB, "old-delegation", {
+      await store.store(TEST_ADDRESS, "old-delegation", {
         expiresAt: new Date(Date.now() - 1000).toISOString(),
         actions: [],
         path: "items/",
@@ -215,20 +279,20 @@ describe("Delegation Routes", () => {
 
     it("cleans up expired delegation from store and cache", async () => {
       // Store expired delegation and cache entry
-      await store.store(TEST_SUB, "old-delegation", {
+      await store.store(TEST_ADDRESS, "old-delegation", {
         expiresAt: new Date(Date.now() - 1000).toISOString(),
         actions: [],
         path: "items/",
       });
-      cache.set(TEST_SUB, { kv: {}, sql: {} });
+      cache.set(TEST_ADDRESS, { kv: {}, sql: {} });
 
       await fetch(`${baseUrl}/api/delegations/status`);
 
       // Store should be cleaned
-      const stored = await store.load(TEST_SUB);
+      const stored = await store.load(TEST_ADDRESS);
       expect(stored).toBeNull();
       // Cache should be evicted
-      expect(cache.has(TEST_SUB)).toBe(false);
+      expect(cache.has(TEST_ADDRESS)).toBe(false);
     });
 
     it("returns 'none' after DELETE", async () => {
@@ -286,7 +350,13 @@ describe("Delegation Routes", () => {
         body: JSON.stringify({ serialized: "activatable" }),
       });
 
-      expect(mockUseDelegation).toHaveBeenCalledTimes(1);
+      expect(mockUseDelegation).toHaveBeenCalledTimes(4);
+      expect(mockUseDelegation.mock.calls.map((call) => call[0].path)).toEqual([
+        "xyz.tinycloud.listen/",
+        "xyz.tinycloud.listen/conversations",
+        "vault/secrets/FIREFLIES_API_KEY",
+        `grants/${TEST_DID}/secrets/FIREFLIES_API_KEY`,
+      ]);
     });
 
     it("persists delegation to the store", async () => {
@@ -296,11 +366,84 @@ describe("Delegation Routes", () => {
         body: JSON.stringify({ serialized: "persistent-delegation" }),
       });
 
-      const stored = await store.load(TEST_SUB);
+      const stored = await store.load(TEST_ADDRESS);
       expect(stored).not.toBeNull();
       expect(stored!.serialized).toBe("persistent-delegation");
       expect(stored!.actions).toContain("tinycloud.kv/get");
-      expect(stored!.path).toBe("");
+      expect(stored!.actions).toContain("tinycloud.sql/write");
+      expect(stored!.path).toContain("tinycloud.sql:xyz.tinycloud.listen/conversations");
+      expect(stored!.policyHash).toBeDefined();
+      expect(stored!.resources?.length).toBe(6);
+    });
+
+    it("accepts SDK portable resources with short service names and fully qualified spaces", async () => {
+      mockDeserializeDelegation.mockImplementationOnce((serialized: string) => ({
+        expiry: new Date(Date.now() + 86400_000),
+        resources: fullPolicyResources("tinycloud:pkh:eip155:1:0xTEST:applications").map(
+          (resource) =>
+            resource.space === "secrets"
+              ? {
+                  ...resource,
+                  service: resource.service.replace("tinycloud.", ""),
+                  space: "tinycloud:pkh:eip155:1:0xTEST:secrets",
+                }
+              : { ...resource, service: resource.service.replace("tinycloud.", "") },
+        ),
+        _serialized: serialized,
+      }));
+
+      const res = await fetch(`${baseUrl}/api/delegations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serialized: "sdk-portable-delegation" }),
+      });
+
+      expect(res.status).toBe(200);
+      const stored = await store.load(TEST_ADDRESS);
+      expect(stored!.resources).toEqual([
+        {
+          service: "tinycloud.kv",
+          space: "applications",
+          path: "xyz.tinycloud.listen/",
+          actions: [
+            "tinycloud.kv/get",
+            "tinycloud.kv/put",
+            "tinycloud.kv/del",
+            "tinycloud.kv/list",
+            "tinycloud.kv/metadata",
+          ],
+        },
+        {
+          service: "tinycloud.sql",
+          space: "applications",
+          path: "xyz.tinycloud.listen/conversations",
+          actions: ["tinycloud.sql/read", "tinycloud.sql/write"],
+        },
+        {
+          service: "tinycloud.capabilities",
+          space: "applications",
+          path: "",
+          actions: ["tinycloud.capabilities/read"],
+        },
+        {
+          service: "tinycloud.kv",
+          space: "secrets",
+          path: "vault/secrets/FIREFLIES_API_KEY",
+          actions: ["tinycloud.kv/get"],
+        },
+        {
+          service: "tinycloud.kv",
+          space: "secrets",
+          path: `grants/${TEST_DID}/secrets/FIREFLIES_API_KEY`,
+          actions: ["tinycloud.kv/get"],
+        },
+        {
+          service: "tinycloud.capabilities",
+          space: "secrets",
+          path: "",
+          actions: ["tinycloud.capabilities/read"],
+        },
+      ]);
     });
 
     it("caches the DelegatedAccess", async () => {
@@ -310,7 +453,7 @@ describe("Delegation Routes", () => {
         body: JSON.stringify({ serialized: "cacheable" }),
       });
 
-      expect(cache.has(TEST_SUB)).toBe(true);
+      expect(cache.has(TEST_ADDRESS)).toBe(true);
     });
 
     it("returns 400 without serialized field", async () => {
@@ -370,29 +513,6 @@ describe("Delegation Routes", () => {
       expect(body.error).toBe("invalid_delegation");
       expect(body.message).toBe("Failed to process delegation");
     });
-
-    it("returns 403 when delegation owner doesn't match authenticated user", async () => {
-      // Mock fetchUserInfo to return a different address than the delegation owner
-      mockFetchUserInfo.mockImplementationOnce(async () => ({
-        sub: "test-sub",
-        address: "0xDIFFERENT",
-      }));
-
-      const res = await fetch(`${baseUrl}/api/delegations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serialized: "stolen-delegation" }),
-      });
-
-      expect(res.status).toBe(403);
-      const body = await res.json();
-      expect(body.error).toBe("ownership_mismatch");
-      expect(body.message).toBe("Delegation owner does not match authenticated user");
-
-      // Verify the delegation was NOT stored or cached
-      expect(await store.load(TEST_SUB)).toBeNull();
-      expect(cache.has(TEST_SUB)).toBe(false);
-    });
   });
 
   // ── DELETE /api/delegations ───────────────────────────────────────
@@ -405,7 +525,7 @@ describe("Delegation Routes", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serialized: "to-delete" }),
       });
-      expect(await store.load(TEST_SUB)).not.toBeNull();
+      expect(await store.load(TEST_ADDRESS)).not.toBeNull();
 
       // Delete
       const res = await fetch(`${baseUrl}/api/delegations`, {
@@ -418,7 +538,7 @@ describe("Delegation Routes", () => {
       expect(body.expiresAt).toBeNull();
 
       // Verify removed
-      expect(await store.load(TEST_SUB)).toBeNull();
+      expect(await store.load(TEST_ADDRESS)).toBeNull();
     });
 
     it("evicts cached DelegatedAccess", async () => {
@@ -428,14 +548,14 @@ describe("Delegation Routes", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serialized: "cached-to-delete" }),
       });
-      expect(cache.has(TEST_SUB)).toBe(true);
+      expect(cache.has(TEST_ADDRESS)).toBe(true);
 
       // Delete
       await fetch(`${baseUrl}/api/delegations`, {
         method: "DELETE",
       });
 
-      expect(cache.has(TEST_SUB)).toBe(false);
+      expect(cache.has(TEST_ADDRESS)).toBe(false);
     });
 
     it("succeeds even when no delegation exists", async () => {

@@ -1,9 +1,16 @@
 import { Router } from "express";
 import type { Request, Response, RequestHandler } from "express";
 import type { TinyCloudNode } from "@tinycloud/node-sdk";
-import { deserializeDelegation } from "@tinycloud/node-sdk";
 import type { DelegationStore, DelegationCache } from "@tinyboilerplate/server";
-import { DEFAULT_DELEGATION_EXPIRY_MS } from "@tinyboilerplate/core";
+import { DEFAULT_DELEGATION_EXPIRY_MS, type ServerInfoPermission } from "@tinyboilerplate/core";
+import { backendDelegationPolicyHash, delegationCoversBackendPolicy } from "../manifest.js";
+import {
+  activatePortableDelegation,
+  deserializePortableDelegationSet,
+  portableDelegationExpiry,
+  portableDelegations,
+  type PortableDelegationSet,
+} from "../delegation-activation.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -13,7 +20,6 @@ interface DelegationRoutesConfig {
   store: DelegationStore;
   cache: DelegationCache;
   authMiddleware: RequestHandler;
-  openKeyIssuerUrl?: string;
 }
 
 // ── Delegation Routes ────────────────────────────────────────────────
@@ -31,7 +37,7 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
       res.status(401).json({ error: "unauthenticated", message: "Authentication required" });
       return;
     }
-    const { sub } = req.user;
+    const { address } = req.user;
     const { serialized } = req.body;
 
     if (!serialized || typeof serialized !== "string") {
@@ -44,40 +50,33 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
 
     try {
       // Deserialize and validate the delegation
-      const delegation = deserializeDelegation(serialized);
+      const delegation = deserializePortableDelegationSet(serialized);
+      const resources = extractDelegationResources(delegation);
 
-      // Verify that the delegation was created by the authenticated user.
-      // We trust the JWT sub claim (set by authMiddleware) as the user identity.
-      // The ownerAddress on the delegation is informational — the real auth
-      // guarantee comes from the JWT token verification above.
-      if (!req.user?.sub) {
-        res.status(401).json({
-          error: "unauthenticated",
-          message: "Authentication required",
-        });
-        return;
+      if (!delegationCoversBackendPolicy(resources, config.did)) {
+        throw new Error("Delegation does not cover the current backend permission policy");
       }
 
       // Activate the delegation to verify it works
-      const access = await node.useDelegation(delegation);
+      const access = await activatePortableDelegation(node, delegation);
 
       // Extract metadata from the delegation itself
-      const expiresAt = delegation.expiry
-        ? (delegation.expiry instanceof Date
-            ? delegation.expiry
-            : new Date(delegation.expiry)
-          ).toISOString()
+      const expiry = portableDelegationExpiry(delegation);
+      const expiresAt = expiry
+        ? expiry.toISOString()
         : new Date(Date.now() + DEFAULT_DELEGATION_EXPIRY_MS).toISOString();
 
-      // Store the delegation keyed by JWT sub (not client-supplied address)
-      await store.store(sub, serialized, {
+      // Store the delegation keyed by wallet address
+      await store.store(address, serialized, {
         expiresAt,
-        actions: delegation.actions ?? [],
-        path: delegation.path ?? "",
+        actions: resources.flatMap((resource) => resource.actions),
+        path: resources.map((resource) => `${resource.service}:${resource.path}`).join(","),
+        resources,
+        policyHash: backendDelegationPolicyHash(config.did),
       });
 
-      // Cache the active DelegatedAccess keyed by sub
-      cache.set(sub, access);
+      // Cache the active DelegatedAccess keyed by address
+      cache.set(address, access);
 
       res.json({
         status: "active",
@@ -98,11 +97,11 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
       res.status(401).json({ error: "unauthenticated", message: "Authentication required" });
       return;
     }
-    const { sub } = req.user;
+    const { address } = req.user;
 
     try {
-      await store.remove(sub);
-      cache.evict(sub);
+      await store.remove(address);
+      cache.evict(address);
 
       res.json({
         status: "none",
@@ -123,10 +122,10 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
       res.status(401).json({ error: "unauthenticated", message: "Authentication required" });
       return;
     }
-    const { sub } = req.user;
+    const { address } = req.user;
 
     try {
-      const stored = await store.load(sub);
+      const stored = await store.load(address);
 
       if (!stored) {
         res.json({
@@ -140,12 +139,23 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
 
       if (isExpired) {
         // Clean up expired delegation
-        await store.remove(sub);
-        cache.evict(sub);
+        await store.remove(address);
+        cache.evict(address);
 
         res.json({
           status: "expired",
           expiresAt: stored.expiresAt,
+        });
+        return;
+      }
+
+      if (stored.policyHash !== backendDelegationPolicyHash(config.did)) {
+        await store.remove(address);
+        cache.evict(address);
+
+        res.json({
+          status: "none",
+          expiresAt: null,
         });
         return;
       }
@@ -164,4 +174,68 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
   });
 
   return router;
+}
+
+function extractDelegationResources(delegation: PortableDelegationSet): ServerInfoPermission[] {
+  return portableDelegations(delegation).flatMap(extractSingleDelegationResources);
+}
+
+function extractSingleDelegationResources(delegation: {
+  resources?: unknown;
+}): ServerInfoPermission[] {
+  if (!Array.isArray(delegation.resources)) return [];
+
+  return delegation.resources.flatMap((resource) => {
+    if (
+      typeof resource !== "object" ||
+      resource === null ||
+      !("service" in resource) ||
+      !("path" in resource) ||
+      !("actions" in resource)
+    ) {
+      return [];
+    }
+
+    const entry = resource as {
+      service?: unknown;
+      space?: unknown;
+      path?: unknown;
+      actions?: unknown;
+    };
+
+    if (
+      typeof entry.service !== "string" ||
+      typeof entry.path !== "string" ||
+      !Array.isArray(entry.actions) ||
+      !entry.actions.every((action) => typeof action === "string")
+    ) {
+      return [];
+    }
+
+    const service = normalizeDelegationService(entry.service);
+
+    return [
+      {
+        service,
+        ...(typeof entry.space === "string"
+          ? { space: normalizeDelegationSpace(entry.space) }
+          : {}),
+        path: entry.path,
+        actions: entry.actions.map((action) => normalizeDelegationAction(action, service)),
+      },
+    ];
+  });
+}
+
+function normalizeDelegationService(service: string): string {
+  return service.startsWith("tinycloud.") ? service : `tinycloud.${service}`;
+}
+
+function normalizeDelegationSpace(space: string): string {
+  const parts = space.split(":");
+  return parts.at(-1) || space;
+}
+
+function normalizeDelegationAction(action: string, service: string): string {
+  return action.includes("/") ? action : `${service}/${action}`;
 }

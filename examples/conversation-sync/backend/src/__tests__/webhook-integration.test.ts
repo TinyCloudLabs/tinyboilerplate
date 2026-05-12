@@ -10,9 +10,9 @@ import type { FullTranscript } from "../services/fireflies-client.js";
 // ── Constants ───────────────────────────────────────────────────────
 
 const SECRET = "integration-test-webhook-secret";
-const SECRET_KV_KEY = "/app.webhooks/config/fireflies-secret";
-const PENDING_KV_KEY = "/app.webhooks/pending/fireflies";
-const FIREFLIES_KEY_PATH = "/app.conversations/config/fireflies-key";
+const SECRET_KV_KEY = "xyz.tinycloud.listen/webhooks/config/fireflies-secret";
+const PENDING_KV_KEY = "xyz.tinycloud.listen/webhooks/pending/fireflies";
+const FIREFLIES_KEY_PATH = "config/fireflies-key";
 
 // ── Test Helpers ────────────────────────────────────────────────────
 
@@ -39,15 +39,7 @@ export function mockFirefliesTranscript(
     id: meetingId,
     title: overrides.title ?? `Meeting ${meetingId}`,
     date: overrides.date ?? 1711000000000,
-<<<<<<< HEAD
-<<<<<<< HEAD
     duration: overrides.duration ?? 30,
-=======
-    duration: overrides.duration ?? 1800,
->>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
-=======
-    duration: overrides.duration ?? 30,
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     organizer_email: overrides.organizer_email ?? "organizer@example.com",
     transcript_url: overrides.transcript_url ?? `https://app.fireflies.ai/view/${meetingId}`,
     speakers: overrides.speakers ?? [
@@ -186,7 +178,17 @@ function createMockAccess(apiKey?: string) {
   const sql = createMockSQL();
   if (apiKey) kv._data.set(FIREFLIES_KEY_PATH, apiKey);
 
-  return { kv, sql };
+  return {
+    kv,
+    sql,
+    secrets: {
+      get: async () => {
+        const val = kv._data.get(FIREFLIES_KEY_PATH);
+        if (val === undefined) return { ok: false, error: { code: "KEY_NOT_FOUND" } };
+        return { ok: true, data: val };
+      },
+    },
+  };
 }
 
 function mockAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
@@ -231,15 +233,7 @@ describe("Webhook Integration Tests", () => {
       "/api/webhooks",
       createWebhookRouter({
         backendKV,
-<<<<<<< HEAD
-<<<<<<< HEAD
         tryGetDelegatedAccess: async () => (delegationActive ? (mockAccess as any) : null),
-=======
-        tryGetDelegatedAccess: async () => (delegationActive ? mockAccess as any : null),
->>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
-=======
-        tryGetDelegatedAccess: async () => (delegationActive ? (mockAccess as any) : null),
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         authMiddleware: mockAuthMiddleware,
         delegationMiddleware,
         syncFn: syncSingleTranscript,
@@ -322,7 +316,7 @@ describe("Webhook Integration Tests", () => {
 
       // Verify transcript blob was stored in KV
       const convId = json.conversationId;
-      const kvKey = `/app.conversations/transcript/${convId}`;
+      const kvKey = `transcript/${convId}`;
       const storedBlob = mockAccess.kv._data.get(kvKey);
       expect(storedBlob).toBeDefined();
       const parsed = JSON.parse(storedBlob!);
@@ -444,8 +438,6 @@ describe("Webhook Integration Tests", () => {
       mockAccess.sql._insertedRows.push({
         table: "conversation",
         values: [
-<<<<<<< HEAD
-<<<<<<< HEAD
           "existing-conv-id", // id
           "Already Synced Meeting", // title
           "fireflies", // source
@@ -458,33 +450,6 @@ describe("Webhook Integration Tests", () => {
           "{}", // metadata
           "2026-01-01T00:00:00Z", // created_at
           "2026-01-01T00:00:00Z", // updated_at
-=======
-          "existing-conv-id",      // id
-=======
-          "existing-conv-id", // id
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-          "Already Synced Meeting", // title
-          "fireflies", // source
-          "already-synced", // source_id
-          "https://app.fireflies.ai/view/already-synced", // source_url
-<<<<<<< HEAD
-          "2026-01-01T00:00:00Z",  // started_at
-          "2026-01-01T00:30:00Z",  // ended_at
-          1800,                    // duration_secs
-          "Overview text",         // summary
-          "{}",                    // metadata
-          "2026-01-01T00:00:00Z",  // created_at
-          "2026-01-01T00:00:00Z",  // updated_at
->>>>>>> 8b3d7eb (TC-1317: Integration tests + OpenAPI spec update for webhook endpoints)
-=======
-          "2026-01-01T00:00:00Z", // started_at
-          "2026-01-01T00:30:00Z", // ended_at
-          1800, // duration_secs
-          "Overview text", // summary
-          "{}", // metadata
-          "2026-01-01T00:00:00Z", // created_at
-          "2026-01-01T00:00:00Z", // updated_at
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
         ],
       });
 

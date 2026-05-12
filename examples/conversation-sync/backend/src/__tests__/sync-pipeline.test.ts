@@ -33,23 +33,12 @@ function createMockSQL() {
 
   return {
     _calls: calls,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     _setDedupSourceIds(ids: string[]) {
       dedupRows = ids;
     },
     _setExecuteFail(fail: boolean) {
       shouldFailExecute = fail;
     },
-<<<<<<< HEAD
-=======
-    _setDedupSourceIds(ids: string[]) { dedupRows = ids; },
-    _setExecuteFail(fail: boolean) { shouldFailExecute = fail; },
->>>>>>> 100e01d (TC-1311: Extract syncSingleTranscript() from sync.ts for reuse)
-=======
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
     query: async (sql: string, params?: any[]) => {
       calls.push({ method: "query", sql, params });
 
@@ -235,7 +224,7 @@ describe("syncSingleTranscript", () => {
     const result = await syncSingleTranscript("ff-1", mockAccess as any, mockClient);
 
     expect(result.status).toBe("created");
-    const kvKey = `/app.conversations/transcript/${result.conversationId}`;
+    const kvKey = `transcript/${result.conversationId}`;
     const storedBlob = mockKV._data.get(kvKey);
     expect(storedBlob).toBeDefined();
 

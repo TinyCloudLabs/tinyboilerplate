@@ -7,10 +7,10 @@ import type { SubscriptionMetadata, RenewalResult } from "../services/pubsub-man
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const SUBSCRIPTION_KV_KEY = "/app.webhooks/config/google-meet-subscription";
-const PENDING_KV_KEY = "/app.webhooks/pending/google-meet";
-const FAILED_KV_KEY = "/app.webhooks/failed/google-meet";
-const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
+const SUBSCRIPTION_KV_KEY = "xyz.tinycloud.listen/webhooks/config/google-meet-subscription";
+const PENDING_KV_KEY = "xyz.tinycloud.listen/webhooks/pending/google-meet";
+const FAILED_KV_KEY = "xyz.tinycloud.listen/webhooks/failed/google-meet";
+const GOOGLE_TOKENS_PATH = "config/google-tokens";
 const EXPECTED_AUDIENCE = "https://example.com/api/webhooks/google-meet";
 const EXPECTED_EMAIL = "sa@project.iam.gserviceaccount.com";
 
@@ -118,9 +118,11 @@ describe("GET /api/webhooks/google-meet/check", () => {
     backendKV = createMockKV();
     mockAccess = createMockAccess();
 
-    checkAndRenewFn = mock(async (): Promise<RenewalResult> => ({
-      status: "active",
-    }));
+    checkAndRenewFn = mock(
+      async (): Promise<RenewalResult> => ({
+        status: "active",
+      }),
+    );
 
     const app = createApp();
     ({ server, port } = await startServer(app));
@@ -209,10 +211,12 @@ describe("GET /api/webhooks/google-meet/check", () => {
       expiresAt: newExpiry,
     };
 
-    checkAndRenewFn = mock(async (): Promise<RenewalResult> => ({
-      status: "renewed",
-      metadata: renewedMetadata,
-    }));
+    checkAndRenewFn = mock(
+      async (): Promise<RenewalResult> => ({
+        status: "renewed",
+        metadata: renewedMetadata,
+      }),
+    );
     await closeServer(server);
     const app = createApp();
     ({ server, port } = await startServer(app));

@@ -1,14 +1,8 @@
 import { Router } from "express";
 import type { Request, Response, RequestHandler } from "express";
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { ensureSchema } from "../schema.js";
-=======
-import { ensureSchema, DATABASE_NAME } from "../schema.js";
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-import { ensureSchema } from "../schema.js";
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+import type { NormalizedConversation } from "../adapters/types.js";
+import { conversationSql, ensureSchema } from "../schema.js";
+import { persistConversation } from "../services/persist-conversation.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -22,10 +16,16 @@ interface ConversationsRoutesConfig {
 const DEFAULT_LIMIT = 20;
 const DEFAULT_OFFSET = 0;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+interface ManualTranscriptImportBody {
+  title?: unknown;
+  transcriptText?: unknown;
+  startedAt?: unknown;
+  durationSecs?: unknown;
+  summary?: unknown;
+  sourceUrl?: unknown;
+  participants?: unknown;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /**
@@ -44,11 +44,178 @@ function rowsToObjects(rows: unknown[][], columns: string[]): Record<string, unk
   return rows.map((row) => rowToObject(row, columns));
 }
 
-<<<<<<< HEAD
-=======
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+function cleanRequiredString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`${field} is required`);
+  }
+  return value.trim();
+}
+
+function cleanOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim();
+  return cleaned === "" ? null : cleaned;
+}
+
+function parseParticipants(value: unknown): string[] {
+  const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[,;\n]/) : [];
+
+  return Array.from(
+    new Set(
+      raw
+        .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+        .filter((entry) => entry.length > 0),
+    ),
+  );
+}
+
+function parseTimestamp(value: string): number | null {
+  const parts = value.split(":").map((part) => Number(part.replace(",", ".")));
+  if (parts.some((part) => Number.isNaN(part))) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return null;
+}
+
+function estimateDuration(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(4, Math.ceil(words / 2.5));
+}
+
+function parseTranscriptText(
+  transcriptText: string,
+  participantNames: string[],
+): {
+  transcript: Array<{
+    index: number;
+    speaker_id: string;
+    speaker_name: string;
+    text: string;
+    start_time: number;
+    end_time: number;
+  }>;
+  speakers: string[];
+} {
+  const transcript: Array<{
+    index: number;
+    speaker_id: string;
+    speaker_name: string;
+    text: string;
+    start_time: number;
+    end_time: number;
+  }> = [];
+  let pendingStart: number | null = null;
+
+  for (const rawLine of transcriptText.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line === "WEBVTT" || /^\d+$/.test(line)) continue;
+
+    const rangeMatch = line.match(
+      /^(\d{1,2}:\d{2}(?::\d{2})?(?:[,.]\d+)?)\s+-->\s+(\d{1,2}:\d{2}(?::\d{2})?(?:[,.]\d+)?)/,
+    );
+    if (rangeMatch) {
+      pendingStart = parseTimestamp(rangeMatch[1]);
+      continue;
+    }
+
+    const voiceMatch = line.match(/^<v\s+([^>]+)>(.+)$/i);
+    const timedSpeakerMatch = line.match(
+      /^\[?(\d{1,2}:\d{2}(?::\d{2})?(?:[,.]\d+)?)\]?\s+([^:]{1,80}):\s+(.+)$/,
+    );
+    const speakerMatch = line.match(/^([^:]{1,80}):\s+(.+)$/);
+
+    let speakerName = participantNames[0] ?? "Speaker";
+    let text = line;
+    let startTime = pendingStart ?? transcript.length * 15;
+
+    if (voiceMatch) {
+      speakerName = voiceMatch[1].trim();
+      text = voiceMatch[2].trim();
+    } else if (timedSpeakerMatch) {
+      startTime = parseTimestamp(timedSpeakerMatch[1]) ?? startTime;
+      speakerName = timedSpeakerMatch[2].trim();
+      text = timedSpeakerMatch[3].trim();
+    } else if (speakerMatch) {
+      speakerName = speakerMatch[1].trim();
+      text = speakerMatch[2].trim();
+    }
+
+    pendingStart = null;
+    if (!text) continue;
+
+    transcript.push({
+      index: transcript.length,
+      speaker_id: speakerName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "speaker",
+      speaker_name: speakerName,
+      text,
+      start_time: startTime,
+      end_time: startTime + estimateDuration(text),
+    });
+  }
+
+  if (transcript.length === 0) {
+    const text = transcriptText.trim();
+    transcript.push({
+      index: 0,
+      speaker_id: "speaker",
+      speaker_name: participantNames[0] ?? "Speaker",
+      text,
+      start_time: 0,
+      end_time: estimateDuration(text),
+    });
+  }
+
+  const speakers = Array.from(
+    new Set([...participantNames, ...transcript.map((line) => line.speaker_name)]),
+  );
+  return { transcript, speakers };
+}
+
+function normalizeManualTranscript(body: ManualTranscriptImportBody): NormalizedConversation {
+  const title = cleanRequiredString(body.title, "title");
+  const transcriptText = cleanRequiredString(body.transcriptText, "transcriptText");
+  const participantNames = parseParticipants(body.participants);
+  const { transcript, speakers } = parseTranscriptText(transcriptText, participantNames);
+  const startedAtRaw = cleanOptionalString(body.startedAt);
+  const startedAt = startedAtRaw ? new Date(startedAtRaw) : new Date();
+  if (Number.isNaN(startedAt.getTime())) {
+    throw new Error("startedAt must be a valid date");
+  }
+
+  const explicitDuration = Number(body.durationSecs);
+  const durationSecs =
+    Number.isFinite(explicitDuration) && explicitDuration > 0
+      ? explicitDuration
+      : Math.max(...transcript.map((line) => line.end_time));
+  const id = crypto.randomUUID();
+
+  return {
+    conversation: {
+      id,
+      title,
+      source: "manual",
+      source_id: `manual:${id}`,
+      source_url: cleanOptionalString(body.sourceUrl),
+      started_at: startedAt.toISOString(),
+      ended_at: new Date(startedAt.getTime() + durationSecs * 1000).toISOString(),
+      duration_secs: durationSecs,
+      summary: cleanOptionalString(body.summary),
+      metadata: {
+        import_type: "transcript",
+        imported_at: new Date().toISOString(),
+        line_count: transcript.length,
+      },
+    },
+    participants: speakers.map((name) => ({
+      id: crypto.randomUUID(),
+      name,
+      email: null,
+      speaker_label: name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || null,
+    })),
+    transcript,
+  };
+}
+
 // ── Conversations Routes ─────────────────────────────────────────────
 
 export function createConversationsRouter(config: ConversationsRoutesConfig) {
@@ -68,21 +235,14 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
     try {
       await ensureSchema(access);
+      const sqlDb = conversationSql(access);
 
-<<<<<<< HEAD
-      // Total count
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-      const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
-=======
       // Total count — with optional source filter
       const countSql = source
         ? `SELECT COUNT(*) AS total FROM conversation WHERE source = ?`
         : `SELECT COUNT(*) AS total FROM conversation`;
       const countParams = source ? [source] : [];
-      const countResult = await access.sql.query(countSql, countParams);
->>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
+      const countResult = await sqlDb.query(countSql, countParams);
       let total = 0;
       if (countResult.ok && countResult.data.rows?.[0]) {
         const countRow = rowToObject(
@@ -93,36 +253,6 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       }
 
       // Paginated list with participant_count subquery
-<<<<<<< HEAD
-      const listResult = await access.sql.query(
-=======
-      const countResult = await access.sql.execute(
-=======
-      const countResult = await access.sql.query(
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
-        `SELECT COUNT(*) AS total FROM conversation`,
-      );
-=======
-      const countResult = await access.sql.query(`SELECT COUNT(*) AS total FROM conversation`);
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-      let total = 0;
-      if (countResult.ok && countResult.data.rows?.[0]) {
-        const countRow = rowToObject(
-          countResult.data.rows[0] as unknown[],
-          countResult.data.columns,
-        );
-        total = Number(countRow.total) || 0;
-      }
-
-      // Paginated list with participant_count subquery
-<<<<<<< HEAD
-      const listResult = await access.sql.execute(
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-      const listResult = await access.sql.query(
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
-        `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
-=======
       const listSql = source
         ? `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
            (SELECT COUNT(*) FROM participant p WHERE p.conversation_id = c.id) AS participant_count
@@ -131,33 +261,42 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
          ORDER BY c.started_at DESC
          LIMIT ? OFFSET ?`
         : `SELECT c.id, c.title, c.source, c.source_url, c.started_at, c.duration_secs, c.summary, c.created_at,
->>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
            (SELECT COUNT(*) FROM participant p WHERE p.conversation_id = c.id) AS participant_count
          FROM conversation c
          ORDER BY c.started_at DESC
          LIMIT ? OFFSET ?`;
       const listParams = source ? [source, limit, offset] : [limit, offset];
-      const listResult = await access.sql.query(listSql, listParams);
+      const listResult = await sqlDb.query(listSql, listParams);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
       const conversations = listResult.ok
         ? rowsToObjects(listResult.data.rows as unknown[][], listResult.data.columns)
         : [];
-=======
-      const conversations = listResult.ok ? (listResult.rows ?? []) : [];
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-      const conversations = listResult.ok
-        ? rowsToObjects(listResult.data.rows as unknown[][], listResult.data.columns)
-        : [];
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
 
       res.json({ conversations, total });
     } catch (err) {
       console.error("[conversations] list failed:", err);
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: "list_failed", message });
+    }
+  });
+
+  // ── POST /import — manually import a pasted/uploaded transcript ──
+  router.post("/import", async (req: Request, res: Response) => {
+    const access = req.delegatedAccess!;
+
+    try {
+      await ensureSchema(access);
+      const normalized = normalizeManualTranscript(req.body ?? {});
+      await persistConversation(access, normalized);
+      res.status(201).json({
+        conversationId: normalized.conversation.id,
+        title: normalized.conversation.title,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status = message.includes("is required") || message.includes("valid date") ? 400 : 500;
+      if (status >= 500) console.error("[conversations] import failed:", err);
+      res.status(status).json({ error: "import_failed", message });
     }
   });
 
@@ -168,68 +307,26 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
 
     try {
       await ensureSchema(access);
+      const sqlDb = conversationSql(access);
 
       // Fetch conversation
-<<<<<<< HEAD
-<<<<<<< HEAD
-      const convoResult = await access.sql.query(
-=======
-      const convoResult = await access.sql.execute(
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-      const convoResult = await access.sql.query(
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
+      const convoResult = await sqlDb.query(
         `SELECT id, title, source, source_id, source_url, started_at, ended_at, duration_secs, summary, metadata, created_at, updated_at
          FROM conversation WHERE id = ?`,
         [id],
       );
 
-<<<<<<< HEAD
-<<<<<<< HEAD
       if (!convoResult.ok || !convoResult.data.rows?.length) {
-=======
-      const row = convoResult.ok && convoResult.rows?.[0]
-        ? (convoResult.rows[0] as any)
-        : null;
-
-      if (!row) {
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-      if (!convoResult.ok || !convoResult.data.rows?.length) {
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         res.status(404).json({ error: "not_found", message: `Conversation ${id} not found` });
         return;
       }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
       const row = rowToObject(convoResult.data.rows[0] as unknown[], convoResult.data.columns);
 
       // Parse metadata from JSON string
       let metadata: Record<string, unknown> = {};
       try {
         metadata = row.metadata ? JSON.parse(String(row.metadata)) : {};
-=======
-      // Parse metadata from JSON string
-      let metadata: Record<string, unknown> = {};
-      try {
-        metadata = row.metadata ? JSON.parse(row.metadata) : {};
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-      const row = rowToObject(
-        convoResult.data.rows[0] as unknown[],
-        convoResult.data.columns,
-      );
-=======
-      const row = rowToObject(convoResult.data.rows[0] as unknown[], convoResult.data.columns);
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-
-      // Parse metadata from JSON string
-      let metadata: Record<string, unknown> = {};
-      try {
-        metadata = row.metadata ? JSON.parse(String(row.metadata)) : {};
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
       } catch {
         metadata = {};
       }
@@ -237,9 +334,7 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
       const conversation = { ...row, metadata };
 
       // Fetch participants
-<<<<<<< HEAD
-<<<<<<< HEAD
-      const participantsResult = await access.sql.query(
+      const participantsResult = await sqlDb.query(
         `SELECT id, name, email, speaker_label FROM participant WHERE conversation_id = ?`,
         [id],
       );
@@ -248,11 +343,10 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
             participantsResult.data.rows as unknown[][],
             participantsResult.data.columns,
           )
-<<<<<<< HEAD
         : [];
 
       // Load transcript blob from KV
-      const kvKey = `/app.conversations/transcript/${id}`;
+      const kvKey = `transcript/${id}`;
       console.log(`[conversations] Loading transcript from KV: ${kvKey}`);
       const kvResult = await access.kv.get(kvKey);
       console.log(
@@ -270,48 +364,6 @@ export function createConversationsRouter(config: ConversationsRoutesConfig) {
           }
         } else {
           transcript = raw;
-=======
-      const participantsResult = await access.sql.execute(
-=======
-      const participantsResult = await access.sql.query(
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
-        `SELECT id, name, email, speaker_label FROM participant WHERE conversation_id = ?`,
-        [id],
-      );
-      const participants = participantsResult.ok
-        ? rowsToObjects(participantsResult.data.rows as unknown[][], participantsResult.data.columns)
-=======
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-        : [];
-
-      // Load transcript blob from KV
-      const kvKey = `/app.conversations/transcript/${id}`;
-      console.log(`[conversations] Loading transcript from KV: ${kvKey}`);
-      const kvResult = await access.kv.get(kvKey);
-      console.log(
-        `[conversations] KV result ok=${kvResult.ok}, hasData=${kvResult.ok && kvResult.data?.data != null}, type=${kvResult.ok ? typeof kvResult.data?.data : "n/a"}`,
-      );
-      let transcript: unknown = null;
-<<<<<<< HEAD
-      if (transcriptBlob) {
-        try {
-          transcript = JSON.parse(transcriptBlob);
-        } catch {
-          transcript = null;
->>>>>>> 0638c1c (TC-1304: Add GET /api/conversations and GET /api/conversations/:id read endpoints)
-=======
-      if (kvResult.ok && kvResult.data.data) {
-        const raw = kvResult.data.data;
-        // KV may return already-parsed object or a JSON string
-        if (typeof raw === "string") {
-          try {
-            transcript = JSON.parse(raw);
-          } catch {
-            transcript = null;
-          }
-        } else {
-          transcript = raw;
->>>>>>> 3b4de56 (chore: include remaining conversation-sync backend and shared changes)
         }
       }
 

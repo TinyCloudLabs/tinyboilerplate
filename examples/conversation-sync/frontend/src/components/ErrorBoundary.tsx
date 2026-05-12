@@ -30,17 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div style={s.card}>
             <span style={s.icon}>!</span>
             <h2 style={s.heading}>Something went wrong</h2>
-<<<<<<< HEAD
-<<<<<<< HEAD
             <p style={s.message}>{this.state.error?.message || "An unexpected error occurred."}</p>
-=======
-            <p style={s.message}>
-              {this.state.error?.message || "An unexpected error occurred."}
-            </p>
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-=======
-            <p style={s.message}>{this.state.error?.message || "An unexpected error occurred."}</p>
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
             <div style={s.btnRow}>
               <button
                 onClick={() => this.setState({ hasError: false, error: null })}
@@ -61,8 +51,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-const FONT = "'Outfit', -apple-system, sans-serif";
-const MONO = "'IBM Plex Mono', 'SF Mono', monospace";
+const FONT = "var(--lst-font)";
+const MONO = "var(--lst-mono)";
 
 const s: Record<string, React.CSSProperties> = {
   container: {
@@ -74,10 +64,9 @@ const s: Record<string, React.CSSProperties> = {
   card: {
     textAlign: "center" as const,
     padding: "32px 28px",
-    background: "#fff",
-    border: "1px solid #e2e4e9",
-    borderLeft: "3px solid #ef4444",
-    borderRadius: 12,
+    background: "var(--lst-bg)",
+    border: "var(--lst-border)",
+    borderRadius: 0,
   },
   icon: {
     display: "inline-flex",
@@ -86,8 +75,8 @@ const s: Record<string, React.CSSProperties> = {
     width: 32,
     height: 32,
     borderRadius: "50%",
-    background: "#fef2f2",
-    color: "#ef4444",
+    background: "var(--lst-blue)",
+    color: "var(--lst-bg)",
     fontSize: 16,
     fontWeight: 700,
     marginBottom: 12,
@@ -95,15 +84,15 @@ const s: Record<string, React.CSSProperties> = {
   heading: {
     fontFamily: FONT,
     fontSize: 18,
-    fontWeight: 700,
-    color: "#18181b",
+    fontWeight: 400,
+    color: "var(--lst-blue)",
     margin: "0 0 8px",
-    letterSpacing: "-0.01em",
+    letterSpacing: 0,
   },
   message: {
     fontFamily: MONO,
     fontSize: 13,
-    color: "#991b1b",
+    color: "var(--lst-blue)",
     margin: "0 0 20px",
     wordBreak: "break-word" as const,
     lineHeight: 1.5,
@@ -118,10 +107,10 @@ const s: Record<string, React.CSSProperties> = {
     padding: "9px 20px",
     fontSize: 13,
     fontWeight: 600,
-    color: "#fff",
-    background: "#18181b",
-    border: "none",
-    borderRadius: 8,
+    color: "var(--lst-bg)",
+    background: "var(--lst-blue)",
+    border: "var(--lst-border)",
+    borderRadius: 999,
     cursor: "pointer",
   },
   btnGhost: {
@@ -129,10 +118,10 @@ const s: Record<string, React.CSSProperties> = {
     padding: "8px 20px",
     fontSize: 13,
     fontWeight: 500,
-    color: "#6b7280",
+    color: "var(--lst-blue)",
     background: "transparent",
-    border: "1px solid #e2e4e9",
-    borderRadius: 8,
+    border: "var(--lst-border)",
+    borderRadius: 999,
     cursor: "pointer",
   },
 };

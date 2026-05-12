@@ -6,7 +6,8 @@ import { GoogleMeetClient } from "../services/google-meet-client.js";
 import type { ConferenceRecord, FullConference } from "../services/google-meet-client.js";
 import { normalizeGoogleMeet } from "../adapters/google-meet.js";
 import { persistConversation } from "../services/persist-conversation.js";
-import { ensureSchema } from "../schema.js";
+import { conversationSql, ensureSchema } from "../schema.js";
+import { resolveAppPath } from "../manifest.js";
 import { GoogleAuthRevokedError } from "../services/google-auth.js";
 import type { SyncSingleResult } from "../services/google-meet-sync.js";
 import { checkAndRenewSubscription as defaultCheckAndRenew } from "../services/pubsub-manager.js";
@@ -53,10 +54,10 @@ export interface GoogleMeetPushConfig {
 
 // ── Constants ────────────────────────────────────────────────────────
 
-const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
-const PENDING_KV_KEY = "/app.webhooks/pending/google-meet";
-const FAILED_KV_KEY = "/app.webhooks/failed/google-meet";
-const SUBSCRIPTION_KV_KEY = "/app.webhooks/config/google-meet-subscription";
+const GOOGLE_TOKENS_PATH = "config/google-tokens";
+const PENDING_KV_KEY = resolveAppPath("webhooks/pending/google-meet");
+const FAILED_KV_KEY = resolveAppPath("webhooks/failed/google-meet");
+const SUBSCRIPTION_KV_KEY = resolveAppPath("webhooks/config/google-meet-subscription");
 const TRANSCRIPT_EVENT_TYPE = "google.workspace.meet.transcript.v2.fileGenerated";
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -77,7 +78,11 @@ interface PendingItem {
   receivedAt: string;
 }
 
-async function storePending(backendKV: BackendKV, conferenceRecordName: string, transcriptName?: string) {
+async function storePending(
+  backendKV: BackendKV,
+  conferenceRecordName: string,
+  transcriptName?: string,
+) {
   const existingResult = await backendKV.get(PENDING_KV_KEY);
   let pending: PendingItem[] = [];
 
@@ -139,8 +144,10 @@ async function defaultSyncConference(
 ): Promise<SyncSingleResult> {
   // Inline implementation that mirrors syncSingleConference but takes a name string
   try {
+    const sqlDb = conversationSql(access);
+
     // 1. Dedup
-    const dedupResult = await access.sql.query(
+    const dedupResult = await sqlDb.query(
       `SELECT source_id FROM conversation WHERE source = 'google-meet' AND source_id = ?`,
       [conferenceRecordName],
     );
@@ -200,7 +207,9 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
     // 1. Verify OIDC token
     const authHeader = req.headers.authorization ?? "";
     if (!verifyToken(authHeader, expectedAudience, expectedEmail)) {
-      res.status(401).json({ error: "invalid_oidc_token", message: "Invalid or missing OIDC token" });
+      res
+        .status(401)
+        .json({ error: "invalid_oidc_token", message: "Invalid or missing OIDC token" });
       return;
     }
 
@@ -271,7 +280,7 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
 
     let tokens: { access_token: string; refresh_token?: string };
     try {
-      tokens = JSON.parse(tokensRaw);
+      tokens = JSON.parse(tokensRaw as string);
     } catch {
       console.log("[google-meet-webhook] invalid token JSON — queuing to pending");
       await storePending(backendKV, conferenceRecordName);
@@ -280,7 +289,7 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
     }
 
     // 7. Dedup check
-    const dedupResult = await access.sql.query(
+    const dedupResult = await conversationSql(access).query(
       `SELECT source_id FROM conversation WHERE source = 'google-meet' AND source_id = ?`,
       [conferenceRecordName],
     );
@@ -289,7 +298,9 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
       for (const row of dedupResult.data.rows) {
         const val = Array.isArray(row) ? row[0] : (row as any).source_id;
         if (String(val) === conferenceRecordName) {
-          console.log(`[google-meet-webhook] already synced — conferenceRecordName=${conferenceRecordName}`);
+          console.log(
+            `[google-meet-webhook] already synced — conferenceRecordName=${conferenceRecordName}`,
+          );
           res.json({ status: "skipped", conferenceRecordName });
           return;
         }
@@ -325,14 +336,19 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
       });
     } catch (err) {
       if (err instanceof GoogleAuthRevokedError) {
-        console.log(`[google-meet-webhook] auth revoked — queuing conferenceRecordName=${conferenceRecordName}`);
+        console.log(
+          `[google-meet-webhook] auth revoked — queuing conferenceRecordName=${conferenceRecordName}`,
+        );
         await storePending(backendKV, conferenceRecordName);
         res.json({ status: "pending", reason: "auth_revoked" });
         return;
       }
 
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error(`[google-meet-webhook] error processing conferenceRecordName=${conferenceRecordName}:`, err);
+      console.error(
+        `[google-meet-webhook] error processing conferenceRecordName=${conferenceRecordName}:`,
+        err,
+      );
       await storeFailed(backendKV, conferenceRecordName, errorMessage);
       res.json({ status: "error", conferenceRecordName, error: errorMessage });
     }
@@ -360,13 +376,15 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
       const tokensRaw = tokensResult.ok && tokensResult.data.data ? tokensResult.data.data : null;
 
       if (!tokensRaw) {
-        res.status(400).json({ error: "no_google_tokens", message: "Google tokens not configured" });
+        res
+          .status(400)
+          .json({ error: "no_google_tokens", message: "Google tokens not configured" });
         return;
       }
 
       let tokens: { access_token: string; refresh_token?: string };
       try {
-        tokens = JSON.parse(tokensRaw);
+        tokens = JSON.parse(tokensRaw as string);
       } catch {
         res.status(400).json({ error: "no_google_tokens", message: "Invalid Google token data" });
         return;
@@ -435,13 +453,15 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
       const tokensRaw = tokensResult.ok && tokensResult.data.data ? tokensResult.data.data : null;
 
       if (!tokensRaw) {
-        res.status(400).json({ error: "no_google_tokens", message: "Google tokens not configured" });
+        res
+          .status(400)
+          .json({ error: "no_google_tokens", message: "Google tokens not configured" });
         return;
       }
 
       let tokens: { access_token: string };
       try {
-        tokens = JSON.parse(tokensRaw);
+        tokens = JSON.parse(tokensRaw as string);
       } catch {
         res.status(400).json({ error: "no_google_tokens", message: "Invalid Google token data" });
         return;
@@ -458,7 +478,11 @@ export function createGoogleMeetPushRouter(config: GoogleMeetPushConfig) {
         res.json({ status: "renewed", expiresAt: result.metadata.expiresAt });
       } else {
         // lapsed
-        res.json({ status: "lapsed", message: "Subscription expired. Please reconnect Google Meet to resume automatic syncing." });
+        res.json({
+          status: "lapsed",
+          message:
+            "Subscription expired. Please reconnect Google Meet to resume automatic syncing.",
+        });
       }
     });
   }

@@ -6,9 +6,9 @@ import { createGoogleMeetPushRouter } from "../routes/google-meet-webhooks.js";
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const PENDING_KV_KEY = "/app.webhooks/pending/google-meet";
-const FAILED_KV_KEY = "/app.webhooks/failed/google-meet";
-const GOOGLE_TOKENS_PATH = "/app.conversations/config/google-tokens";
+const PENDING_KV_KEY = "xyz.tinycloud.listen/webhooks/pending/google-meet";
+const FAILED_KV_KEY = "xyz.tinycloud.listen/webhooks/failed/google-meet";
+const GOOGLE_TOKENS_PATH = "config/google-tokens";
 const EXPECTED_AUDIENCE = "https://example.com/api/webhooks/google-meet";
 const EXPECTED_EMAIL = "sa@project.iam.gserviceaccount.com";
 
@@ -206,10 +206,7 @@ describe("GET /api/webhooks/google-meet/pending", () => {
   });
 
   it("removes processed items from pending queue", async () => {
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("conferenceRecords/abc")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("conferenceRecords/abc")));
 
     await getPending();
 
@@ -229,10 +226,7 @@ describe("GET /api/webhooks/google-meet/pending", () => {
     const app = createApp();
     ({ server, port } = await startServer(app));
 
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("conferenceRecords/abc")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("conferenceRecords/abc")));
 
     const res = await getPending();
     const body = await res.json();
@@ -291,10 +285,7 @@ describe("GET /api/webhooks/google-meet/pending", () => {
     const app = createApp();
     ({ server, port } = await startServer(app));
 
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("conferenceRecords/fail1")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("conferenceRecords/fail1")));
 
     await getPending();
 
@@ -333,10 +324,7 @@ describe("GET /api/webhooks/google-meet/pending", () => {
     );
     ({ server, port } = await startServer(app));
 
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("conferenceRecords/abc")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("conferenceRecords/abc")));
 
     const res = await getPending();
     expect(res.status).toBe(400);
@@ -432,7 +420,9 @@ describe("DELETE /api/webhooks/google-meet/pending", () => {
   it("clears all pending items and returns count", async () => {
     backendKV._data.set(
       PENDING_KV_KEY,
-      JSON.stringify(pendingItems("conferenceRecords/a", "conferenceRecords/b", "conferenceRecords/c")),
+      JSON.stringify(
+        pendingItems("conferenceRecords/a", "conferenceRecords/b", "conferenceRecords/c"),
+      ),
     );
 
     const res = await deletePending();
@@ -442,10 +432,7 @@ describe("DELETE /api/webhooks/google-meet/pending", () => {
   });
 
   it("empties the pending queue in KV", async () => {
-    backendKV._data.set(
-      PENDING_KV_KEY,
-      JSON.stringify(pendingItems("conferenceRecords/a")),
-    );
+    backendKV._data.set(PENDING_KV_KEY, JSON.stringify(pendingItems("conferenceRecords/a")));
 
     await deletePending();
 

@@ -6,3 +6,7 @@ dist/
 .DS_Store
 bun.lock
 *.pem
+.turbo/
+.claude/
+test/.passkey.json
+test/.last-run.log

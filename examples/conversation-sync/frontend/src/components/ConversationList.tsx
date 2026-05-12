@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback, type FC } from "react";
+import { useState, useEffect, useCallback, useRef, type FC, type MouseEvent } from "react";
 import type { ApiClient } from "@tinyboilerplate/client";
+import { InboxFilters, type SourceFilter } from "./InboxFilters";
+import { InboxBulkBar } from "./InboxBulkBar";
+import { InboxRow, InboxRowGrid } from "./InboxRow";
 
 interface Conversation {
   id: string;
@@ -26,62 +29,28 @@ interface ConversationListProps {
 
 const PAGE_SIZE = 20;
 
-function formatDuration(secs: number): string {
-<<<<<<< HEAD
-<<<<<<< HEAD
-  if (secs >= 3600) return `${Math.round(secs / 3600)} hr`;
-  return `${Math.round(secs / 60)} min`;
+function formatGroupDate(isoString: string): string {
+  return new Date(isoString).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-/** Strip markdown artifacts and collapse to a clean plain-text snippet. */
-function cleanSummary(str: string, max: number): string {
-  const clean = str
-    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
-    .replace(/^[-*]\s+/gm, "") // bullet prefixes
-    .replace(/\n+/g, " ") // newlines → spaces
-    .replace(/\s{2,}/g, " ") // collapse whitespace
-<<<<<<< HEAD
-    .trim();
-  return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
-=======
-  if (secs >= 3600) {
-    const hours = Math.round(secs / 3600);
-    return `${hours} hr`;
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
   }
-  const minutes = Math.round(secs / 60);
-  return `${minutes} min`;
-=======
-  if (secs >= 3600) return `${Math.round(secs / 3600)} hr`;
-  return `${Math.round(secs / 60)} min`;
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-}
 
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-<<<<<<< HEAD
-function truncateSummary(summary: string, maxLen = 100): string {
-  if (summary.length <= maxLen) return summary;
-  return summary.slice(0, maxLen) + "\u2026";
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
-/** Strip markdown artifacts and collapse to a clean plain-text snippet. */
-function cleanSummary(str: string, max: number): string {
-  const clean = str
-    .replace(/\*\*(.+?)\*\*/g, "$1")   // bold
-    .replace(/^[-*]\s+/gm, "")          // bullet prefixes
-    .replace(/\n+/g, " ")               // newlines → spaces
-    .replace(/\s{2,}/g, " ")            // collapse whitespace
-=======
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-    .trim();
-  return clean.length > max ? clean.slice(0, max - 1) + "\u2026" : clean;
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
 }
 
 export const ConversationList: FC<ConversationListProps> = ({
@@ -94,12 +63,16 @@ export const ConversationList: FC<ConversationListProps> = ({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const fetchConversations = useCallback(
     async (offset: number, append: boolean) => {
+      const sourceParam = sourceFilter !== "all" ? `&source=${sourceFilter}` : "";
       try {
-        const sourceParam = sourceFilter !== "all" ? `&source=${sourceFilter}` : "";
         const data = await api.get<ConversationsResponse>(
           `/api/conversations?limit=${PAGE_SIZE}&offset=${offset}${sourceParam}`,
         );
@@ -117,18 +90,29 @@ export const ConversationList: FC<ConversationListProps> = ({
     [api, sourceFilter],
   );
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  // Initial fetch + refresh on refreshKey change
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   useEffect(() => {
     setLoading(true);
     setConversations([]);
+    setSelected(new Set());
     fetchConversations(0, false).finally(() => setLoading(false));
   }, [fetchConversations, refreshKey]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [contextMenu]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const handleLoadMore = async () => {
     setLoadingMore(true);
@@ -136,11 +120,48 @@ export const ConversationList: FC<ConversationListProps> = ({
     setLoadingMore(false);
   };
 
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const openContextMenu = (event: MouseEvent, id: string) => {
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, id });
+  };
+
+  const selectedConversations = conversations.filter((conversation) =>
+    selected.has(conversation.id),
+  );
+  const selectedSummaries = selectedConversations.filter((conversation) => conversation.summary);
+
+  const copySelectedSummaries = async () => {
+    const text = selectedSummaries
+      .map((conversation) => `${conversation.title}\n${conversation.summary}`)
+      .join("\n\n");
+    await copyText(text);
+    setNotice(
+      `Copied ${selectedSummaries.length} summar${selectedSummaries.length === 1 ? "y" : "ies"}`,
+    );
+  };
+
+  const copySummary = async (conversation: Conversation) => {
+    if (!conversation.summary) return;
+    await copyText(`${conversation.title}\n${conversation.summary}`);
+    setNotice("Summary copied");
+    setContextMenu(null);
+  };
+
   if (loading) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
     return (
       <div style={s.loadingCard}>
         <div style={s.loadingDots}>
@@ -151,7 +172,6 @@ export const ConversationList: FC<ConversationListProps> = ({
         <p style={s.loadingText}>Loading conversations</p>
       </div>
     );
-<<<<<<< HEAD
   }
 
   if (error) {
@@ -161,173 +181,144 @@ export const ConversationList: FC<ConversationListProps> = ({
         {error}
       </div>
     );
-=======
-    return <p style={styles.info}>Loading conversations...</p>;
-  }
-
-  if (error) {
-    return <div style={styles.error}>{error}</div>;
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
-  }
-
-  if (error) {
-    return (
-      <div style={s.errorCard}>
-        <span style={s.errorIcon}>!</span>
-        {error}
-      </div>
-    );
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   }
 
   if (conversations.length === 0) {
     return (
-<<<<<<< HEAD
-<<<<<<< HEAD
       <div style={s.emptyCard}>
         <p style={s.emptyTitle}>No conversations yet</p>
-<<<<<<< HEAD
-        <p style={s.emptySub}>Sync your first meetings from Fireflies above.</p>
-=======
-      <div style={styles.empty}>
-        <p style={styles.emptyTitle}>No conversations yet.</p>
-        <p style={styles.emptySubtitle}>
-          Click Sync to import from Fireflies.
-        </p>
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
-      <div style={s.emptyCard}>
-        <p style={s.emptyTitle}>No conversations yet</p>
-        <p style={s.emptySub}>Sync your first meetings from Fireflies above.</p>
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-=======
         <p style={s.emptySub}>Sync your first meetings above.</p>
->>>>>>> c024b29 (TC-1326: Frontend source picker, Google OAuth popup, sync control, source filter)
       </div>
     );
   }
 
   const hasMore = conversations.length < total;
+  const groupedConversations = conversations.reduce<Array<{ date: string; items: Conversation[] }>>(
+    (groups, conversation) => {
+      const date = formatGroupDate(conversation.started_at);
+      const last = groups[groups.length - 1];
+      if (last?.date === date) {
+        last.items.push(conversation);
+      } else {
+        groups.push({ date, items: [conversation] });
+      }
+      return groups;
+    },
+    [],
+  );
 
   return (
-<<<<<<< HEAD
-<<<<<<< HEAD
-    <section style={s.card}>
-      <div style={s.headerRow}>
-        <span style={s.countLabel}>
-          {total} conversation{total !== 1 ? "s" : ""}
-        </span>
-        <div style={s.filterRow}>
-          {(["all", "fireflies", "google-meet"] as const).map((src) => (
-            <button
-              key={src}
-              style={{
-                ...s.filterChip,
-                ...(sourceFilter === src ? s.filterChipActive : {}),
-              }}
-              onClick={() => setSourceFilter(src)}
-            >
-              {src === "all" ? "All" : src === "fireflies" ? "Fireflies" : "Google Meet"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <ul style={s.list}>
-        {conversations.map((c) => (
-          <li key={c.id} style={s.row} onClick={() => onSelectConversation(c.id)}>
-            <div style={s.rowTop}>
-              <span style={s.title}>{c.title}</span>
-              <div style={s.rowRight}>
-                <span
-                  style={{
-                    ...s.sourceBadge,
-                    ...(c.source === "google-meet" ? s.sourceBadgeGreen : {}),
-                  }}
-                >
-                  {c.source === "fireflies"
-                    ? "FF"
-                    : c.source === "google-meet"
-                      ? "GM"
-                      : c.source}
-                </span>
-                <span style={s.date}>{formatDate(c.started_at)}</span>
-              </div>
-            </div>
-            <div style={s.meta}>
-              <span>{formatDuration(c.duration_secs)}</span>
-              <span style={s.metaDot}>&middot;</span>
-              <span>
-                {c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}
-              </span>
-            </div>
-            {c.summary && <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>}
-=======
-    <section>
-      <ul style={styles.list}>
-=======
-    <section style={s.card}>
+    <section style={s.card} ref={containerRef}>
       <div style={s.headerRow}>
         <span style={s.countLabel}>
           {total} conversation{total !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <ul style={s.list}>
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-        {conversations.map((c) => (
-          <li key={c.id} style={s.row} onClick={() => onSelectConversation(c.id)}>
-            <div style={s.rowTop}>
-              <span style={s.title}>{c.title}</span>
-              <span style={s.date}>{formatDate(c.started_at)}</span>
-            </div>
-            <div style={s.meta}>
-              <span>{formatDuration(c.duration_secs)}</span>
-              <span style={s.metaDot}>&middot;</span>
+      <InboxFilters
+        total={total}
+        sourceFilter={sourceFilter}
+        onSourceFilterChange={setSourceFilter}
+        showingCount={conversations.length}
+      />
+
+      {selected.size > 0 && (
+        <InboxBulkBar
+          selectedCount={selected.size}
+          hasSummaries={selectedSummaries.length > 0}
+          onCopySummaries={copySelectedSummaries}
+          onClear={clearSelection}
+        />
+      )}
+
+      {notice && <div style={s.notice}>{notice}</div>}
+
+      <div style={s.columnHeader}>
+        <span />
+        <span style={s.colLabel}>TIME</span>
+        <span style={s.colLabel}>SOURCE</span>
+        <span style={s.colLabel}>TITLE / PREVIEW</span>
+        <span style={s.colLabel}>PEOPLE</span>
+        <span style={{ ...s.colLabel, textAlign: "right" }}>DUR</span>
+        <span style={{ ...s.colLabel, textAlign: "center" }}>SUM</span>
+        <span />
+      </div>
+
+      <div style={s.list}>
+        {groupedConversations.map((group) => (
+          <div key={group.date}>
+            <div style={s.groupHeader}>
+              <span>— {group.date.toUpperCase()}</span>
+              <span style={s.groupRule} />
               <span>
-                {c.participant_count} participant{c.participant_count !== 1 ? "s" : ""}
+                {group.items.length} record{group.items.length === 1 ? "" : "s"}
               </span>
             </div>
-<<<<<<< HEAD
-            {c.summary && (
-              <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>
-            )}
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
-            {c.summary && <p style={s.summary}>{cleanSummary(c.summary, 120)}</p>}
->>>>>>> 4ccbd94 (style: run Prettier on all conversation-sync files)
-          </li>
+            {group.items.map((c) => (
+              <InboxRow
+                key={c.id}
+                conversation={c}
+                selected={selected.has(c.id)}
+                onToggleSelect={toggleSelect}
+                onOpen={onSelectConversation}
+                onContextMenu={openContextMenu}
+                onMenu={openContextMenu}
+              />
+            ))}
+          </div>
         ))}
-      </ul>
+      </div>
 
       {hasMore && (
         <button
-<<<<<<< HEAD
-<<<<<<< HEAD
           style={{ ...s.loadMore, ...(loadingMore ? s.loadMoreDisabled : {}) }}
           disabled={loadingMore}
           onClick={handleLoadMore}
         >
           {loadingMore ? "Loading\u2026" : "Load More"}
-=======
-          style={{
-            ...styles.loadMore,
-            ...(loadingMore ? styles.loadMoreDisabled : {}),
-          }}
-          disabled={loadingMore}
-          onClick={handleLoadMore}
-        >
-          {loadingMore ? "Loading..." : "Load More"}
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
-          style={{ ...s.loadMore, ...(loadingMore ? s.loadMoreDisabled : {}) }}
-          disabled={loadingMore}
-          onClick={handleLoadMore}
-        >
-          {loadingMore ? "Loading\u2026" : "Load More"}
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
         </button>
+      )}
+
+      {contextMenu && (
+        <div
+          style={{ ...s.contextMenu, top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+          role="menu"
+        >
+          {(() => {
+            const conversation = conversations.find((item) => item.id === contextMenu.id);
+            if (!conversation) return null;
+            return (
+              <>
+                <button
+                  type="button"
+                  style={s.contextItem}
+                  role="menuitem"
+                  onClick={() => {
+                    setContextMenu(null);
+                    onSelectConversation(conversation.id);
+                  }}
+                >
+                  <span style={{ flex: 1 }}>Open transcript</span>
+                  <span style={s.contextShortcut}>↵</span>
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    ...s.contextItem,
+                    ...(!conversation.summary ? s.contextItemDisabled : {}),
+                  }}
+                  role="menuitem"
+                  disabled={!conversation.summary}
+                  onClick={() => copySummary(conversation)}
+                >
+                  <span style={{ flex: 1 }}>Copy summary</span>
+                  <span style={s.contextShortcut}>⌘⇧C</span>
+                </button>
+              </>
+            );
+          })()}
+        </div>
       )}
     </section>
   );
@@ -335,164 +326,63 @@ export const ConversationList: FC<ConversationListProps> = ({
 
 // ── Styles ──────────────────────────────────────────────────────────
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-const FONT = "'Outfit', -apple-system, sans-serif";
-const MONO = "'IBM Plex Mono', 'SF Mono', monospace";
+const FONT = "var(--lst-font)";
+const MONO = "var(--lst-mono)";
 
 const s: Record<string, React.CSSProperties> = {
   card: {
     fontFamily: FONT,
-    background: "#fff",
-    border: "1px solid #e2e4e9",
-    borderRadius: 12,
+    background: "var(--lst-bg)",
+    border: "var(--lst-border)",
+    borderRadius: 0,
     overflow: "hidden",
-<<<<<<< HEAD
+    position: "relative",
   },
   headerRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "14px 20px 0",
+    padding: "14px 32px",
+    borderBottom: "var(--lst-border)",
   },
   countLabel: {
     fontFamily: MONO,
     fontSize: 11,
     fontWeight: 500,
-    color: "#9ca3af",
-    letterSpacing: "0.03em",
+    color: "var(--lst-ink-55)",
+    letterSpacing: "0.08em",
     textTransform: "uppercase" as const,
-=======
-const styles: Record<string, React.CSSProperties> = {
-  info: {
-    fontSize: 14,
-    color: "#555",
-    textAlign: "center",
-    padding: 20,
-=======
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
   },
-  headerRow: {
-    padding: "14px 20px 0",
+  columnHeader: {
+    ...InboxRowGrid,
+    padding: "10px 32px",
+    borderBottom: "var(--lst-border)",
+    position: "sticky",
+    top: 0,
+    background: "var(--lst-bg)",
+    zIndex: 2,
   },
-<<<<<<< HEAD
-  empty: {
-    textAlign: "center",
-    padding: "32px 16px",
-    color: "#666",
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-    margin: "0 0 4px",
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    margin: 0,
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
-=======
-  countLabel: {
-    fontFamily: MONO,
-    fontSize: 11,
-    fontWeight: 500,
-    color: "#9ca3af",
-    letterSpacing: "0.03em",
-    textTransform: "uppercase" as const,
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-  },
-  filterRow: {
-    display: "flex",
-    gap: 4,
-  },
-  filterChip: {
-    fontFamily: FONT,
-    fontSize: 11,
-    fontWeight: 500,
-    color: "#6b7280",
-    background: "transparent",
-    border: "1px solid #e2e4e9",
-    borderRadius: 12,
-    padding: "3px 10px",
-    cursor: "pointer",
-  },
-  filterChipActive: {
-    color: "#6366f1",
-    background: "#eef2ff",
-    borderColor: "#c7d2fe",
-  },
-  list: {
-    listStyle: "none",
-    margin: 0,
-    padding: 0,
-  },
-  row: {
-<<<<<<< HEAD
-<<<<<<< HEAD
-    padding: "14px 20px",
-    borderBottom: "1px solid #f3f4f6",
-    cursor: "pointer",
-    transition: "background 0.12s",
-  },
-  rowTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 3,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#18181b",
-    letterSpacing: "-0.01em",
-  },
-  rowRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexShrink: 0,
-  },
-  sourceBadge: {
+  colLabel: {
     fontFamily: MONO,
     fontSize: 10,
-    fontWeight: 600,
-    color: "#6366f1",
-    background: "#eef2ff",
-    padding: "1px 6px",
-    borderRadius: 4,
-    letterSpacing: "0.02em",
+    color: "var(--lst-ink-55)",
+    letterSpacing: "0.08em",
   },
-  sourceBadgeGreen: {
-    color: "#059669",
-    background: "#ecfdf5",
-  },
-  date: {
-    fontFamily: MONO,
-    fontSize: 12,
-    fontWeight: 400,
-    color: "#9ca3af",
-    flexShrink: 0,
-  },
-  meta: {
+  list: { margin: 0, padding: 0 },
+  groupHeader: {
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    fontSize: 12,
-    color: "#6b7280",
+    gap: 12,
+    padding: "20px 32px 8px",
+    fontFamily: MONO,
+    fontSize: 11,
+    color: "var(--lst-ink-55)",
+    letterSpacing: "0.08em",
   },
-  metaDot: {
-    color: "#d1d5db",
-  },
-  summary: {
-    fontSize: 13,
-    color: "#6b7280",
-    margin: "5px 0 0",
-    lineHeight: 1.45,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical" as const,
-    overflow: "hidden",
+  groupRule: {
+    height: 1,
+    background: "var(--lst-rule-soft)",
+    flex: 1,
   },
   loadMore: {
     fontFamily: FONT,
@@ -501,16 +391,13 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "12px 0",
     fontSize: 13,
     fontWeight: 500,
-    color: "#6b7280",
+    color: "var(--lst-blue)",
     background: "transparent",
     border: "none",
-    borderTop: "1px solid #f3f4f6",
+    borderTop: "var(--lst-border)",
     cursor: "pointer",
   },
-  loadMoreDisabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
+  loadMoreDisabled: { opacity: 0.5, cursor: "not-allowed" },
   loadingCard: {
     fontFamily: FONT,
     display: "flex",
@@ -518,48 +405,41 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: 14,
     padding: "40px 20px",
-    background: "#fff",
-    border: "1px solid #e2e4e9",
-    borderRadius: 12,
+    background: "var(--lst-bg)",
+    border: "var(--lst-border)",
+    borderRadius: 0,
     animation: "fadeSlideIn 0.3s ease-out",
   },
-  loadingDots: {
-    display: "flex",
-    gap: 6,
-  },
+  loadingDots: { display: "flex", gap: 6 },
   loadingDot: {
     width: 8,
     height: 8,
     borderRadius: "50%",
-    background: "#6366f1",
+    background: "var(--lst-blue)",
     animation: "syncPulse 1s ease-in-out infinite",
   },
   loadingText: {
     fontFamily: FONT,
     fontSize: 13,
     fontWeight: 500,
-    color: "#6b7280",
+    color: "var(--lst-ink-70)",
     margin: 0,
   },
   emptyCard: {
     fontFamily: FONT,
     textAlign: "center" as const,
     padding: "36px 20px",
-    background: "#fff",
-    border: "1px solid #e2e4e9",
-    borderRadius: 12,
+    background: "var(--lst-bg)",
+    border: "var(--lst-border)",
+    borderRadius: 0,
   },
   emptyTitle: {
     fontSize: 15,
-    fontWeight: 600,
-    color: "#374151",
+    fontWeight: 500,
+    color: "var(--lst-blue)",
     margin: "0 0 4px",
   },
-  emptySub: {
-    fontSize: 13,
-    color: "#9ca3af",
-    margin: 0,
-  },
+  emptySub: { fontSize: 13, color: "var(--lst-ink-55)", margin: 0 },
   errorCard: {
     fontFamily: FONT,
     display: "flex",
@@ -567,10 +447,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     padding: "12px 16px",
     fontSize: 13,
-    color: "#991b1b",
-    background: "#fef2f2",
-    border: "1px solid #fecaca",
-    borderRadius: 12,
+    color: "var(--lst-blue)",
+    background: "var(--lst-ink-08)",
+    border: "var(--lst-border)",
+    borderRadius: 0,
     lineHeight: 1.4,
   },
   errorIcon: {
@@ -580,152 +460,54 @@ const styles: Record<string, React.CSSProperties> = {
     width: 18,
     height: 18,
     borderRadius: "50%",
-    background: "#ef4444",
-    color: "#fff",
+    background: "var(--lst-blue)",
+    color: "var(--lst-bg)",
     fontSize: 11,
     fontWeight: 700,
     flexShrink: 0,
-=======
-    padding: "12px 16px",
-    borderBottom: "1px solid #e5e7eb",
-=======
-    padding: "14px 20px",
-    borderBottom: "1px solid #f3f4f6",
->>>>>>> 94871e9 (feat: full Fireflies pagination, SSE streaming sync, and frontend redesign)
-    cursor: "pointer",
-    transition: "background 0.12s",
   },
-  rowTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 3,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#18181b",
-    letterSpacing: "-0.01em",
-  },
-  date: {
-    fontFamily: MONO,
-    fontSize: 12,
-    fontWeight: 400,
-    color: "#9ca3af",
-    flexShrink: 0,
-    marginLeft: 12,
-  },
-  meta: {
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-    fontSize: 12,
-    color: "#6b7280",
-  },
-  metaDot: {
-    color: "#d1d5db",
-  },
-  summary: {
-    fontSize: 13,
-    color: "#6b7280",
-    margin: "5px 0 0",
-    lineHeight: 1.45,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical" as const,
-    overflow: "hidden",
-  },
-  loadMore: {
+  contextMenu: {
+    position: "fixed",
+    zIndex: 50,
+    background: "var(--lst-bg)",
+    border: "var(--lst-border)",
+    borderRadius: 14,
+    minWidth: 240,
+    boxShadow: "0 8px 0 rgba(28,53,184,0.08)",
+    padding: "6px 0",
     fontFamily: FONT,
-    display: "block",
+  },
+  contextItem: {
     width: "100%",
-    padding: "12px 0",
+    padding: "8px 14px",
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
     fontSize: 13,
-    fontWeight: 500,
-    color: "#6b7280",
-    background: "transparent",
-    border: "none",
-    borderTop: "1px solid #f3f4f6",
+    fontFamily: FONT,
     cursor: "pointer",
+    color: "var(--lst-blue)",
+    border: "none",
+    background: "transparent",
+    textAlign: "left",
   },
-  loadMoreDisabled: {
-    opacity: 0.5,
+  contextItemDisabled: {
+    opacity: 0.45,
     cursor: "not-allowed",
->>>>>>> 9b46023 (TC-1307: Build ConversationList component with pagination and summary preview)
   },
-  loadingCard: {
-    fontFamily: FONT,
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    gap: 14,
-    padding: "40px 20px",
-    background: "#fff",
-    border: "1px solid #e2e4e9",
-    borderRadius: 12,
-    animation: "fadeSlideIn 0.3s ease-out",
+  contextShortcut: {
+    fontFamily: MONO,
+    color: "var(--lst-ink-55)",
+    fontSize: 10,
   },
-  loadingDots: {
-    display: "flex",
-    gap: 6,
-  },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    background: "#6366f1",
-    animation: "syncPulse 1s ease-in-out infinite",
-  },
-  loadingText: {
-    fontFamily: FONT,
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#6b7280",
-    margin: 0,
-  },
-  emptyCard: {
-    fontFamily: FONT,
-    textAlign: "center" as const,
-    padding: "36px 20px",
-    background: "#fff",
-    border: "1px solid #e2e4e9",
-    borderRadius: 12,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: "#374151",
-    margin: "0 0 4px",
-  },
-  emptySub: {
-    fontSize: 13,
-    color: "#9ca3af",
-    margin: 0,
-  },
-  errorCard: {
-    fontFamily: FONT,
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 8,
-    padding: "12px 16px",
-    fontSize: 13,
-    color: "#991b1b",
-    background: "#fef2f2",
-    border: "1px solid #fecaca",
-    borderRadius: 12,
-    lineHeight: 1.4,
-  },
-  errorIcon: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 18,
-    height: 18,
-    borderRadius: "50%",
-    background: "#ef4444",
-    color: "#fff",
+  notice: {
+    padding: "8px 32px",
+    borderBottom: "var(--lst-border)",
+    background: "var(--lst-ink-08)",
+    color: "var(--lst-blue)",
+    fontFamily: MONO,
     fontSize: 11,
-    fontWeight: 700,
-    flexShrink: 0,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
   },
 };

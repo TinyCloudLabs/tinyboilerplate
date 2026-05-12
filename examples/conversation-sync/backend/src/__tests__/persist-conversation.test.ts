@@ -137,7 +137,7 @@ describe("persistConversation", () => {
 
     await persistConversation(mockAccess as any, normalized);
 
-    const kvKey = `/app.conversations/transcript/conv-123`;
+    const kvKey = `transcript/conv-123`;
     const stored = mockKV._data.get(kvKey);
     expect(stored).toBeDefined();
 
@@ -165,9 +165,7 @@ describe("persistConversation", () => {
     mockSQL._setExecuteFail(true);
     const normalized = createNormalized();
 
-    expect(persistConversation(mockAccess as any, normalized)).rejects.toThrow(
-      "SQL insert failed",
-    );
+    expect(persistConversation(mockAccess as any, normalized)).rejects.toThrow("SQL insert failed");
   });
 
   // ── Test 6: serializes metadata as JSON ───────────────────────────

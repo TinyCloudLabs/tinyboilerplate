@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
-import type { FullConference, ConferenceRecord, Transcript } from "../services/google-meet-client.js";
+import type {
+  FullConference,
+  ConferenceRecord,
+  Transcript,
+} from "../services/google-meet-client.js";
 
 // ── Mock KV Store ────────────────────────────────────────────────────
 
@@ -79,9 +83,7 @@ function createMockSQL() {
 
 // ── Mock FullConference Factory ──────────────────────────────────────
 
-function createMockConferenceRecord(
-  overrides: Partial<ConferenceRecord> = {},
-): ConferenceRecord {
+function createMockConferenceRecord(overrides: Partial<ConferenceRecord> = {}): ConferenceRecord {
   return {
     name: overrides.name ?? "conferenceRecords/abc-123",
     startTime: overrides.startTime ?? "2024-03-20T14:00:00Z",
@@ -91,12 +93,9 @@ function createMockConferenceRecord(
   };
 }
 
-function createMockFullConference(
-  overrides: Partial<FullConference> = {},
-): FullConference {
+function createMockFullConference(overrides: Partial<FullConference> = {}): FullConference {
   return {
-    conferenceRecord:
-      overrides.conferenceRecord ?? createMockConferenceRecord(),
+    conferenceRecord: overrides.conferenceRecord ?? createMockConferenceRecord(),
     participants: overrides.participants ?? [
       {
         name: "conferenceRecords/abc-123/participants/p1",
@@ -250,7 +249,7 @@ describe("syncSingleConference", () => {
     const result = await syncSingleConference(record, mockAccess as any, mockClient);
 
     expect(result.status).toBe("created");
-    const kvKey = `/app.conversations/transcript/${result.conversationId}`;
+    const kvKey = `transcript/${result.conversationId}`;
     const storedBlob = mockKV._data.get(kvKey);
     expect(storedBlob).toBeDefined();
 

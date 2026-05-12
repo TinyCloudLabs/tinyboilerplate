@@ -14,11 +14,19 @@ import {
   DelegationStore,
   DelegationCache,
   createCsrfMiddleware,
+  createNonceStore,
   withSessionRefresh,
 } from "@tinyboilerplate/server";
 
 import { createAuthMiddleware } from "./middleware/auth.js";
 import { createDelegationMiddleware } from "./middleware/delegation.js";
+import {
+  activatePortableDelegation,
+  ensureBackendSecretsPrivateIdentity,
+} from "./delegation-activation.js";
+import { backendDelegationPolicyHash, resolveAppPath } from "./manifest.js";
+import { createAuthRouter } from "./routes/auth.js";
+import { createManifestRouter } from "./routes/manifest.js";
 import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
 import { createConfigRouter } from "./routes/config.js";
@@ -30,21 +38,27 @@ import { createGoogleMeetPushRouter } from "./routes/google-meet-webhooks.js";
 import { createGoogleMeetSyncRouter } from "./routes/google-meet-sync.js";
 import { createGoogleMeetStatusRouter } from "./routes/google-meet-status.js";
 import { createGoogleAuthRouter } from "./routes/google-auth.js";
-import { initGoogleMeetWebhooks, isGoogleMeetWebhooksEnabled } from "./services/google-meet-webhooks.js";
-import { parsePubSubConfig, createMeetSubscription, deleteMeetSubscription } from "./services/pubsub-manager.js";
+import {
+  initGoogleMeetWebhooks,
+  isGoogleMeetWebhooksEnabled,
+} from "./services/google-meet-webhooks.js";
+import {
+  parsePubSubConfig,
+  createMeetSubscription,
+  deleteMeetSubscription,
+} from "./services/pubsub-manager.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
-const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
-const TINYCLOUD_HOST = process.env.TINYCLOUD_HOST ?? "https://node.tinycloud.xyz";
-const OPENKEY_ISSUER_URL = process.env.OPENKEY_ISSUER_URL ?? "https://openkey.so";
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
-const PORT = parseInt(process.env.PORT ?? "3001", 10);
-
-if (!BACKEND_PRIVATE_KEY) {
+if (!process.env.BACKEND_PRIVATE_KEY) {
   console.error("BACKEND_PRIVATE_KEY is required. Generate one with: bun run generate-key");
   process.exit(1);
 }
+
+const BACKEND_PRIVATE_KEY: string = process.env.BACKEND_PRIVATE_KEY;
+const TINYCLOUD_HOST = process.env.TINYCLOUD_HOST ?? "https://node.tinycloud.xyz";
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "https://localhost:5173";
+const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 // ── Bootstrap ────────────────────────────────────────────────────────
 
@@ -55,6 +69,10 @@ async function main() {
     privateKey: BACKEND_PRIVATE_KEY,
     host: TINYCLOUD_HOST,
   });
+  const secretsUnlock = await ensureBackendSecretsPrivateIdentity(node);
+  if (!secretsUnlock.ok) {
+    console.warn("[secrets] backend vault unlock failed:", secretsUnlock.error.message);
+  }
 
   // 1b. Initialize Google Meet webhook infrastructure (Pub/Sub topic + subscription)
   // Gracefully skipped if GOOGLE_SERVICE_ACCOUNT_KEY / GOOGLE_PUBSUB_PUSH_URL are not set
@@ -64,47 +82,76 @@ async function main() {
   const delegationStore = new DelegationStore(node);
   const delegationCache = new DelegationCache();
 
-  // 3. Create middleware
-  const authMiddleware = createAuthMiddleware(OPENKEY_ISSUER_URL);
+  // 3. Create auth infrastructure
+  const nonceStore = createNonceStore();
+  const authMiddleware = createAuthMiddleware(BACKEND_PRIVATE_KEY);
 
   const delegationMiddleware = createDelegationMiddleware({
     node,
     store: delegationStore,
     cache: delegationCache,
+    backendDid: did,
   });
 
   // 4. Backend KV accessor (for webhook config stored in backend's own space)
   const backendKV = {
     get: (key: string) => withSessionRefresh(node, () => node.kv.get(key)),
     put: (key: string, value: string) => withSessionRefresh(node, () => node.kv.put(key, value)),
+  } as any;
+
+  const cachedDelegationIsCurrent = async (address: string, label: string) => {
+    const stored = await delegationStore.load(address);
+    if (!stored) {
+      console.log(`${label} cached delegation has no stored record`);
+      delegationCache.evict(address);
+      return false;
+    }
+    if (new Date(stored.expiresAt).getTime() <= Date.now()) {
+      console.log(`${label} cached delegation expired at ${stored.expiresAt}`);
+      await delegationStore.remove(address);
+      delegationCache.evict(address);
+      return false;
+    }
+    if (stored.policyHash !== backendDelegationPolicyHash(did)) {
+      console.log(`${label} cached delegation policy is stale`);
+      await delegationStore.remove(address);
+      delegationCache.evict(address);
+      return false;
+    }
+    return true;
   };
 
   // Resolve delegated access for webhook processing (single-user mode)
-  const WEBHOOK_USER_SUB_PATH = "/app.webhooks/config/user-sub";
+  const WEBHOOK_USER_ADDRESS_PATH = resolveAppPath("webhooks/config/user-address");
   const tryGetDelegatedAccess = async () => {
-    const subResult = await backendKV.get(WEBHOOK_USER_SUB_PATH);
-    const sub =
-      subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
-    if (!sub) {
+    const addrResult = await backendKV.get(WEBHOOK_USER_ADDRESS_PATH);
+    const address =
+      addrResult.ok && (addrResult as any).data?.data
+        ? String((addrResult as any).data.data)
+        : null;
+    if (!address) {
       console.log(
-        "[webhook] no user-sub stored — webhook secret may not have been saved with a signed-in user",
+        "[webhook] no user-address stored — webhook secret may not have been saved with a signed-in user",
       );
       return null;
     }
-    console.log(`[webhook] resolving delegation for sub=${sub}`);
+    console.log(`[webhook] resolving delegation for address=${address}`);
 
     // Check cache first
-    let access = delegationCache.get(sub);
+    let access = delegationCache.get(address);
     if (access) {
-      console.log("[webhook] delegation found in cache");
-      return access;
+      if (await cachedDelegationIsCurrent(address, "[webhook]")) {
+        console.log("[webhook] delegation found in cache");
+        return access;
+      }
+      access = null;
     }
 
     // Load from persistent store
-    const stored = await delegationStore.load(sub);
+    const stored = await delegationStore.load(address);
     if (!stored) {
       console.log(
-        "[webhook] no delegation in store for this sub — user needs to sign in and delegate",
+        "[webhook] no delegation in store for this address — user needs to sign in and delegate",
       );
       return null;
     }
@@ -112,12 +159,18 @@ async function main() {
       console.log(`[webhook] delegation expired at ${stored.expiresAt}`);
       return null;
     }
+    if (stored.policyHash !== backendDelegationPolicyHash(did)) {
+      console.log("[webhook] delegation policy is stale — user needs to sign in again");
+      await delegationStore.remove(address);
+      delegationCache.evict(address);
+      return null;
+    }
 
     // Activate delegation
     try {
       const delegation = deserializeDelegation(stored.serialized);
-      access = await node.useDelegation(delegation);
-      delegationCache.set(sub, access);
+      access = await activatePortableDelegation(node, delegation);
+      delegationCache.set(address, access);
       console.log("[webhook] delegation activated from store");
       return access;
     } catch (err) {
@@ -128,6 +181,7 @@ async function main() {
 
   // 5. Set up Express
   const app = express();
+  app.set("trust proxy", "loopback");
   app.use(cors({ origin: FRONTEND_URL }));
 
   // Webhook routes — mounted before express.json() so raw body is preserved for HMAC verification
@@ -147,19 +201,32 @@ async function main() {
   // Google Meet push endpoint — after JSON parsing, before CSRF (public, OIDC-verified)
   const pubSubConfig = parsePubSubConfig();
   if (pubSubConfig) {
-    const GOOGLE_MEET_USER_SUB_PATH = "/app.webhooks/config/google-meet-user-sub";
+    const GOOGLE_MEET_USER_ADDRESS_PATH = resolveAppPath(
+      "webhooks/config/google-meet-user-address",
+    );
     const tryGetGoogleMeetAccess = async () => {
-      const subResult = await backendKV.get(GOOGLE_MEET_USER_SUB_PATH);
-      const sub = subResult.ok && (subResult as any).data?.data ? String((subResult as any).data.data) : null;
-      if (!sub) return null;
-      let access = delegationCache.get(sub);
-      if (access) return access;
-      const stored = await delegationStore.load(sub);
+      const addrResult = await backendKV.get(GOOGLE_MEET_USER_ADDRESS_PATH);
+      const address =
+        addrResult.ok && (addrResult as any).data?.data
+          ? String((addrResult as any).data.data)
+          : null;
+      if (!address) return null;
+      let access = delegationCache.get(address);
+      if (access) {
+        if (await cachedDelegationIsCurrent(address, "[google-meet-webhook]")) return access;
+        access = null;
+      }
+      const stored = await delegationStore.load(address);
       if (!stored || new Date(stored.expiresAt).getTime() <= Date.now()) return null;
+      if (stored.policyHash !== backendDelegationPolicyHash(did)) {
+        await delegationStore.remove(address);
+        delegationCache.evict(address);
+        return null;
+      }
       try {
         const delegation = deserializeDelegation(stored.serialized);
-        access = await node.useDelegation(delegation);
-        delegationCache.set(sub, access);
+        access = await activatePortableDelegation(node, delegation);
+        delegationCache.set(address, access);
         return access;
       } catch {
         return null;
@@ -181,12 +248,20 @@ async function main() {
 
   app.use(createCsrfMiddleware());
 
-  // 5. Rate limiting
+  // 6. Rate limiting
   const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 100,
     standardHeaders: "draft-7",
     legacyHeaders: false,
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "rate_limited", message: "Too many auth requests" },
   });
 
   const delegationLimiter = rateLimit({
@@ -199,8 +274,18 @@ async function main() {
 
   app.use(generalLimiter);
 
-  // 6. Mount routes
+  // 7. Mount routes
+  app.use("/api/manifest", createManifestRouter(did));
   app.use("/api/server-info", createServerInfoRouter(did));
+
+  app.use(
+    "/api/auth",
+    authLimiter,
+    createAuthRouter({
+      nonceStore,
+      privateKey: BACKEND_PRIVATE_KEY,
+    }),
+  );
 
   app.use(
     "/api/delegations",
@@ -211,7 +296,6 @@ async function main() {
       store: delegationStore,
       cache: delegationCache,
       authMiddleware,
-      openKeyIssuerUrl: OPENKEY_ISSUER_URL,
     }),
   );
 
@@ -233,15 +317,18 @@ async function main() {
     createGoogleAuthRouter({
       authMiddleware,
       delegationMiddleware,
-      resolveDelegation: async (sub: string) => {
-        let access = delegationCache.get(sub);
-        if (access) return access;
-        const stored = await delegationStore.load(sub);
+      resolveDelegation: async (address: string) => {
+        let access = delegationCache.get(address);
+        if (access) {
+          if (await cachedDelegationIsCurrent(address, "[google-auth]")) return access;
+          access = null;
+        }
+        const stored = await delegationStore.load(address);
         if (!stored || new Date(stored.expiresAt).getTime() <= Date.now()) return null;
         try {
           const delegation = deserializeDelegation(stored.serialized);
-          access = await node.useDelegation(delegation);
-          delegationCache.set(sub, access);
+          access = await activatePortableDelegation(node, delegation);
+          delegationCache.set(address, access);
           return access;
         } catch {
           return null;
@@ -299,13 +386,13 @@ async function main() {
     }),
   );
 
-  // 7. OpenAPI docs
+  // 8. OpenAPI docs
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const spec = loadYaml(readFileSync(resolve(__dirname, "../openapi.yaml"), "utf-8")) as object;
   app.get("/api/openapi.json", (_req, res) => res.json(spec));
   app.use("/api/docs", apiReference({ spec: { content: spec } }));
 
-  // 8. Start server
+  // 9. Start server
   const server = app.listen(PORT, () => {
     console.log(`Backend ready. DID: ${did}`);
     console.log(`Listening on http://localhost:${PORT}`);

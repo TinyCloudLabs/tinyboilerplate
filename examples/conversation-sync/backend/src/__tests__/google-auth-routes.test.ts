@@ -31,7 +31,7 @@ function createMockKV() {
 // ── Test Helpers ─────────────────────────────────────────────────────
 
 const TEST_SUB = "test-user-sub";
-const TOKENS_KV_PATH = "/app.conversations/config/google-tokens";
+const TOKENS_KV_PATH = "config/google-tokens";
 const TEST_CLIENT_ID = "test-client-id.apps.googleusercontent.com";
 
 function mockAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
@@ -69,7 +69,7 @@ function createApp(
     createGoogleAuthRouter({
       authMiddleware: mockAuthMiddleware,
       delegationMiddleware: createMockDelegationMiddleware(mockKV),
-      resolveDelegation: async (_sub: string) => ({ kv: mockKV } as any),
+      resolveDelegation: async (_sub: string) => ({ kv: mockKV }) as any,
       exchangeCode: opts?.exchangeCode ?? (async () => DEFAULT_TOKEN_RESPONSE),
     }),
   );
@@ -194,10 +194,9 @@ describe("Google Auth Routes", () => {
     });
 
     it("returns 400 when state is missing", async () => {
-      const res = await fetch(
-        `http://localhost:${port}/api/auth/google/callback?code=test-code`,
-        { redirect: "manual" },
-      );
+      const res = await fetch(`http://localhost:${port}/api/auth/google/callback?code=test-code`, {
+        redirect: "manual",
+      });
       expect(res.status).toBe(400);
     });
 
@@ -272,13 +271,11 @@ describe("Google Auth Routes", () => {
     it("returns 501 for callback when GOOGLE_CLIENT_ID not set", async () => {
       delete process.env.GOOGLE_CLIENT_ID;
 
-      const res = await fetch(
-        `http://localhost:${port}/api/auth/google/callback?code=x&state=y`,
-        { redirect: "manual" },
-      );
+      const res = await fetch(`http://localhost:${port}/api/auth/google/callback?code=x&state=y`, {
+        redirect: "manual",
+      });
 
       expect(res.status).toBe(501);
     });
   });
-
 });

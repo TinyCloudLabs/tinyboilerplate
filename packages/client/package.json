@@ -21,18 +21,11 @@
   },
   "peerDependencies": {
     "@openkey/sdk": ">=0.8.0",
-    "@tinycloud/web-sdk": ">=2.2.0-beta.12",
-    "ethers": "^5.7.0"
-  },
-  "peerDependenciesMeta": {
-    "ethers": {
-      "optional": true
-    }
+    "@tinycloud/web-sdk": ">=2.2.0-beta.12"
   },
   "devDependencies": {
     "@openkey/sdk": "^0.8.4",
     "@tinycloud/web-sdk": "2.2.0-beta.12",
-    "ethers": "^5.7.2",
     "typescript": "^5.7.0"
   }
 }

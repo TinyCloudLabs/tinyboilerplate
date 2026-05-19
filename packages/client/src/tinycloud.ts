@@ -5,7 +5,7 @@ import type {
   Manifest,
   SiweConfig,
 } from "@tinycloud/web-sdk";
-import type { providers } from "ethers";
+import type { EIP1193Provider } from "./openkey.js";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ export interface TinyCloudWebConfig {
  * Create a TinyCloudWeb instance with BrowserSessionStorage for session persistence.
  */
 export function createTinyCloudWeb(
-  web3Provider: providers.Web3Provider,
+  web3Provider: EIP1193Provider,
   config?: TinyCloudWebConfig,
 ): TinyCloudWeb {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
@@ -49,9 +49,6 @@ export function createTinyCloudWeb(
     includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
   });
 
-  // Set provider for SDK signing paths that still read the provider property.
-  tcw.provider = web3Provider;
-
   return tcw;
 }
 
@@ -64,7 +61,7 @@ export function createTinyCloudWeb(
  * containing the signed SIWE message and signature.
  */
 export async function createAndSignIn(
-  web3Provider: providers.Web3Provider,
+  web3Provider: EIP1193Provider,
   config?: TinyCloudWebConfig & { nonce?: string },
 ): Promise<{ tcw: TinyCloudWeb; session: ClientSession }> {
   const siweConfig = config?.nonce

@@ -36,7 +36,8 @@ describe("createTinyCloudWeb", () => {
 
     expect(lastTinyCloudConfig.capabilityRequest).toBe(capabilityRequest);
     expect(lastTinyCloudConfig.manifest).toBe(manifests);
-    expect((tcw as any).provider).toBe(provider);
+    expect(lastTinyCloudConfig.providers.web3.driver).toBe(provider);
+    expect((tcw as any).provider).toBeUndefined();
   });
 
   test("preserves an explicit manifest over composed request manifests", () => {

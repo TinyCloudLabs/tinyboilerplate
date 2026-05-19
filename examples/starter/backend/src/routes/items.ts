@@ -6,6 +6,7 @@ import type { DelegatedAccess } from "@tinyboilerplate/server";
 const APP_ID = "xyz.tinycloud.starter";
 const ITEM_KV_PREFIX = `${APP_ID}/items/`;
 const ITEM_SQL_DATABASE = `${APP_ID}/items`;
+const KV_LIST_FETCH_CONCURRENCY = 5;
 
 // ── Items Router ─────────────────────────────────────────────────────
 
@@ -48,14 +49,15 @@ export function createItemsRouter() {
         const items: Item[] = rows.map((row) => rowToItem(row, columns));
         res.json({ items });
       } else {
-        // KV list returns { keys: string[] }, then get each value in parallel
+        // KV list returns { keys: string[] }, then get each value with bounded fanout
         const listResult = await access.kv.list({ prefix: ITEM_KV_PREFIX });
         if (!listResult.ok) {
-          res.json({ items: [] });
-          return;
+          throw new Error(`KV list failed: ${listResult.error.message}`);
         }
         const keys = listResult.data.keys ?? [];
-        const results = await Promise.all(keys.map((key) => access.kv.get(key)));
+        const results = await mapWithConcurrency(keys, KV_LIST_FETCH_CONCURRENCY, (key) =>
+          access.kv.get(key),
+        );
         const items: Item[] = results
           .filter(
             (r): r is typeof r & { ok: true; data: { data: unknown } } =>
@@ -380,6 +382,27 @@ function rowToItem(row: unknown[], columns: string[]): Item {
     createdAt: obj.created_at as string,
     updatedAt: obj.updated_at as string,
   };
+}
+
+async function mapWithConcurrency<T, R>(
+  values: T[],
+  concurrency: number,
+  mapper: (value: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(values.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), values.length);
+
+  async function worker(): Promise<void> {
+    while (nextIndex < values.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(values[index]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, worker));
+  return results;
 }
 
 function handleStoreError(res: Response, err: unknown, operation: string): void {

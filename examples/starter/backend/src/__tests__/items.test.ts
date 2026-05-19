@@ -204,6 +204,24 @@ describe("Items CRUD (KV store)", () => {
     expect(body).toEqual({ items: [] });
   });
 
+  it("GET /api/items returns a store error when KV list fails", async () => {
+    const originalConsoleError = console.error;
+    console.error = () => {};
+    access.kv.list = (async (_opts: { prefix: string }) => ({
+      ok: false,
+      error: { message: "list unavailable" },
+    })) as typeof access.kv.list;
+
+    try {
+      const res = await fetch(`${baseUrl}/api/items`);
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body).toEqual({ error: "store_error", message: "Failed to list items" });
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
+
   it("POST /api/items creates an item", async () => {
     const res = await fetch(`${baseUrl}/api/items`, {
       method: "POST",
@@ -296,6 +314,37 @@ describe("Items CRUD (KV store)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items).toHaveLength(2);
+  });
+
+  it("GET /api/items bounds concurrent KV value fetches", async () => {
+    const itemCount = 12;
+    for (let i = 0; i < itemCount; i += 1) {
+      await fetch(`${baseUrl}/api/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: `Item ${i}` }),
+      });
+    }
+
+    const originalGet = access.kv.get;
+    let activeGets = 0;
+    let maxActiveGets = 0;
+    access.kv.get = async (key: string) => {
+      activeGets += 1;
+      maxActiveGets = Math.max(maxActiveGets, activeGets);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        return await originalGet(key);
+      } finally {
+        activeGets -= 1;
+      }
+    };
+
+    const res = await fetch(`${baseUrl}/api/items`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(itemCount);
+    expect(maxActiveGets).toBeLessThanOrEqual(5);
   });
 
   it("defaults to KV store when no ?store param", async () => {

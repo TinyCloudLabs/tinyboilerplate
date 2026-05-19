@@ -10,10 +10,10 @@
     "examples/conversation-sync/backend"
   ],
   "overrides": {
-    "@tinycloud/sdk-core": "2.2.0-beta.10",
-    "@tinycloud/sdk-services": "2.2.0-beta.10",
-    "@tinycloud/web-sdk": "2.2.0-beta.10",
-    "@tinycloud/node-sdk": "2.2.0-beta.10",
+    "@tinycloud/sdk-core": "2.2.0-beta.12",
+    "@tinycloud/sdk-services": "2.2.0-beta.12",
+    "@tinycloud/web-sdk": "2.2.0-beta.12",
+    "@tinycloud/node-sdk": "2.2.0-beta.12",
     "@tinycloud/web-core": "1.7.0",
     "@tinycloud/node-sdk-wasm": "1.7.3-beta.1",
     "@tinycloud/web-sdk-wasm": "1.7.3-beta.1"
@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tinycloud/node-sdk": "2.2.0-beta.10",
+    "@tinycloud/node-sdk": "2.2.0-beta.12",
     "eslint": "^10.1.0",
     "husky": "^9.1.7",
     "portless": "^0.13.0",

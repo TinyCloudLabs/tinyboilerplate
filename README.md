@@ -55,7 +55,8 @@ cp examples/starter/.env.example examples/starter/.env
 bun run dev
 ```
 
-The frontend runs on `http://localhost:5173`, the backend on `http://localhost:3001`.
+The starter frontend runs on `https://localhost:5173` when local certs are present, and the backend runs on `http://localhost:3001`.
+If `examples/starter/frontend/localhost.pem` and `examples/starter/frontend/localhost-key.pem` are missing, Vite falls back to `http://localhost:5173`; use the same origin for the OpenKey redirect URI and `FRONTEND_URL`.
 For the Listen conversation-sync example, you can also run stable HTTPS local
 URLs with `bun run dev:conversation-sync:portless`.
 

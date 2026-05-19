@@ -13,7 +13,7 @@ A clean React + Express starter showing OpenKey authentication, TinyCloud delega
 
 - [Bun](https://bun.sh) v1.0+
 - An [OpenKey](https://openkey.so) account with a registered OAuth client
-- The OAuth client must have `http://localhost:5173` as an allowed redirect URI
+- The OAuth client must have `https://localhost:5173` as an allowed redirect URI
 
 ## Setup
 
@@ -44,6 +44,7 @@ VITE_OPENKEY_CLIENT_ID=your-client-id
 
 # Optional — defaults work for local dev
 # TINYCLOUD_HOST=https://node.tinycloud.xyz
+FRONTEND_URL=https://localhost:5173
 OPENKEY_ISSUER_URL=https://openkey.so
 PORT=3001
 VITE_OPENKEY_HOST=https://openkey.so
@@ -61,8 +62,10 @@ bun run dev
 ```
 
 This starts both:
-- **Frontend**: `http://localhost:5173` (Vite dev server)
+- **Frontend**: `https://localhost:5173` (Vite dev server, when local certs are present)
 - **Backend**: `http://localhost:3001` (Bun with --watch)
+
+If `frontend/localhost.pem` and `frontend/localhost-key.pem` are missing, Vite falls back to `http://localhost:5173`. In that case, use the HTTP origin consistently for the OpenKey redirect URI and `FRONTEND_URL`.
 
 You can also run them separately:
 ```bash

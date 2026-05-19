@@ -16,7 +16,7 @@ mock.module("@tinycloud/web-sdk", () => ({
 const { createTinyCloudWeb } = await import("../tinycloud.js");
 
 describe("createTinyCloudWeb", () => {
-  test("stores composed request manifests for permission escalation", () => {
+  test("uses the current provider option and stores composed request manifests", () => {
     const manifests = [
       {
         manifest_version: 1,
@@ -36,7 +36,8 @@ describe("createTinyCloudWeb", () => {
 
     expect(lastTinyCloudConfig.capabilityRequest).toBe(capabilityRequest);
     expect(lastTinyCloudConfig.manifest).toBe(manifests);
-    expect(lastTinyCloudConfig.providers.web3.driver).toBe(provider);
+    expect(lastTinyCloudConfig.provider).toBe(provider);
+    expect(lastTinyCloudConfig.providers).toBeUndefined();
     expect((tcw as any).provider).toBeUndefined();
   });
 

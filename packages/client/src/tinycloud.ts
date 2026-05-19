@@ -2,6 +2,7 @@ import { TinyCloudWeb, BrowserSessionStorage } from "@tinycloud/web-sdk";
 import type {
   ClientSession,
   ComposedManifestRequest,
+  Config as TinyCloudWebSdkConfig,
   Manifest,
   SiweConfig,
 } from "@tinycloud/web-sdk";
@@ -36,8 +37,8 @@ export function createTinyCloudWeb(
   config?: TinyCloudWebConfig,
 ): TinyCloudWeb {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
-  const tcw = new (TinyCloudWeb as any)({
-    providers: { web3: { driver: web3Provider } },
+  const tcwConfig: TinyCloudWebSdkConfig = {
+    provider: web3Provider,
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
     tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
@@ -47,9 +48,9 @@ export function createTinyCloudWeb(
     manifest,
     capabilityRequest: config?.capabilityRequest,
     includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
-  });
+  };
 
-  return tcw;
+  return new TinyCloudWeb(tcwConfig);
 }
 
 /**

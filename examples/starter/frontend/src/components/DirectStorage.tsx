@@ -61,6 +61,7 @@ const DUCKDB_EXAMPLE_QUERIES = [
 
 interface DirectStorageProps {
   tcw: TinyCloudWeb | null;
+  isSignedIn: boolean;
 }
 
 type DatabaseRunner = {
@@ -78,7 +79,7 @@ function appDuckdb(tcw: TinyCloudWeb): DatabaseRunner {
   return typeof service.db === "function" ? service.db(APP_DATABASE) : service;
 }
 
-export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
+export const DirectStorage: FC<DirectStorageProps> = ({ tcw, isSignedIn }) => {
   const [mode, setMode] = useState<"kv" | "sql" | "duckdb">("kv");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -282,7 +283,9 @@ export const DirectStorage: FC<DirectStorageProps> = ({ tcw }) => {
 
       {!enabled ? (
         <p style={styles.description}>
-          Sign in to use direct storage. Not available after session restore.
+          {isSignedIn
+            ? "Backend API access was restored, but direct browser storage was not. Sign out and sign in again to refresh direct storage."
+            : "Sign in to use direct browser storage."}
         </p>
       ) : (
         <>

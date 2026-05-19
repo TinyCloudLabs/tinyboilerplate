@@ -13,6 +13,8 @@ import {
   verifySession,
   loadAppManifest,
   composeManifestWithBackend,
+  restoreTinyCloudWebSession,
+  clearPersistedSession,
   SessionStore,
   type ApiClient,
 } from "@tinyboilerplate/client";
@@ -71,13 +73,27 @@ export function App() {
         if (status.status !== "active") {
           throw new Error("Delegation expired or missing — re-auth required");
         }
-        console.log("[restore] Delegation active. Session fully restored!");
+        console.log("[restore] Delegation active. Restoring direct TinyCloud storage...");
 
         // DID is deterministic from address (mainnet)
         const did = `did:pkh:eip155:1:${storedAddress}`;
 
-        // No TinyCloudWeb instance — not needed for API operations.
-        // User must re-authenticate to create new delegations.
+        const directRestore = await restoreTinyCloudWebSession(storedAddress, {
+          autoCreateSpace: false,
+        });
+        if (directRestore.status === "restored" && directRestore.tcw) {
+          console.log("[restore] Direct TinyCloud storage restored.");
+          setTcw(directRestore.tcw);
+        } else {
+          const message = `[restore] Direct TinyCloud storage restore returned ${directRestore.status}; continuing with backend API access only.`;
+          if (directRestore.error) {
+            console.warn(message, directRestore.error);
+          } else {
+            console.info(message);
+          }
+          setTcw(null);
+        }
+
         setAddress(storedAddress);
         setDid(did);
         setApi(apiClient);
@@ -202,14 +218,18 @@ export function App() {
       revokeDelegation(BACKEND_URL, token).catch(() => {});
     }
 
-    await tcw?.signOut?.();
+    if (tcw) {
+      await tcw.signOut?.();
+    } else if (address) {
+      clearPersistedSession(address);
+    }
     sessionStoreRef.current.clear();
     setAddress(null);
     setDid(null);
     setTcw(null);
     setApi(null);
     setAuthError(null);
-  }, [tcw]);
+  }, [address, tcw]);
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -235,7 +255,7 @@ export function App() {
 
         <ItemsCRUD api={api} />
 
-        <DirectStorage tcw={tcw} />
+        <DirectStorage tcw={tcw} isSignedIn={isSignedIn} />
       </main>
 
       <footer style={styles.footer}>

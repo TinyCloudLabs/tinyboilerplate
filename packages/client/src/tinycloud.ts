@@ -4,6 +4,7 @@ import type {
   ComposedManifestRequest,
   Config as TinyCloudWebSdkConfig,
   Manifest,
+  SessionRestoreResult,
   SiweConfig,
 } from "@tinycloud/web-sdk";
 import type { EIP1193Provider } from "./openkey.js";
@@ -25,6 +26,13 @@ export interface TinyCloudWebConfig {
   capabilityRequest?: ComposedManifestRequest;
   /** Include implicit account registry permissions when composing `manifest`. Default true in the SDK. */
   includeAccountRegistryPermissions?: boolean;
+}
+
+export interface RestoreTinyCloudWebSessionResult {
+  tcw: TinyCloudWeb | null;
+  status: SessionRestoreResult["status"];
+  session?: ClientSession;
+  error?: Error;
 }
 
 // ── TinyCloudWeb Instance ────────────────────────────────────────────
@@ -71,4 +79,47 @@ export async function createAndSignIn(
   const tcw = createTinyCloudWeb(web3Provider, { ...config, siweConfig });
   const session = await tcw.signIn();
   return { tcw, session };
+}
+
+/**
+ * Restore a browser TinyCloudWeb session from BrowserSessionStorage without
+ * connecting a wallet. The returned instance is session-only: it can use the
+ * restored TinyCloud delegation for direct storage, but cannot create new
+ * wallet-signed delegations until a provider is connected later.
+ */
+export async function restoreTinyCloudWebSession(
+  address: string,
+  config?: TinyCloudWebConfig,
+): Promise<RestoreTinyCloudWebSessionResult> {
+  const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
+  const tcwConfig: TinyCloudWebSdkConfig = {
+    tinycloudHosts: config?.tinycloudHosts,
+    tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
+    tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
+    autoCreateSpace: config?.autoCreateSpace ?? false,
+    sessionStorage: new BrowserSessionStorage(),
+    siweConfig: config?.siweConfig,
+    manifest,
+    capabilityRequest: config?.capabilityRequest,
+    includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
+  };
+
+  const tcw = new TinyCloudWeb(tcwConfig);
+
+  try {
+    const result = await tcw.restoreSession(address);
+    if (result.status === "restored") {
+      return { tcw, status: result.status, session: result.session };
+    }
+
+    tcw.cleanup();
+    return { tcw: null, status: result.status, error: result.error };
+  } catch (err) {
+    tcw.cleanup();
+    return {
+      tcw: null,
+      status: "restore-failed",
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
 }

@@ -2,7 +2,13 @@
 
 export { connectWallet, type ConnectWalletConfig, type ConnectWalletResult } from "./openkey.js";
 
-export { createTinyCloudWeb, createAndSignIn, type TinyCloudWebConfig } from "./tinycloud.js";
+export {
+  createTinyCloudWeb,
+  createAndSignIn,
+  restoreTinyCloudWebSession,
+  type RestoreTinyCloudWebSessionResult,
+  type TinyCloudWebConfig,
+} from "./tinycloud.js";
 
 export {
   loadAppManifest,

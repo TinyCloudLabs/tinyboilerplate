@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "bun:test";
 import express from "express";
 import type { Server } from "http";
+import { applySecurityDefaults } from "../security.js";
 import { createServerInfoRouter } from "../routes/server-info.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -9,6 +10,7 @@ const TEST_DID = "did:pkh:eip155:1:0xTEST";
 
 function createApp() {
   const app = express();
+  applySecurityDefaults(app);
   app.use("/api/server-info", createServerInfoRouter(TEST_DID));
   return app;
 }
@@ -91,6 +93,16 @@ describe("GET /api/server-info", () => {
 
     const res = await fetch(`${baseUrl}/api/server-info`);
     expect(res.headers.get("content-type")).toContain("application/json");
+  });
+
+  it("does not expose the Express X-Powered-By header", async () => {
+    const app = createApp();
+    const result = await startServer(app);
+    server = result.server;
+    baseUrl = `http://localhost:${result.port}`;
+
+    const res = await fetch(`${baseUrl}/api/server-info`);
+    expect(res.headers.has("x-powered-by")).toBe(false);
   });
 
   it("returns 404 for non-existent sub-routes", async () => {

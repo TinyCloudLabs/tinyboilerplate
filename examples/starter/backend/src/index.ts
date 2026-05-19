@@ -22,6 +22,7 @@ import { createAuthRouter } from "./routes/auth.js";
 import { createServerInfoRouter } from "./routes/server-info.js";
 import { createDelegationRouter } from "./routes/delegations.js";
 import { createItemsRouter } from "./routes/items.js";
+import { applySecurityDefaults } from "./security.js";
 
 // ── Environment ──────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ async function main() {
 
   // 4. Set up Express
   const app = express();
+  applySecurityDefaults(app);
   app.use(cors({ origin: FRONTEND_URL }));
   app.use(express.json());
   app.use(createCsrfMiddleware());

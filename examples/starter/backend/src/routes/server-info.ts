@@ -25,25 +25,25 @@ export function createServerInfoRouter(did: string) {
   //
   // Space is omitted so the manifest default applies: the application
   // space. Paths are app-relative and resolve under the manifest
-  // `app_id` prefix (`com.example.app/`) during composition.
+  // `app_id` prefix (`xyz.tinycloud.starter/`) during composition.
   const backendPermissions: ServerInfo["permissions"] = [
     {
       service: "tinycloud.kv",
       path: "/",
       actions: ["get", "put", "del", "list"],
-      description: "Read and write Example App item records in KV.",
+      description: "Read and write TinyCloud Starter item records in KV.",
     },
     {
       service: "tinycloud.sql",
       path: "/",
       actions: ["read", "write"],
-      description: "Read and write Example App item records in SQL.",
+      description: "Read and write TinyCloud Starter item records in SQL.",
     },
     {
       service: "tinycloud.duckdb",
       path: "/",
       actions: ["read", "write"],
-      description: "Read and write Example App item records in DuckDB.",
+      description: "Read and write TinyCloud Starter item records in DuckDB.",
     },
   ];
 
@@ -51,7 +51,7 @@ export function createServerInfoRouter(did: string) {
     const info: ServerInfo = {
       did,
       status: "ready",
-      name: "Example App Backend",
+      name: "TinyCloud Starter Backend",
       expiry: "7d",
       permissions: backendPermissions,
     };

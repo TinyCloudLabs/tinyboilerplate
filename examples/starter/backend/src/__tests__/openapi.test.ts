@@ -17,6 +17,11 @@ describe("OpenAPI spec", () => {
     expect(spec.paths).toBeDefined();
   });
 
+  test("uses the starter app API title", () => {
+    const info = spec.info as Record<string, unknown>;
+    expect(info.title).toBe("TinyCloud Starter API");
+  });
+
   test("contains all expected paths", () => {
     const paths = Object.keys(spec.paths as object);
     expect(paths).toContain("/api/server-info");

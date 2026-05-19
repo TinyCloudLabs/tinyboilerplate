@@ -1,0 +1,15 @@
+{
+  "manifest_version": 1,
+  "app_id": "xyz.tinycloud.starter",
+  "name": "TinyCloud Starter",
+  "description": "A clean React and Express starter for TinyCloud apps.",
+  "defaults": true,
+  "permissions": [
+    {
+      "service": "tinycloud.duckdb",
+      "path": "/",
+      "actions": ["read", "write"],
+      "description": "Run optional DuckDB examples for TinyCloud Starter data."
+    }
+  ]
+}

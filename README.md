@@ -48,7 +48,7 @@ bun run build
 bun run generate-key
 
 # 4. Configure environment
-cp examples/react-express/.env.example examples/react-express/.env
+cp examples/starter/.env.example examples/starter/.env
 # Edit .env — set BACKEND_PRIVATE_KEY and VITE_OPENKEY_CLIENT_ID
 
 # 5. Run the example
@@ -68,7 +68,7 @@ tinyboilerplate/
 │   ├── client/                      # Browser helpers (auth, delegation, API client)
 │   └── server/                      # Server helpers (identity, delegation store, JWT)
 ├── examples/
-│   └── react-express/               # Full working example
+│   └── starter/                     # Clean starter app
 │       ├── frontend/                # React + Vite
 │       └── backend/                 # Express + Bun
 ├── package.json                     # Bun workspace root
@@ -160,7 +160,7 @@ Frontend                    Backend                    TinyCloud
 ```
 Frontend                    Backend                    TinyCloud
    │── GET /api/items ────────►│                           │
-   │                           │── kv.list("com.example.app/items/") ─►│
+   │                           │── kv.list("xyz.tinycloud.starter/items/") ─►│
    │◄── { items: [...] } ──────│                           │
 ```
 
@@ -183,7 +183,7 @@ The `DirectStorage` panel uses the `TinyCloudWeb` instance directly — `tcw.kv.
 
 1. **Define your model** in `packages/core/src/index.ts` (replace `Item` with your types)
 2. **Update the manifest** — change `app_id`, name, description, and any permissions in `manifest.json`
-3. **Write your routes** — copy `examples/react-express/backend/src/routes/items.ts` as a template
+3. **Write your routes** — copy `examples/starter/backend/src/routes/items.ts` as a template
 4. **Wire up the frontend** — use `createApiClient` to call your new routes
 5. **Store type** — the example supports both `kv` and `sql` via `?store=kv|sql` query param
 

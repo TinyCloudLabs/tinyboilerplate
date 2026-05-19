@@ -6,7 +6,7 @@
  * deserialize → useDelegation → operate on the user's space.
  *
  * To run: BACKEND_PRIVATE_KEY=0x... bun run e2e-test.ts
- * Or:     source examples/react-express/backend/.env && bun run e2e-test.ts
+ * Or:     source examples/starter/backend/.env && bun run e2e-test.ts
  */
 import { TinyCloudNode, serializeDelegation, deserializeDelegation } from "@tinycloud/node-sdk";
 import { randomBytes } from "crypto";
@@ -16,7 +16,7 @@ import { resolve } from "path";
 // Load backend .env if BACKEND_PRIVATE_KEY isn't set
 if (!process.env.BACKEND_PRIVATE_KEY) {
   try {
-    const envPath = resolve(import.meta.dir, "examples/react-express/backend/.env");
+    const envPath = resolve(import.meta.dir, "examples/starter/backend/.env");
     const envContent = readFileSync(envPath, "utf-8");
     for (const line of envContent.split("\n")) {
       if (line.startsWith("#") || !line.includes("=")) continue;
@@ -25,7 +25,7 @@ if (!process.env.BACKEND_PRIVATE_KEY) {
     }
   } catch {
     console.error(
-      "BACKEND_PRIVATE_KEY not set. Run: source examples/react-express/backend/.env && bun run e2e-test.ts",
+      "BACKEND_PRIVATE_KEY not set. Run: source examples/starter/backend/.env && bun run e2e-test.ts",
     );
     process.exit(1);
   }
@@ -45,7 +45,7 @@ async function apiGet(path: string) {
 }
 
 async function main() {
-  console.log("=== TinyBoilerplate E2E Test ===\n");
+  console.log("=== TinyCloud Starter E2E Test ===\n");
 
   // 1. Check backend is up
   console.log("1. Backend info");
@@ -56,7 +56,7 @@ async function main() {
     console.log(`   DID: ${backendDID}\n`);
   } catch {
     console.error(
-      "   Backend not running. Start it with: cd examples/react-express/backend && bun run dev",
+      "   Backend not running. Start it with: cd examples/starter/backend && bun run dev",
     );
     process.exit(1);
   }

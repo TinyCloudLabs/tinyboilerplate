@@ -16,7 +16,7 @@ adding small, focused examples one at a time.
 
 Existing tracked examples:
 
-- `examples/react-express`: the clean generic starter and intended default
+- `examples/starter`: the clean generic starter and intended default
   copy/fork base.
 - `examples/conversation-sync`: a large Listen-derived advanced reference app.
   It is useful as reference material, but it should not be copied as the normal
@@ -45,17 +45,15 @@ complete flows over flashy surfaces.
 
 ### 1. Clean Starter App
 
-Status: already represented by `examples/react-express`.
-
-Possible follow-up: rename or document it more explicitly as the starter, but do
-not do that unless the user asks. Avoid destabilizing the existing hardening PR.
+Status: represented by `examples/starter`, renamed from the older
+framework-named path so it is explicitly the default scaffold.
 
 ### 2. User-Owned Notes / Bookmarks
 
 Priority: build this first.
 
 Purpose: demonstrate a normal app whose data is owned by the user in TinyCloud.
-This should feel like the missing middle between `react-express` and
+This should feel like the missing middle between `starter` and
 `conversation-sync`.
 
 Concept:
@@ -98,7 +96,7 @@ examples/notes-bookmarks
 
 Suggested implementation route:
 
-1. Start from `examples/react-express`, not from `examples/conversation-sync`.
+1. Start from `examples/starter`, not from `examples/conversation-sync`.
 2. Rename the packages, app id, manifest, server-info, storage keys, README, and
    API title.
 3. Replace the placeholder `Item` model with `Note` or `Bookmark`.
@@ -251,7 +249,7 @@ Before handing work back, run:
 bun install --frozen-lockfile
 bun run format:check
 bun run build
-bun test packages/client/src packages/server/src examples/react-express/backend/src examples/conversation-sync/backend/src
+bun test packages/client/src packages/server/src examples/starter/backend/src examples/conversation-sync/backend/src
 cd examples/conversation-sync/frontend && bunx vitest run
 ```
 
@@ -260,7 +258,7 @@ has frontend tests, include them in the example's README and in the handoff.
 
 ## Known Follow-Up Issue
 
-During the example audit, `examples/react-express/backend/src/routes/delegations.ts`
+During the example audit, `examples/starter/backend/src/routes/delegations.ts`
 was found to expose error `detail` and `stack` for invalid delegation failures,
 with a comment saying `Revert before merging`. This appears pre-existing. Fix it
 before using that route as the base for more examples, or make the new example

@@ -1,7 +1,7 @@
 import { type FC, useCallback, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
 
-const APP_ID = "com.example.app";
+const APP_ID = "xyz.tinycloud.starter";
 const APP_KV_PREFIX = `${APP_ID}/`;
 const APP_DATABASE = `${APP_ID}/items`;
 

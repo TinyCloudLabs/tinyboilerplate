@@ -1,13 +1,13 @@
 # Keep in sync with:
 #   - packages/core/src/index.ts (types)
-#   - examples/react-express/backend/src/routes/ (endpoints)
+#   - examples/starter/backend/src/routes/ (endpoints)
 
 openapi: 3.1.0
 info:
-  title: TinyBoilerplate API
+  title: TinyCloud Starter API
   version: 0.1.0
   description: |
-    Example API for the TinyBoilerplate project.
+    Starter API for TinyCloud + OpenKey apps.
     Demonstrates JWT auth (OpenKey) + TinyCloud delegation patterns.
 
     **Two-layer auth:**

@@ -339,8 +339,10 @@ describe("Delegation Routes", () => {
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toBe("invalid_delegation");
-      expect(body.message).toBe("Failed to process delegation");
+      expect(body).toEqual({
+        error: "invalid_delegation",
+        message: "Failed to process delegation",
+      });
     });
 
     it("returns 400 when node.useDelegation rejects", async () => {
@@ -356,8 +358,10 @@ describe("Delegation Routes", () => {
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toBe("invalid_delegation");
-      expect(body.message).toBe("Failed to process delegation");
+      expect(body).toEqual({
+        error: "invalid_delegation",
+        message: "Failed to process delegation",
+      });
     });
   });
 

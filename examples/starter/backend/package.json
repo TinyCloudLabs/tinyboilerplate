@@ -1,5 +1,5 @@
 {
-  "name": "@tinyboilerplate/example-backend",
+  "name": "@tinyboilerplate/starter-backend",
   "private": true,
   "type": "module",
   "scripts": {

@@ -58,8 +58,8 @@
         "vitest": "^4.1.1",
       },
     },
-    "examples/react-express/backend": {
-      "name": "@tinyboilerplate/example-backend",
+    "examples/starter/backend": {
+      "name": "@tinyboilerplate/starter-backend",
       "dependencies": {
         "@scalar/express-api-reference": "^0.4.0",
         "@tinyboilerplate/core": "workspace:*",
@@ -77,8 +77,8 @@
         "typescript": "^5.7.0",
       },
     },
-    "examples/react-express/frontend": {
-      "name": "@tinyboilerplate/example-frontend",
+    "examples/starter/frontend": {
+      "name": "@tinyboilerplate/starter-frontend",
       "dependencies": {
         "@openkey/sdk": "^0.8.4",
         "@tinyboilerplate/client": "workspace:*",
@@ -536,9 +536,9 @@
 
     "@tinyboilerplate/core": ["@tinyboilerplate/core@workspace:packages/core"],
 
-    "@tinyboilerplate/example-backend": ["@tinyboilerplate/example-backend@workspace:examples/react-express/backend"],
+    "@tinyboilerplate/starter-backend": ["@tinyboilerplate/starter-backend@workspace:examples/starter/backend"],
 
-    "@tinyboilerplate/example-frontend": ["@tinyboilerplate/example-frontend@workspace:examples/react-express/frontend"],
+    "@tinyboilerplate/starter-frontend": ["@tinyboilerplate/starter-frontend@workspace:examples/starter/frontend"],
 
     "@tinyboilerplate/server": ["@tinyboilerplate/server@workspace:packages/server"],
 

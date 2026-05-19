@@ -218,8 +218,8 @@ export function App() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>TinyBoilerplate</h1>
-        <p style={styles.subtitle}>React + Express Example</p>
+        <h1 style={styles.title}>TinyCloud Starter</h1>
+        <p style={styles.subtitle}>React + Express scaffold</p>
       </header>
 
       <main style={styles.main}>

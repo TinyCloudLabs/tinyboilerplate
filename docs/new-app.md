@@ -11,7 +11,7 @@ Treat it as advanced reference material, not as the default starter.
 
 ## 1. Choose the Starting Point
 
-Use `examples/react-express` by default. It is the intended scaffold for a new
+Use `examples/starter` by default. It is the intended scaffold for a new
 app and demonstrates the reusable substrate:
 
 - OpenKey popup sign-in
@@ -39,7 +39,7 @@ and agent docs.
 ## 2. Copy and Rename Packages
 
 Start by copying or forking the whole TinyBoilerplate repo. The examples depend
-on the workspace packages in `packages/*`, so copying only `examples/react-express`
+on the workspace packages in `packages/*`, so copying only `examples/starter`
 is not self-contained unless you also copy, publish, or replace those packages.
 
 ```bash
@@ -47,12 +47,12 @@ git clone https://github.com/tinycloudlabs/tinyboilerplate.git my-new-app
 cd my-new-app
 ```
 
-Then use `examples/react-express` as the app surface. Rename package names in:
+Then use `examples/starter` as the app surface. Rename package names in:
 
 - root `package.json`
-- `examples/react-express/package.json`
-- `examples/react-express/frontend/package.json`
-- `examples/react-express/backend/package.json`
+- `examples/starter/package.json`
+- `examples/starter/frontend/package.json`
+- `examples/starter/backend/package.json`
 
 Keep shared imports as `@tinyboilerplate/*` while developing inside this
 monorepo. Rename or publish those shared packages only if the new app is being
@@ -66,20 +66,20 @@ Choose a stable app id before users create data. Recommended format:
 xyz.tinycloud.<app-name>
 ```
 
-For `examples/react-express`, replace:
+For `examples/starter`, replace:
 
-- `examples/react-express/frontend/public/manifest.json`: `app_id`, `name`, `description`
-- `examples/react-express/backend/src/routes/items.ts`: `APP_ID`
-- `examples/react-express/frontend/src/components/DirectStorage.tsx`: `APP_ID`
+- `examples/starter/frontend/public/manifest.json`: `app_id`, `name`, `description`
+- `examples/starter/backend/src/routes/items.ts`: `APP_ID`
+- `examples/starter/frontend/src/components/DirectStorage.tsx`: `APP_ID`
 
 Also rename app-facing display text:
 
-- `examples/react-express/frontend/src/App.tsx`: title/subtitle/footer copy
-- `examples/react-express/backend/src/routes/server-info.ts`: backend display name and permission descriptions
-- `examples/react-express/backend/openapi.yaml`: API title if the app exposes docs
-- `examples/react-express/README.md`: product name, setup notes, and data model examples
+- `examples/starter/frontend/src/App.tsx`: title/subtitle/footer copy
+- `examples/starter/backend/src/routes/server-info.ts`: backend display name and permission descriptions
+- `examples/starter/backend/openapi.yaml`: API title if the app exposes docs
+- `examples/starter/README.md`: product name, setup notes, and data model examples
 
-Do not reuse `com.example.app` for a real product.
+Do not reuse `xyz.tinycloud.starter` for a real product.
 
 ## 4. Configure Auth and Environment
 
@@ -109,7 +109,7 @@ Rename storage keys before shipping a real app:
 
 - TinyCloud KV prefixes derived from `APP_ID`
 - TinyCloud SQL and DuckDB database names derived from `APP_ID`
-- browser storage keys such as `tinyboilerplate:session` and `tinyboilerplate:storeType`
+- browser storage keys such as `tinyboilerplate:session` and `tinycloud-starter:storeType`
 - CSRF/request header display values if branded diagnostics matter
 - OpenKey app display names passed through the auth flow
 
@@ -117,7 +117,7 @@ Changing these after users have data is a migration, not a rename.
 
 ## 6. Replace the Example Domain Model
 
-`examples/react-express` uses `Item` as the placeholder model. Replace it with
+`examples/starter` uses `Item` as the placeholder model. Replace it with
 your product model in this order:
 
 1. Update shared types in `packages/core/src/index.ts`.
@@ -140,7 +140,7 @@ rm -rf node_modules
 bun install --frozen-lockfile
 bun run format:check
 bun run build
-bun test packages/client/src packages/server/src examples/react-express/backend/src examples/conversation-sync/backend/src
+bun test packages/client/src packages/server/src examples/starter/backend/src examples/conversation-sync/backend/src
 cd examples/conversation-sync/frontend && bunx vitest run
 ```
 
@@ -149,7 +149,7 @@ For a copied full-repo scaffold using React + Express, run at least:
 ```bash
 bun install --frozen-lockfile
 bun run build
-bun test packages/client/src packages/server/src examples/react-express/backend/src
+bun test packages/client/src packages/server/src examples/starter/backend/src
 ```
 
 Then run the app locally:

@@ -25,10 +25,10 @@ Dependency chain: `core` ← `client`, `core` ← `server`. Client and server ar
 bun install                          # Install all workspace deps
 bun run build                        # Build core → client → server (order matters)
 bun run generate-key                 # Generate BACKEND_PRIVATE_KEY
-bun run dev                          # Run react-express example (frontend:5173 + backend:3001)
+bun run dev                          # Run starter example (frontend:5173 + backend:3001)
 ```
 
-Workspace root: `package.json` defines `"workspaces": ["packages/*", "examples/react-express/frontend", "examples/react-express/backend"]`.
+Workspace root: `package.json` defines `"workspaces": ["packages/*", "examples/starter/frontend", "examples/starter/backend"]`.
 
 Backend runs with `bun --watch`, frontend with Vite.
 
@@ -122,7 +122,7 @@ DEFAULT_DELEGATION_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000  // 1 year fallback
 DELEGATION_CACHE_TTL_MS = 50 * 60 * 1000  // 50 minutes
 ```
 
-## Example App Structure (react-express)
+## Starter App Structure
 
 ### Backend Routes
 

@@ -8,7 +8,7 @@ interface ItemsCRUDProps {
 
 export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
   const [storeType, setStoreType] = useState<StoreType>(
-    () => (localStorage.getItem("tinyboilerplate:storeType") as StoreType) || "kv",
+    () => (localStorage.getItem("tinycloud-starter:storeType") as StoreType) || "kv",
   );
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
@@ -201,7 +201,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
             <button
               onClick={() => {
                 setStoreType("kv");
-                localStorage.setItem("tinyboilerplate:storeType", "kv");
+                localStorage.setItem("tinycloud-starter:storeType", "kv");
                 setItems([]);
                 setSqlQuery(null);
                 setRowCount(null);
@@ -217,7 +217,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
             <button
               onClick={() => {
                 setStoreType("sql");
-                localStorage.setItem("tinyboilerplate:storeType", "sql");
+                localStorage.setItem("tinycloud-starter:storeType", "sql");
                 setItems([]);
                 setLastResponse(null);
               }}
@@ -231,7 +231,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
             <button
               onClick={() => {
                 setStoreType("duckdb");
-                localStorage.setItem("tinyboilerplate:storeType", "duckdb");
+                localStorage.setItem("tinycloud-starter:storeType", "duckdb");
                 setItems([]);
                 setLastResponse(null);
               }}

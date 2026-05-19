@@ -1,5 +1,5 @@
 {
-  "name": "@tinyboilerplate/example-react-express",
+  "name": "@tinyboilerplate/starter",
   "private": true,
   "scripts": {
     "dev": "bun run dev:backend & bun run dev:frontend",

@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import type { Item, CreateItemInput, UpdateItemInput, StoreType } from "@tinyboilerplate/core";
 import type { DelegatedAccess } from "@tinyboilerplate/server";
 
-const APP_ID = "com.example.app";
+const APP_ID = "xyz.tinycloud.starter";
 const ITEM_KV_PREFIX = `${APP_ID}/items/`;
 const ITEM_SQL_DATABASE = `${APP_ID}/items`;
 

@@ -26,7 +26,7 @@ export function conversationSql(access: DelegatedAccess): ConversationSql {
  */
 /**
  * TinyCloud's SQLite authorizer restricts CREATE INDEX, UNIQUE constraints,
- * and REFERENCES. Keep schema simple — PRIMARY KEY only (like react-express items table).
+ * and REFERENCES. Keep schema simple — PRIMARY KEY only (like starter items table).
  * Dedup is handled at the application level via pre-fetch source_id check.
  */
 const SCHEMA_STATEMENTS = [

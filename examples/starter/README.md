@@ -1,11 +1,11 @@
-# React + Express Example
+# TinyCloud Starter
 
-A full-stack demo showing OpenKey authentication, TinyCloud delegation, and CRUD operations through a backend that operates on the user's TinyCloud space.
+A clean React + Express starter showing OpenKey authentication, TinyCloud delegation, and CRUD operations through a backend that operates on the user's TinyCloud space.
 
 **What this demonstrates:**
 - OAuth PKCE sign-in via OpenKey (popup mode)
 - TinyCloud session creation + space auto-provisioning
-- Manifest-backed delegation from user to backend (7-day expiry, `com.example.app/` app scope)
+- Manifest-backed delegation from user to backend (7-day expiry, `xyz.tinycloud.starter/` app scope)
 - JWT-authenticated API with delegation-based authorization
 - CRUD on user-owned data via KV, SQL, and DuckDB storage
 
@@ -53,7 +53,7 @@ VITE_BACKEND_URL=http://localhost:3001
 ## Running
 
 ```bash
-# From this directory (examples/react-express)
+# From this directory (examples/starter)
 bun run dev
 
 # Or from repo root
@@ -130,8 +130,8 @@ export interface Task {
 // frontend/public/manifest.json
 {
   "manifest_version": 1,
-  "app_id": "com.example.app",
-  "name": "Example App",
+  "app_id": "xyz.tinycloud.starter",
+  "name": "TinyCloud Starter",
   "defaults": true
 }
 ```

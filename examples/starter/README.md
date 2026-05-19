@@ -12,8 +12,7 @@ A clean React + Express starter showing OpenKey authentication, TinyCloud delega
 ## Prerequisites
 
 - [Bun](https://bun.sh) v1.0+
-- An [OpenKey](https://openkey.so) account with a registered OAuth client
-- The OAuth client must have `https://localhost:5173` as an allowed redirect URI
+- An [OpenKey](https://openkey.so) account
 
 ## Setup
 
@@ -27,26 +26,24 @@ bun run build
 
 # 3. Generate a backend private key
 bun run generate-key
-# Copy the output key
 
-# 4. Create your .env file
-cp .env.example .env
+# 4. Create the child app env files
+cp examples/starter/backend/.env.example examples/starter/backend/.env
+cp examples/starter/frontend/.env.example examples/starter/frontend/.env
 ```
 
-Edit `.env`:
+Edit `examples/starter/backend/.env` and paste the generated `BACKEND_PRIVATE_KEY` value. If `bun run generate-key` created a repo-root `.env`, copy the key from there.
 
 ```bash
-# Required — paste the generated key
 BACKEND_PRIVATE_KEY=0x...
-
-# Required — your OpenKey OAuth client ID
-VITE_OPENKEY_CLIENT_ID=your-client-id
-
-# Optional — defaults work for local dev
-# TINYCLOUD_HOST=https://node.tinycloud.xyz
-FRONTEND_URL=https://localhost:5173
-OPENKEY_ISSUER_URL=https://openkey.so
+TINYCLOUD_HOST=https://node.tinycloud.xyz
+FRONTEND_URL=http://localhost:5173
 PORT=3001
+```
+
+`examples/starter/frontend/.env` can usually keep the example defaults:
+
+```bash
 VITE_OPENKEY_HOST=https://openkey.so
 VITE_BACKEND_URL=http://localhost:3001
 ```
@@ -62,10 +59,10 @@ bun run dev
 ```
 
 This starts both:
-- **Frontend**: `https://localhost:5173` (Vite dev server, when local certs are present)
+- **Frontend**: `http://localhost:5173` by default, or `https://localhost:5173` when local certs are present
 - **Backend**: `http://localhost:3001` (Bun with --watch)
 
-If `frontend/localhost.pem` and `frontend/localhost-key.pem` are missing, Vite falls back to `http://localhost:5173`. In that case, use the HTTP origin consistently for the OpenKey redirect URI and `FRONTEND_URL`.
+If `frontend/localhost.pem` and `frontend/localhost-key.pem` are present, Vite uses HTTPS. In that case, set `FRONTEND_URL=https://localhost:5173` in `backend/.env` so CORS matches the frontend origin.
 
 You can also run them separately:
 ```bash

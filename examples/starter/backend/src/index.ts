@@ -28,11 +28,13 @@ import { applySecurityDefaults } from "./security.js";
 
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY;
 const TINYCLOUD_HOST = process.env.TINYCLOUD_HOST ?? "https://node.tinycloud.xyz";
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "https://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 if (!BACKEND_PRIVATE_KEY) {
-  console.error("BACKEND_PRIVATE_KEY is required. Generate one with: bun run generate-key");
+  console.error(
+    "BACKEND_PRIVATE_KEY is required. Generate one from the repo root with `bun run generate-key`, then set examples/starter/backend/.env.",
+  );
   process.exit(1);
 }
 

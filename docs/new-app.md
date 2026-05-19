@@ -83,21 +83,20 @@ Do not reuse `xyz.tinycloud.starter` for a real product.
 
 ## 4. Configure Auth and Environment
 
-1. Register or choose an OpenKey OAuth client for the new frontend origin.
-2. Copy the example env file:
+1. Copy the child app env files:
 
 ```bash
-cp .env.example .env
+cp examples/starter/backend/.env.example examples/starter/backend/.env
+cp examples/starter/frontend/.env.example examples/starter/frontend/.env
 ```
 
-3. Set backend values:
+2. Set backend values:
    - `BACKEND_PRIVATE_KEY`: generate with `bun run generate-key`
    - `TINYCLOUD_HOST`: optional, defaults to the production TinyCloud node
    - `FRONTEND_URL`: exact frontend origin
    - `PORT`: backend port
-4. Set frontend values:
+3. Set frontend values:
    - `VITE_OPENKEY_HOST`: OpenKey issuer, usually `https://openkey.so`
-   - `VITE_OPENKEY_CLIENT_ID`: OpenKey client id if required by the OpenKey setup
    - `VITE_BACKEND_URL`: exact backend origin
 
 Backend identity is app-owned. User data access happens through user-granted

@@ -48,15 +48,16 @@ bun run build
 bun run generate-key
 
 # 4. Configure environment
-cp examples/starter/.env.example examples/starter/.env
-# Edit .env — set BACKEND_PRIVATE_KEY and VITE_OPENKEY_CLIENT_ID
+cp examples/starter/backend/.env.example examples/starter/backend/.env
+cp examples/starter/frontend/.env.example examples/starter/frontend/.env
+# Edit examples/starter/backend/.env and set BACKEND_PRIVATE_KEY
 
 # 5. Run the example
 bun run dev
 ```
 
-The starter frontend runs on `https://localhost:5173` when local certs are present, and the backend runs on `http://localhost:3001`.
-If `examples/starter/frontend/localhost.pem` and `examples/starter/frontend/localhost-key.pem` are missing, Vite falls back to `http://localhost:5173`; use the same origin for the OpenKey redirect URI and `FRONTEND_URL`.
+The starter frontend runs on `http://localhost:5173` by default, or `https://localhost:5173` when local certs are present. The backend runs on `http://localhost:3001`.
+If `examples/starter/frontend/localhost.pem` and `examples/starter/frontend/localhost-key.pem` are present, set `FRONTEND_URL=https://localhost:5173` in `examples/starter/backend/.env` so CORS matches the frontend origin.
 For the Listen conversation-sync example, you can also run stable HTTPS local
 URLs with `bun run dev:conversation-sync:portless`.
 
@@ -198,14 +199,13 @@ The delegation chain is the same regardless of your data model: authenticate (JW
 |----------|----------|---------|-------------|
 | `BACKEND_PRIVATE_KEY` | Yes | — | Ethereum private key (0x-prefixed). Generate with `bun run generate-key` |
 | `TINYCLOUD_HOST` | No | `https://node.tinycloud.xyz` | TinyCloud node URL |
-| `OPENKEY_ISSUER_URL` | No | `https://openkey.so` | OpenKey issuer for JWT verification |
+| `FRONTEND_URL` | No | `http://localhost:5173` | Frontend origin allowed by backend CORS |
 | `PORT` | No | `3001` | Backend port |
 
 ### Frontend (Vite)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_OPENKEY_CLIENT_ID` | Yes | — | Your OpenKey OAuth client ID |
 | `VITE_OPENKEY_HOST` | No | `https://openkey.so` | OpenKey host |
 | `VITE_BACKEND_URL` | No | `http://localhost:3001` | Backend URL |
 

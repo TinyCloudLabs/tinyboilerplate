@@ -94,6 +94,9 @@ export interface ItemListMeta {
   totalKeys: number;
   hasMore: boolean;
   truncated: boolean;
+  limitedBy?: "kv_value_fetch_limit";
+  supportsPagination?: boolean;
+  note?: string;
 }
 
 export interface ItemListResponse {

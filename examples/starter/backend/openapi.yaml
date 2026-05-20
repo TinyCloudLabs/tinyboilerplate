@@ -165,7 +165,7 @@ paths:
         - $ref: "#/components/parameters/StoreType"
         - name: limit
           in: query
-          description: Maximum KV item values to fetch. Applies to the KV store only; defaults to 25 and is capped at 50.
+          description: Maximum KV item values to fetch. Applies to the KV store only; defaults to 25 and is capped at 50. The installed TinyCloud SDK does not provide cursor pagination, so this limit is applied after listing matching keys.
           schema:
             type: integer
             minimum: 1
@@ -434,12 +434,13 @@ components:
 
     ItemListMeta:
       type: object
-      description: KV list bounds and truncation metadata. Present for KV list responses.
-      required: [limit, returned, totalKeys, hasMore, truncated]
+      description: KV list bounds and truncation metadata. Present for KV list responses. This describes a bounded sample from matching keys, not cursor pagination.
+      required:
+        [limit, returned, totalKeys, hasMore, truncated, limitedBy, supportsPagination, note]
       properties:
         limit:
           type: integer
-          description: Effective server-side limit after defaulting and max enforcement.
+          description: Effective server-side value-fetch limit after defaulting and max enforcement.
           example: 25
         returned:
           type: integer
@@ -451,12 +452,26 @@ components:
           example: 42
         hasMore:
           type: boolean
-          description: True when more KV keys matched than the server fetched.
+          description: True when more KV keys matched than the server fetched. This does not imply a cursor is available.
           example: true
         truncated:
           type: boolean
           description: True when the response was capped by the effective limit.
           example: true
+        limitedBy:
+          type: string
+          enum: [kv_value_fetch_limit]
+          description: Stable reason the KV response is bounded.
+          example: kv_value_fetch_limit
+        supportsPagination:
+          type: boolean
+          const: false
+          description: The installed TinyCloud SDK does not expose cursor/limit pagination for KV list.
+          example: false
+        note:
+          type: string
+          description: Human-readable note that this is a bounded sample, not true pagination.
+          example: "KV list pagination is not available in the installed TinyCloud SDK; limit caps value fetches after listing matching keys."
 
     DelegationResponse:
       type: object

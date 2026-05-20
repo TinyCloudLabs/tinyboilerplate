@@ -5,6 +5,11 @@ import type { Request, Response, NextFunction } from "express";
 import { createItemsRouter } from "../routes/items.js";
 
 const TEST_ITEM_KV_PREFIX = "xyz.tinycloud.starter/items/";
+const EXPECTED_KV_LIST_HONESTY_META = {
+  limitedBy: "kv_value_fetch_limit",
+  supportsPagination: false,
+  note: "KV list pagination is not available in the installed TinyCloud SDK; limit caps value fetches after listing matching keys.",
+};
 
 // ── Mock KV Store (in-memory, Result pattern) ───────────────────────
 
@@ -224,6 +229,7 @@ describe("Items CRUD (KV store)", () => {
         totalKeys: 0,
         hasMore: false,
         truncated: false,
+        ...EXPECTED_KV_LIST_HONESTY_META,
       },
     });
   });
@@ -359,6 +365,7 @@ describe("Items CRUD (KV store)", () => {
       totalKeys: 30,
       hasMore: true,
       truncated: true,
+      ...EXPECTED_KV_LIST_HONESTY_META,
     });
     expect(getCalls).toBe(25);
   });
@@ -382,6 +389,7 @@ describe("Items CRUD (KV store)", () => {
       totalKeys: 70,
       hasMore: true,
       truncated: true,
+      ...EXPECTED_KV_LIST_HONESTY_META,
     });
     expect(getCalls).toBe(50);
   });
@@ -389,10 +397,16 @@ describe("Items CRUD (KV store)", () => {
   it("GET /api/items does not call KV get beyond the requested limit", async () => {
     seedKVItems(access, 20);
     const originalGet = access.kv.get;
+    const originalList = access.kv.list;
     let getCalls = 0;
+    let listOptions: unknown;
     access.kv.get = async (key: string) => {
       getCalls += 1;
       return originalGet(key);
+    };
+    access.kv.list = async (opts: { prefix: string }) => {
+      listOptions = opts;
+      return originalList(opts);
     };
 
     const res = await fetch(`${baseUrl}/api/items?limit=7`);
@@ -405,8 +419,10 @@ describe("Items CRUD (KV store)", () => {
       totalKeys: 20,
       hasMore: true,
       truncated: true,
+      ...EXPECTED_KV_LIST_HONESTY_META,
     });
     expect(getCalls).toBe(7);
+    expect(listOptions).toEqual({ prefix: TEST_ITEM_KV_PREFIX });
   });
 
   it("GET /api/items bounds concurrent KV value fetches", async () => {

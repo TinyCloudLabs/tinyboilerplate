@@ -9,6 +9,9 @@ const ITEM_SQL_DATABASE = `${APP_ID}/items`;
 const KV_LIST_FETCH_CONCURRENCY = 5;
 const KV_LIST_DEFAULT_LIMIT = 25;
 const KV_LIST_MAX_LIMIT = 50;
+const KV_LIST_LIMITED_BY = "kv_value_fetch_limit";
+const KV_LIST_PAGINATION_NOTE =
+  "KV list pagination is not available in the installed TinyCloud SDK; limit caps value fetches after listing matching keys.";
 
 // ── Items Router ─────────────────────────────────────────────────────
 
@@ -79,6 +82,9 @@ export function createItemsRouter() {
             totalKeys: keys.length,
             hasMore: keys.length > keysToFetch.length,
             truncated: keys.length > keysToFetch.length,
+            limitedBy: KV_LIST_LIMITED_BY,
+            supportsPagination: false,
+            note: KV_LIST_PAGINATION_NOTE,
           },
         });
       }

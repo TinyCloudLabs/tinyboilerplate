@@ -59,6 +59,23 @@ describe("OpenAPI spec", () => {
     expect(limit).toBeDefined();
     expect(limit.in).toBe("query");
     expect(limit.schema).toMatchObject({ type: "integer", default: 25, maximum: 50 });
+    expect(limit.description).toContain("does not provide cursor pagination");
+  });
+
+  test("item list metadata documents bounded KV samples, not cursor pagination", () => {
+    const components = spec.components as Record<string, Record<string, unknown>>;
+    const schemas = components.schemas as Record<string, Record<string, unknown>>;
+    const meta = schemas.ItemListMeta as Record<string, unknown>;
+    const required = meta.required as string[];
+    const properties = meta.properties as Record<string, Record<string, unknown>>;
+
+    expect(required).toEqual(expect.arrayContaining(["limitedBy", "supportsPagination", "note"]));
+    expect(properties.limitedBy).toMatchObject({
+      type: "string",
+      enum: ["kv_value_fetch_limit"],
+    });
+    expect(properties.supportsPagination).toMatchObject({ type: "boolean", const: false });
+    expect(properties.note.description).toContain("bounded sample");
   });
 
   test("defines all expected schemas", () => {

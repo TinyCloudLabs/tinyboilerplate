@@ -14,6 +14,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);
+  const [kvListMeta, setKvListMeta] = useState<ItemListResponse["meta"] | null>(null);
 
   // Create form
   const [newTitle, setNewTitle] = useState("");
@@ -58,6 +59,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
       if (id !== fetchIdRef.current) return;
       setItems(res.items);
       setLastResponse(res);
+      setKvListMeta(storeType === "kv" ? (res.meta ?? null) : null);
       if (res.sql) setSqlQuery(res.sql);
       if (res.rowCount != null) setRowCount(res.rowCount);
     } catch (err) {
@@ -74,6 +76,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
     } else {
       setItems([]);
       setLastResponse(null);
+      setKvListMeta(null);
       setLoading(false);
     }
   }, [enabled, fetchItems]);
@@ -96,6 +99,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
 
         const res = await api.post<ItemResponse>(`/api/items?store=${storeType}`, body);
         setLastResponse(res);
+        setKvListMeta(null);
         setNewTitle("");
         setNewData("");
         // Optimistic: add to list immediately
@@ -127,6 +131,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
 
         const res = await api.put<ItemResponse>(`/api/items/${id}?store=${storeType}`, body);
         setLastResponse(res);
+        setKvListMeta(null);
         setEditingId(null);
         setEditTitle("");
         setEditData("");
@@ -155,6 +160,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
       try {
         await api.del(`/api/items/${id}?store=${storeType}`);
         setLastResponse({ deleted: id });
+        setKvListMeta(null);
         // Optimistic: remove from list immediately
         setItems((prev) => prev.filter((i) => i.id !== id));
       } catch (err) {
@@ -179,6 +185,11 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
     setEditTitle("");
     setEditData("");
   }, []);
+
+  const kvListStatus =
+    storeType === "kv" && kvListMeta && (kvListMeta.truncated || kvListMeta.hasMore)
+      ? `Showing ${kvListMeta.returned} of ${kvListMeta.totalKeys} KV keys`
+      : null;
 
   // ── Render ────────────────────────────────────────────────────────
 
@@ -206,6 +217,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
                 setSqlQuery(null);
                 setRowCount(null);
                 setLastResponse(null);
+                setKvListMeta(null);
               }}
               style={{
                 ...styles.toggleButton,
@@ -220,6 +232,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
                 localStorage.setItem("tinycloud-starter:storeType", "sql");
                 setItems([]);
                 setLastResponse(null);
+                setKvListMeta(null);
               }}
               style={{
                 ...styles.toggleButton,
@@ -234,6 +247,7 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
                 localStorage.setItem("tinycloud-starter:storeType", "duckdb");
                 setItems([]);
                 setLastResponse(null);
+                setKvListMeta(null);
               }}
               style={{
                 ...styles.toggleButton,
@@ -290,6 +304,8 @@ export const ItemsCRUD: FC<ItemsCRUDProps> = ({ api }) => {
               <code style={styles.sqlCode}>{sqlQuery}</code>
             </div>
           )}
+
+          {kvListStatus && <p style={styles.kvListStatus}>{kvListStatus}</p>}
 
           {/* Create form */}
           <form onSubmit={handleCreate} style={styles.createForm}>
@@ -540,6 +556,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#888",
     textAlign: "center",
     padding: 20,
+  },
+  kvListStatus: {
+    fontSize: 13,
+    color: "#555",
+    margin: "-4px 0 12px",
   },
   itemList: {
     display: "flex",

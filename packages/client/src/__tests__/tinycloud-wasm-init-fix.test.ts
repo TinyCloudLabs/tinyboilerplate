@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
-import { patchTinyCloudWasmInit } from "../../scripts/fix-web-wasm-init.mjs";
+import {
+  patchTinyCloudWasmInit,
+  removeStaleViteDependencyCaches,
+} from "../../scripts/fix-web-wasm-init.mjs";
 
 describe("patchTinyCloudWasmInit", () => {
   test("wraps the bundled web-sdk wasm module in the object-shaped initializer", () => {
@@ -27,5 +33,39 @@ describe("patchTinyCloudWasmInit", () => {
     expect(result.content).toContain(
       "var initialized = __wbg_init({ module_or_path: wasm() }).then(function () {",
     );
+  });
+
+  test("removes stale starter frontend Vite dependency caches with the deprecated wasm init warning", () => {
+    const root = mkdtempSync(join(tmpdir(), "tinyboilerplate-wasm-init-"));
+
+    try {
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({
+          workspaces: ["examples/starter/frontend", "packages/client"],
+        }),
+      );
+
+      const staleCache = join(root, "examples/starter/frontend/node_modules/.vite");
+      const staleFile = join(staleCache, "deps/@tinycloud_web-sdk.js");
+      mkdirSync(join(staleCache, "deps"), { recursive: true });
+      writeFileSync(
+        staleFile,
+        'console.warn("using deprecated parameters for the initialization function; pass a single object instead");',
+      );
+
+      const packageCache = join(root, "packages/client/node_modules/.vite");
+      const packageCacheFile = join(packageCache, "deps/other.js");
+      mkdirSync(join(packageCache, "deps"), { recursive: true });
+      writeFileSync(packageCacheFile, "console.log('fresh cache');");
+
+      const removed = removeStaleViteDependencyCaches(root);
+
+      expect(removed).toEqual([staleCache]);
+      expect(readFileSync(packageCacheFile, "utf8")).toBe("console.log('fresh cache');");
+      expect(() => readFileSync(staleFile, "utf8")).toThrow();
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
   });
 });

@@ -13,6 +13,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "postinstall": "node scripts/fix-web-wasm-init.mjs",
     "test": "bun test src/__tests__"
   },
   "dependencies": {

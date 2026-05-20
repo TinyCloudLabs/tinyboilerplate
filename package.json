@@ -22,6 +22,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "postinstall": "node packages/client/scripts/fix-web-wasm-init.mjs",
     "predev": "lsof -ti:3001,5173 | xargs kill -9 2>/dev/null; pkill -9 -f 'bun --watch src/index.ts' 2>/dev/null; true",
     "dev": "turbo run dev --filter=@tinyboilerplate/starter-frontend --filter=@tinyboilerplate/starter-backend",
     "dev:conversation-sync": "turbo run dev --filter=conversation-sync-frontend --filter=conversation-sync-backend",

@@ -1,5 +1,11 @@
 import { Router } from "express";
 import type { ServerInfo } from "@tinyboilerplate/core";
+import {
+  BACKEND_DELEGATION_PERMISSIONS,
+  getBackendDelegationPolicyHash,
+} from "../backend-policy.js";
+
+export { getBackendDelegationPolicyHash };
 
 // ── Server Info Route ────────────────────────────────────────────────
 
@@ -26,34 +32,13 @@ export function createServerInfoRouter(did: string) {
   // Space is omitted so the manifest default applies: the application
   // space. Paths are app-relative and resolve under the manifest
   // `app_id` prefix (`xyz.tinycloud.starter/`) during composition.
-  const backendPermissions: ServerInfo["permissions"] = [
-    {
-      service: "tinycloud.kv",
-      path: "/",
-      actions: ["get", "put", "del", "list"],
-      description: "Read and write TinyCloud Starter item records in KV.",
-    },
-    {
-      service: "tinycloud.sql",
-      path: "/",
-      actions: ["read", "write"],
-      description: "Read and write TinyCloud Starter item records in SQL.",
-    },
-    {
-      service: "tinycloud.duckdb",
-      path: "/",
-      actions: ["read", "write"],
-      description: "Read and write TinyCloud Starter item records in DuckDB.",
-    },
-  ];
-
   router.get("/", (_req, res) => {
     const info: ServerInfo = {
       did,
       status: "ready",
       name: "TinyCloud Starter Backend",
       expiry: "7d",
-      permissions: backendPermissions,
+      permissions: BACKEND_DELEGATION_PERMISSIONS,
     };
     res.json(info);
   });

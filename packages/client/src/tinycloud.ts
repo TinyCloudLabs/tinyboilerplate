@@ -26,6 +26,8 @@ export interface TinyCloudWebConfig {
   capabilityRequest?: ComposedManifestRequest;
   /** Include implicit account registry permissions when composing `manifest`. Default true in the SDK. */
   includeAccountRegistryPermissions?: boolean;
+  /** SIWE nonce override. If set, `siweConfig.nonce` still wins inside the SDK. */
+  nonce?: string;
 }
 
 export interface RestoreTinyCloudWebSessionResult {
@@ -52,6 +54,7 @@ export function createTinyCloudWeb(
     tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
     autoCreateSpace: config?.autoCreateSpace ?? true,
     sessionStorage: new BrowserSessionStorage(),
+    nonce: config?.nonce,
     siweConfig: config?.siweConfig,
     manifest,
     capabilityRequest: config?.capabilityRequest,
@@ -71,13 +74,16 @@ export function createTinyCloudWeb(
  */
 export async function createAndSignIn(
   web3Provider: EIP1193Provider,
-  config?: TinyCloudWebConfig & { nonce?: string },
+  config?: TinyCloudWebConfig & { address?: string },
 ): Promise<{ tcw: TinyCloudWeb; session: ClientSession }> {
   const siweConfig = config?.nonce
     ? { ...config?.siweConfig, nonce: config.nonce }
     : config?.siweConfig;
   const tcw = createTinyCloudWeb(web3Provider, { ...config, siweConfig });
-  const session = await tcw.signIn();
+  if (config?.nonce) {
+    await tcw.clearPersistedSession(config.address);
+  }
+  const session = await tcw.signIn(config?.nonce ? { nonce: config.nonce } : undefined);
   return { tcw, session };
 }
 
@@ -98,6 +104,7 @@ export async function restoreTinyCloudWebSession(
     tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
     autoCreateSpace: config?.autoCreateSpace ?? false,
     sessionStorage: new BrowserSessionStorage(),
+    nonce: config?.nonce,
     siweConfig: config?.siweConfig,
     manifest,
     capabilityRequest: config?.capabilityRequest,

@@ -28,6 +28,7 @@ import express from "express";
 import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
 import { createDelegationRouter } from "../routes/delegations.js";
+import { getBackendDelegationPolicyHash } from "../routes/server-info.js";
 
 // ── In-Memory Delegation Store ────────────────────────────────────────
 
@@ -37,6 +38,8 @@ interface StoredEntry {
   expiresAt: string;
   actions: string[];
   path: string;
+  policyHash?: string;
+  resources?: unknown[];
 }
 
 function createMockDelegationStore() {
@@ -51,6 +54,8 @@ function createMockDelegationStore() {
         expiresAt: metadata.expiresAt,
         actions: metadata.actions,
         path: metadata.path,
+        policyHash: metadata.policyHash,
+        resources: metadata.resources,
       });
     },
     load: async (identifier: string) => {
@@ -202,6 +207,23 @@ describe("Delegation Routes", () => {
       expect(body.status).toBe("expired");
     });
 
+    it("returns 'none' and removes stored delegations from an old backend policy", async () => {
+      await store.store(TEST_ADDRESS, "old-policy-delegation", {
+        expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        actions: ["tinycloud.kv/get"],
+        path: "xyz.tinycloud.starter/",
+      });
+      cache.set(TEST_ADDRESS, { kv: {}, sql: {} });
+
+      const res = await fetch(`${baseUrl}/api/delegations/status`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.status).toBe("none");
+      expect(body.expiresAt).toBeNull();
+      expect(await store.load(TEST_ADDRESS)).toBeNull();
+      expect(cache.has(TEST_ADDRESS)).toBe(false);
+    });
+
     it("cleans up expired delegation from store and cache", async () => {
       // Store expired delegation and cache entry
       await store.store(TEST_ADDRESS, "old-delegation", {
@@ -290,6 +312,7 @@ describe("Delegation Routes", () => {
       expect(stored!.serialized).toBe("persistent-delegation");
       expect(stored!.actions).toContain("tinycloud.kv/get");
       expect(stored!.path).toBe("");
+      expect(stored!.policyHash).toBe(getBackendDelegationPolicyHash());
     });
 
     it("caches the DelegatedAccess keyed by address", async () => {

@@ -35,6 +35,19 @@ describe("patchTinyCloudWasmInit", () => {
     );
   });
 
+  test("removes the generated wasm-bindgen deprecation warning branch", () => {
+    const input =
+      'Object.getPrototypeOf(A)===Object.prototype?({module_or_path:A}=A):console.warn("using deprecated parameters for the initialization function; pass a single object instead")';
+
+    const result = patchTinyCloudWasmInit(input);
+
+    expect(result.changed).toBe(true);
+    expect(result.content).not.toContain(
+      "using deprecated parameters for the initialization function",
+    );
+    expect(result.content).toContain("Object.getPrototypeOf(A)===Object.prototype");
+  });
+
   test("removes stale starter frontend Vite dependency caches with the deprecated wasm init warning", () => {
     const root = mkdtempSync(join(tmpdir(), "tinyboilerplate-wasm-init-"));
 

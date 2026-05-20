@@ -6,12 +6,14 @@
 FROM oven/bun:1.3 AS builder
 WORKDIR /build
 
-# Copy just what we need to bun-install + bun-build the cli package.
+# Copy just what we need to bun-install + bun-build the agent runtime package.
 COPY package.json bun.lock tsconfig.base.json ./
 COPY packages/core packages/core
 COPY packages/agent-runtime packages/agent-runtime
-# Needed for @tinyboilerplate/cli's postinstall (fix-wasm-esm.mjs lives here).
+# Needed for @tinyboilerplate/server's postinstall (fix-wasm-esm.mjs lives here).
 COPY packages/server/scripts packages/server/scripts
+# Needed for @tinyboilerplate/client's postinstall (fix-web-wasm-init.mjs lives here).
+COPY packages/client/scripts packages/client/scripts
 # Minimal server/client package.json stubs so bun install's workspace scan doesn't error.
 COPY packages/server/package.json packages/server/package.json
 COPY packages/client/package.json packages/client/package.json

@@ -4,6 +4,7 @@
   "packageManager": "bun@1.3.9",
   "workspaces": [
     "packages/*",
+    "test",
     "examples/starter/frontend",
     "examples/starter/backend",
     "examples/conversation-sync/frontend",
@@ -28,6 +29,7 @@
     "dev:conversation-sync": "turbo run dev --filter=conversation-sync-frontend --filter=conversation-sync-backend",
     "dev:conversation-sync:portless": "cd examples/conversation-sync && bun run dev:portless",
     "generate-key": "cd packages/server && bun run generate-key",
+    "test:browser:install": "bun run --cwd test install:browsers",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "lint:fix": "eslint . --fix",

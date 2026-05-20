@@ -153,6 +153,7 @@ export function App() {
       //    sign in. ONE wallet prompt covers the full app + backend union.
       console.log("[sign-in] Step 4: TinyCloud sign-in with manifest...");
       const { tcw: tcwInstance, session } = await createAndSignIn(web3Provider, {
+        address: addr,
         nonce,
         autoCreateSpace: true,
         capabilityRequest: composed,

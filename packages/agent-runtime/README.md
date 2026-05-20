@@ -65,7 +65,9 @@ agent (OpenCode) ──▶ bash: tc kv / tc sql ──▶ /root/.tinycloud/profi
 2. In your compose file, bind-mount your app-specific `CLAUDE.md` at `/workspace/CLAUDE.md:ro` — that's what teaches the agent about your SQL schema and KV key layout.
 3. Wire the frontend's Connect Agent dialog to POST `{ serialized }` to `http://localhost:4097/delegation`.
 
-See `examples/conversation-sync/` for the listen wiring.
+Apps can keep their Docker Compose wiring and agent instructions wherever their
+own runtime lives; this package only needs the serialized delegation endpoint
+contract above.
 
 ## Troubleshooting
 

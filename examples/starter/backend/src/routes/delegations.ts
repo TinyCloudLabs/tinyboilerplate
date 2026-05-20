@@ -4,6 +4,7 @@ import type { TinyCloudNode } from "@tinycloud/node-sdk";
 import { deserializeDelegation } from "@tinycloud/node-sdk";
 import type { DelegationStore, DelegationCache } from "@tinyboilerplate/server";
 import { DEFAULT_DELEGATION_EXPIRY_MS } from "@tinyboilerplate/core";
+import { getBackendDelegationPolicyHash } from "../backend-policy.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -61,6 +62,15 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
         expiresAt,
         actions: delegation.actions ?? [],
         path: delegation.path ?? "",
+        policyHash: getBackendDelegationPolicyHash(),
+        resources: delegation.resources?.map((resource) => ({
+          service: resource.service.startsWith("tinycloud.")
+            ? resource.service
+            : `tinycloud.${resource.service}`,
+          space: resource.space,
+          path: resource.path,
+          actions: [...resource.actions],
+        })),
       });
 
       // Cache the active DelegatedAccess keyed by address
@@ -133,6 +143,17 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
         res.json({
           status: "expired",
           expiresAt: stored.expiresAt,
+        });
+        return;
+      }
+
+      if (stored.policyHash !== getBackendDelegationPolicyHash()) {
+        await store.remove(address);
+        cache.evict(address);
+
+        res.json({
+          status: "none",
+          expiresAt: null,
         });
         return;
       }

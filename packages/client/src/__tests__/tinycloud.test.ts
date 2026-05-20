@@ -3,7 +3,17 @@ import { describe, expect, mock, test } from "bun:test";
 let lastTinyCloudConfig: any = null;
 let lastRestoreAddress: string | undefined;
 let lastCleanupCalled = false;
+let lastClearPersistedSessionAddress: string | undefined;
+let lastSignInOptions: any;
 let restoreResult: any = { status: "restored", session: { address: "0xabc" } };
+const signInSession = {
+  address: "0xabc",
+  walletAddress: "0xabc",
+  chainId: 1,
+  sessionKey: "session-key",
+  siwe: "siwe-message",
+  signature: "signature",
+};
 
 mock.module("@tinycloud/web-sdk", () => ({
   BrowserSessionStorage: class BrowserSessionStorage {},
@@ -19,13 +29,23 @@ mock.module("@tinycloud/web-sdk", () => ({
       return restoreResult;
     }
 
+    async clearPersistedSession(address?: string) {
+      lastClearPersistedSessionAddress = address;
+    }
+
+    async signIn(options?: any) {
+      lastSignInOptions = options;
+      return signInSession;
+    }
+
     cleanup() {
       lastCleanupCalled = true;
     }
   },
 }));
 
-const { createTinyCloudWeb, restoreTinyCloudWebSession } = await import("../tinycloud.js");
+const { createTinyCloudWeb, createAndSignIn, restoreTinyCloudWebSession } =
+  await import("../tinycloud.js");
 
 describe("createTinyCloudWeb", () => {
   test("uses the current provider option and stores composed request manifests", () => {
@@ -79,6 +99,29 @@ describe("createTinyCloudWeb", () => {
     });
 
     expect(lastTinyCloudConfig.manifest).toBe(explicitManifest);
+  });
+});
+
+describe("createAndSignIn", () => {
+  test("forces a fresh SIWE message when a backend nonce is supplied", async () => {
+    lastClearPersistedSessionAddress = undefined;
+    lastSignInOptions = undefined;
+
+    const provider = { request: async () => null } as any;
+    const result = await createAndSignIn(provider, {
+      address: "0xAbC",
+      nonce: "fresh-backend-nonce",
+      siweConfig: { statement: "Sign in to the starter" },
+    });
+
+    expect(result.session).toBe(signInSession);
+    expect(lastTinyCloudConfig.nonce).toBe("fresh-backend-nonce");
+    expect(lastTinyCloudConfig.siweConfig).toEqual({
+      statement: "Sign in to the starter",
+      nonce: "fresh-backend-nonce",
+    });
+    expect(lastClearPersistedSessionAddress).toBe("0xAbC");
+    expect(lastSignInOptions).toEqual({ nonce: "fresh-backend-nonce" });
   });
 });
 

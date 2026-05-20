@@ -74,6 +74,24 @@ describe("GET /api/server-info", () => {
     expect(services.has("tinycloud.sql")).toBe(true);
   });
 
+  it("advertises the exact KV item prefix used by the runtime list route", async () => {
+    const app = createApp();
+    const result = await startServer(app);
+    server = result.server;
+    baseUrl = `http://localhost:${result.port}`;
+
+    const res = await fetch(`${baseUrl}/api/server-info`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const kvPermission = (body.permissions as Array<{ service: string; path: string }>).find(
+      (permission) => permission.service === "tinycloud.kv",
+    );
+
+    expect(kvPermission).toBeDefined();
+    expect(kvPermission!.path).toBe("items/");
+  });
+
   it("does not require authentication", async () => {
     const app = createApp();
     const result = await startServer(app);

@@ -2,10 +2,10 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import type { Item, CreateItemInput, UpdateItemInput, StoreType } from "@tinyboilerplate/core";
 import type { DelegatedAccess } from "@tinyboilerplate/server";
+import { ITEM_KV_PATH, ITEM_SQL_PATH, STARTER_APP_ID } from "../backend-policy.js";
 
-const APP_ID = "xyz.tinycloud.starter";
-const ITEM_KV_PREFIX = `${APP_ID}/items/`;
-const ITEM_SQL_DATABASE = `${APP_ID}/items`;
+const ITEM_KV_PREFIX = `${STARTER_APP_ID}/${ITEM_KV_PATH}`;
+const ITEM_SQL_DATABASE = `${STARTER_APP_ID}/${ITEM_SQL_PATH}`;
 const KV_LIST_FETCH_CONCURRENCY = 5;
 const KV_LIST_DEFAULT_LIMIT = 25;
 const KV_LIST_MAX_LIMIT = 50;

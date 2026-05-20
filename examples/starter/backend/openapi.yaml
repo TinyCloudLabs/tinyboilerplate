@@ -520,8 +520,8 @@ components:
           description: Optional space override. Omitted to use the application space.
         path:
           type: string
-          description: App-relative resource path.
-          example: /
+          description: App-relative resource path. KV list permissions should name the exact prefix the backend lists, such as items/.
+          example: items/
         actions:
           type: array
           items:

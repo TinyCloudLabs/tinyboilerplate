@@ -14,6 +14,7 @@ const require = createRequire(import.meta.url);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const deprecatedWasmInitWarning =
   "using deprecated parameters for the initialization function; pass a single object instead";
+const deprecatedWasmInitWarningBranch = `:console.warn("${deprecatedWasmInitWarning}")`;
 
 const bundledWebSdkStart =
   "return function(A){return Y=A.exports,s=null,a=null,Y}(C)}(function(A,g,I,Q){";
@@ -40,6 +41,10 @@ export function patchTinyCloudWasmInit(content) {
 
   if (patched.includes(directWasmInit)) {
     patched = patched.replace(directWasmInit, directWasmInitPatched);
+  }
+
+  if (patched.includes(deprecatedWasmInitWarningBranch)) {
+    patched = patched.replaceAll(deprecatedWasmInitWarningBranch, ":void 0");
   }
 
   return {

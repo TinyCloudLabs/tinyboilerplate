@@ -51,6 +51,16 @@ describe("OpenAPI spec", () => {
     expect(itemsById.delete).toBeDefined();
   });
 
+  test("items list documents KV limit query parameter", () => {
+    const items = (spec.paths as Record<string, Record<string, unknown>>)["/api/items"];
+    const get = items.get as Record<string, unknown>;
+    const parameters = get.parameters as Record<string, unknown>[];
+    const limit = parameters.find((param) => param.name === "limit") as Record<string, unknown>;
+    expect(limit).toBeDefined();
+    expect(limit.in).toBe("query");
+    expect(limit.schema).toMatchObject({ type: "integer", default: 25, maximum: 50 });
+  });
+
   test("defines all expected schemas", () => {
     const components = spec.components as Record<string, Record<string, unknown>>;
     const schemas = Object.keys(components.schemas as object);
@@ -59,6 +69,7 @@ describe("OpenAPI spec", () => {
     expect(schemas).toContain("UpdateItemInput");
     expect(schemas).toContain("ItemResponse");
     expect(schemas).toContain("ItemListResponse");
+    expect(schemas).toContain("ItemListMeta");
     expect(schemas).toContain("DelegationResponse");
     expect(schemas).toContain("ServerInfo");
     expect(schemas).toContain("ApiError");

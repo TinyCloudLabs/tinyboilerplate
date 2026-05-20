@@ -159,10 +159,18 @@ paths:
   /api/items:
     get:
       operationId: listItems
-      summary: List all items
+      summary: List items
       tags: [Items]
       parameters:
         - $ref: "#/components/parameters/StoreType"
+        - name: limit
+          in: query
+          description: Maximum KV item values to fetch. Applies to the KV store only; defaults to 25 and is capped at 50.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 25
         - name: search
           in: query
           description: Search term for title and data (SQL store only)
@@ -421,6 +429,34 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Item"
+        meta:
+          $ref: "#/components/schemas/ItemListMeta"
+
+    ItemListMeta:
+      type: object
+      description: KV list bounds and truncation metadata. Present for KV list responses.
+      required: [limit, returned, totalKeys, hasMore, truncated]
+      properties:
+        limit:
+          type: integer
+          description: Effective server-side limit after defaulting and max enforcement.
+          example: 25
+        returned:
+          type: integer
+          description: Number of item values returned after fetching and filtering.
+          example: 25
+        totalKeys:
+          type: integer
+          description: Number of keys matched by the KV prefix list.
+          example: 42
+        hasMore:
+          type: boolean
+          description: True when more KV keys matched than the server fetched.
+          example: true
+        truncated:
+          type: boolean
+          description: True when the response was capped by the effective limit.
+          example: true
 
     DelegationResponse:
       type: object

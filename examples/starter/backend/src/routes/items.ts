@@ -7,6 +7,8 @@ const APP_ID = "xyz.tinycloud.starter";
 const ITEM_KV_PREFIX = `${APP_ID}/items/`;
 const ITEM_SQL_DATABASE = `${APP_ID}/items`;
 const KV_LIST_FETCH_CONCURRENCY = 5;
+const KV_LIST_DEFAULT_LIMIT = 25;
+const KV_LIST_MAX_LIMIT = 50;
 
 // ── Items Router ─────────────────────────────────────────────────────
 
@@ -55,7 +57,9 @@ export function createItemsRouter() {
           throw new Error(`KV list failed: ${listResult.error.message}`);
         }
         const keys = listResult.data.keys ?? [];
-        const results = await mapWithConcurrency(keys, KV_LIST_FETCH_CONCURRENCY, (key) =>
+        const limit = getKVListLimit(req);
+        const keysToFetch = keys.slice(0, limit);
+        const results = await mapWithConcurrency(keysToFetch, KV_LIST_FETCH_CONCURRENCY, (key) =>
           access.kv.get(key),
         );
         const items: Item[] = results
@@ -67,7 +71,16 @@ export function createItemsRouter() {
             const val = r.data.data;
             return (typeof val === "string" ? JSON.parse(val) : val) as Item;
           });
-        res.json({ items });
+        res.json({
+          items,
+          meta: {
+            limit,
+            returned: items.length,
+            totalKeys: keys.length,
+            hasMore: keys.length > keysToFetch.length,
+            truncated: keys.length > keysToFetch.length,
+          },
+        });
       }
     } catch (err) {
       handleStoreError(res, err, "list items");
@@ -325,6 +338,13 @@ function getStoreType(req: Request): StoreType {
 
 function itemKey(id: string): string {
   return `${ITEM_KV_PREFIX}${id}`;
+}
+
+function getKVListLimit(req: Request): number {
+  const value = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
+  const requested = typeof value === "string" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(requested) || requested < 1) return KV_LIST_DEFAULT_LIMIT;
+  return Math.min(Math.floor(requested), KV_LIST_MAX_LIMIT);
 }
 
 type DatabaseService = DelegatedAccess["sql"] | DelegatedAccess["duckdb"];

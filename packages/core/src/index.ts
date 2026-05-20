@@ -88,8 +88,17 @@ export interface ItemResponse {
   item: Item;
 }
 
+export interface ItemListMeta {
+  limit: number;
+  returned: number;
+  totalKeys: number;
+  hasMore: boolean;
+  truncated: boolean;
+}
+
 export interface ItemListResponse {
   items: Item[];
+  meta?: ItemListMeta;
 }
 
 export interface DelegationResponse {

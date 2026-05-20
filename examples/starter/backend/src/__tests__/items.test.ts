@@ -4,6 +4,8 @@ import type { Server } from "http";
 import type { Request, Response, NextFunction } from "express";
 import { createItemsRouter } from "../routes/items.js";
 
+const TEST_ITEM_KV_PREFIX = "xyz.tinycloud.starter/items/";
+
 // ── Mock KV Store (in-memory, Result pattern) ───────────────────────
 
 function createMockKV() {
@@ -163,6 +165,19 @@ function createApp(delegatedAccess: any) {
   return app;
 }
 
+function seedKVItems(access: ReturnType<typeof createMockDelegatedAccess>, count: number) {
+  for (let i = 0; i < count; i += 1) {
+    const id = `seed-${i}`;
+    access.kv._store.set(`${TEST_ITEM_KV_PREFIX}${id}`, {
+      id,
+      title: `Seed ${i}`,
+      data: `data-${i}`,
+      createdAt: `2026-05-20T00:00:${String(i).padStart(2, "0")}.000Z`,
+      updatedAt: `2026-05-20T00:00:${String(i).padStart(2, "0")}.000Z`,
+    });
+  }
+}
+
 function startServer(app: express.Express): Promise<{ server: Server; port: number }> {
   return new Promise((resolve) => {
     const server = app.listen(0, () => {
@@ -201,7 +216,16 @@ describe("Items CRUD (KV store)", () => {
     const res = await fetch(`${baseUrl}/api/items`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ items: [] });
+    expect(body).toEqual({
+      items: [],
+      meta: {
+        limit: 25,
+        returned: 0,
+        totalKeys: 0,
+        hasMore: false,
+        truncated: false,
+      },
+    });
   });
 
   it("GET /api/items returns a store error when KV list fails", async () => {
@@ -314,6 +338,75 @@ describe("Items CRUD (KV store)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.items).toHaveLength(2);
+  });
+
+  it("GET /api/items applies the default KV list bound", async () => {
+    seedKVItems(access, 30);
+    const originalGet = access.kv.get;
+    let getCalls = 0;
+    access.kv.get = async (key: string) => {
+      getCalls += 1;
+      return originalGet(key);
+    };
+
+    const res = await fetch(`${baseUrl}/api/items`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(25);
+    expect(body.meta).toEqual({
+      limit: 25,
+      returned: 25,
+      totalKeys: 30,
+      hasMore: true,
+      truncated: true,
+    });
+    expect(getCalls).toBe(25);
+  });
+
+  it("GET /api/items enforces the maximum KV list limit", async () => {
+    seedKVItems(access, 70);
+    const originalGet = access.kv.get;
+    let getCalls = 0;
+    access.kv.get = async (key: string) => {
+      getCalls += 1;
+      return originalGet(key);
+    };
+
+    const res = await fetch(`${baseUrl}/api/items?limit=999`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(50);
+    expect(body.meta).toEqual({
+      limit: 50,
+      returned: 50,
+      totalKeys: 70,
+      hasMore: true,
+      truncated: true,
+    });
+    expect(getCalls).toBe(50);
+  });
+
+  it("GET /api/items does not call KV get beyond the requested limit", async () => {
+    seedKVItems(access, 20);
+    const originalGet = access.kv.get;
+    let getCalls = 0;
+    access.kv.get = async (key: string) => {
+      getCalls += 1;
+      return originalGet(key);
+    };
+
+    const res = await fetch(`${baseUrl}/api/items?limit=7`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.items).toHaveLength(7);
+    expect(body.meta).toEqual({
+      limit: 7,
+      returned: 7,
+      totalKeys: 20,
+      hasMore: true,
+      truncated: true,
+    });
+    expect(getCalls).toBe(7);
   });
 
   it("GET /api/items bounds concurrent KV value fetches", async () => {

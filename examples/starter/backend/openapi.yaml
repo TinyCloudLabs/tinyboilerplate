@@ -366,7 +366,7 @@ components:
       description: Storage backend to use
       schema:
         type: string
-        enum: [kv, sql]
+        enum: [kv, sql, duckdb]
         default: kv
 
     CsrfHeader:
@@ -494,6 +494,46 @@ components:
           description: "Backend DID (e.g. did:pkh:eip155:1:0x...)"
         status:
           type: string
+        name:
+          type: string
+          description: Human-readable backend name for permission prompts.
+        expiry:
+          type: string
+          description: Backend delegation expiry as an ms-format duration string.
+          example: "7d"
+        permissions:
+          type: array
+          description: Permissions the backend needs the user to delegate.
+          items:
+            $ref: "#/components/schemas/ServerInfoPermission"
+
+    ServerInfoPermission:
+      type: object
+      required: [service, path, actions]
+      properties:
+        service:
+          type: string
+          description: Long-form TinyCloud service identifier.
+          example: tinycloud.kv
+        space:
+          type: string
+          description: Optional space override. Omitted to use the application space.
+        path:
+          type: string
+          description: App-relative resource path.
+          example: /
+        actions:
+          type: array
+          items:
+            type: string
+          description: Actions requested for this resource.
+          example: [get, put, del, list]
+        skipPrefix:
+          type: boolean
+          description: Skip the app-id prefix when resolving this permission.
+        description:
+          type: string
+          description: User-facing context for why the permission is needed.
 
     ApiError:
       type: object

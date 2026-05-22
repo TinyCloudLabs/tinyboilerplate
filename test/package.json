@@ -3,10 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "app-shell-smoke": "bun app-shell-smoke.ts",
     "install:browsers": "playwright install chromium",
-    "install:browsers:ci": "playwright install --with-deps chromium",
-    "setup": "bun setup-passkey.ts",
-    "signin": "bun run-signin.ts"
+    "install:browsers:ci": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "playwright": "^1.50.0"

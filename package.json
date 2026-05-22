@@ -1,14 +1,15 @@
 {
   "name": "tinyboilerplate",
   "private": true,
+  "type": "module",
   "packageManager": "bun@1.3.9",
   "workspaces": [
     "packages/*",
     "test",
-    "examples/starter/frontend",
-    "examples/starter/backend",
-    "examples/conversation-sync/frontend",
-    "examples/conversation-sync/backend"
+    "templates/app-starter/frontend",
+    "templates/app-starter/backend",
+    "examples/notes/frontend",
+    "examples/notes/backend"
   ],
   "overrides": {
     "@tinycloud/sdk-core": "2.2.0-beta.12",
@@ -24,14 +25,17 @@
   "scripts": {
     "build": "turbo run build",
     "postinstall": "node packages/client/scripts/fix-web-wasm-init.mjs",
-    "predev": "lsof -ti:3001,5173 | xargs kill -9 2>/dev/null; pkill -9 -f 'bun --watch src/index.ts' 2>/dev/null; true",
-    "dev": "turbo run dev --filter=@tinyboilerplate/starter-frontend --filter=@tinyboilerplate/starter-backend",
-    "dev:conversation-sync": "turbo run dev --filter=conversation-sync-frontend --filter=conversation-sync-backend",
-    "dev:conversation-sync:portless": "cd examples/conversation-sync && bun run dev:portless",
-    "generate-key": "cd packages/server && bun run generate-key",
+    "predev": "lsof -ti:3003,5175 | xargs kill -9 2>/dev/null; pkill -9 -f 'bun --watch src/index.ts' 2>/dev/null; true",
+    "dev": "bun run dev:app-starter",
+    "dev:app-starter": "turbo run dev --filter=@tinyboilerplate/app-starter-frontend --filter=@tinyboilerplate/app-starter-backend",
+    "scaffold:app": "bun scripts/scaffold-app.ts",
+    "test:scaffold:integration": "bun test scripts/scaffold-app.test.ts",
+    "dev:notes": "turbo run dev --filter=@tinyboilerplate/notes-frontend --filter=@tinyboilerplate/notes-backend",
+    "generate-key": "bun run packages/server/scripts/generate-key.ts templates/app-starter/backend/.env",
     "test:browser:install": "bun run --cwd test install:browsers",
+    "test:browser:app-shell": "bun run --cwd test app-shell-smoke",
     "test": "turbo run test",
-    "lint": "turbo run lint",
+    "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

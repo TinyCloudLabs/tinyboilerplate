@@ -1,0 +1,15 @@
+{
+  "manifest_version": 1,
+  "app_id": "xyz.tinycloud.app-starter",
+  "name": "TinyCloud App Starter",
+  "description": "Blank reusable TinyCloud app substrate with a delegated KV storage probe.",
+  "defaults": false,
+  "permissions": [
+    {
+      "service": "tinycloud.kv",
+      "path": "probe/",
+      "actions": ["get", "put", "del", "list"],
+      "description": "Read and write a tiny storage probe value."
+    }
+  ]
+}

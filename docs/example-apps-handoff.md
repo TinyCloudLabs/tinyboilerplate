@@ -12,18 +12,17 @@ adding small, focused examples one at a time.
 - TinyCloud SDK line: `2.2.0-beta.12`
 - Root `bun.lock` is intended to be committed and used with
   `bun install --frozen-lockfile`
-- `docs/new-app.md` explains how to create a new app from the scaffold
+- `README.md` and `templates/app-starter/README.md` explain how to create and
+  verify a new app from the scaffold
 
 Existing tracked examples:
 
-- `examples/starter`: the clean generic starter and intended default
-  copy/fork base.
-- `examples/conversation-sync`: a large Listen-derived advanced reference app.
-  It is useful as reference material, but it should not be copied as the normal
-  starting point for new apps.
+- `templates/app-starter`: the canonical blank reusable starter source.
+- `examples/notes`: the first real product example after the blank starter.
 
-Listen is not part of this repo as a dependency, submodule, or fork base. Treat
-Listen only as a separate reference implementation.
+This repo must stay self-contained. Do not reference separate product apps,
+private readmes, proprietary domains, or named external implementations in
+public TinyBoilerplate docs.
 
 ## Product Direction
 
@@ -36,7 +35,7 @@ ladder of examples where each app teaches one TinyCloud capability clearly:
 4. agent-readable manifests and docs
 5. external ingestion
 6. AI context approval and generated artifacts
-7. advanced reference behavior
+7. advanced reference behavior, when there is a current maintained example
 
 Each example should be small enough to understand and copy. Prefer boring,
 complete flows over flashy surfaces.
@@ -45,16 +44,15 @@ complete flows over flashy surfaces.
 
 ### 1. Clean Starter App
 
-Status: represented by `examples/starter`, renamed from the older
-framework-named path so it is explicitly the default scaffold.
+Status: represented by `templates/app-starter`. Use the scaffold command rather
+than raw-copying the template when creating a user-facing app.
 
 ### 2. User-Owned Notes / Bookmarks
 
-Priority: build this first.
+Status: represented by `examples/notes`.
 
 Purpose: demonstrate a normal app whose data is owned by the user in TinyCloud.
-This should feel like the missing middle between `starter` and
-`conversation-sync`.
+This should feel like the missing middle after the blank starter.
 
 Concept:
 
@@ -80,7 +78,7 @@ Non-goals:
 - no AI
 - no external webhooks
 - no user-to-user sharing
-- no Listen-specific identifiers, transcript model, or source integrations
+- no product-specific identifiers, proprietary data models, or source integrations
 
 Suggested app id:
 
@@ -88,15 +86,10 @@ Suggested app id:
 xyz.tinycloud.notes
 ```
 
-Suggested path:
-
-```text
-examples/notes-bookmarks
-```
-
 Suggested implementation route:
 
-1. Start from `examples/starter`, not from `examples/conversation-sync`.
+1. Start from `templates/app-starter` through the scaffold command, not from
+   old reference examples.
 2. Rename the packages, app id, manifest, server-info, storage keys, README, and
    API title.
 3. Replace the placeholder `Item` model with `Note` or `Bookmark`.
@@ -122,6 +115,9 @@ Acceptance criteria:
 - The new example has focused backend tests.
 - The new README states that this is the recommended first real example after
   the starter.
+- Browser runtime verification covers OpenKey sign-in, backend delegation, and
+  create/edit/list/delete against the running app. Build/tests alone are only
+  unauthenticated smoke checks.
 
 ### 3. Shared Collection / Team Board
 
@@ -154,7 +150,7 @@ Priority: build after sharing, or earlier if agent interoperability becomes the
 top priority.
 
 Purpose: show how a TinyCloud app can be legible to agents without becoming
-Listen-specific.
+specific to any existing product app.
 
 Concept:
 
@@ -174,8 +170,8 @@ TinyCloud concepts to teach:
 
 Priority: build only after the first three examples are solid.
 
-Purpose: replace Fireflies/Google-Meet-specific learning with a generic ingest
-pattern.
+Purpose: demonstrate a generic ingest pattern without provider-specific product
+assumptions.
 
 Concept:
 
@@ -193,7 +189,7 @@ TinyCloud concepts to teach:
 
 Non-goals:
 
-- no Fireflies, Granola, Google Meet, or transcript-specific product code
+- no provider-specific or proprietary product code
 
 ### 6. AI Brief / Corpus-to-Artifact App
 
@@ -219,21 +215,24 @@ TinyCloud concepts to teach:
 
 Non-goals:
 
-- no large Abracadabra clone
+- no large existing-product clone
 - no broad agent marketplace
 - no hidden AI context upload
 
 ### 7. Advanced Reference App
 
-Status: already represented by `examples/conversation-sync`.
+Status: not currently represented in this repo.
 
-Keep it clearly labeled as advanced reference. If it is improved later, avoid
-turning it into the default scaffold.
+If a maintained advanced example is added later, keep it clearly labeled as an
+advanced reference and avoid turning it into the default scaffold. Any
+architecture material imported from outside this repo must first be rewritten as
+generic TinyCloud guidance with product names, domains, and proprietary details
+removed.
 
 ## Development Constraints
 
 - Preserve the existing examples while adding new ones.
-- Do not port Listen product code into generic examples.
+- Do not port product-specific code into generic examples.
 - Keep new examples scoped and teachable.
 - Use the repo's existing package/workspace patterns.
 - Prefer copying the starter and reducing it over copying the advanced example.
@@ -249,31 +248,25 @@ Before handing work back, run:
 bun install --frozen-lockfile
 bun run format:check
 bun run build
-bun test packages/client/src packages/server/src examples/starter/backend/src examples/conversation-sync/backend/src
-cd examples/conversation-sync/frontend && bunx vitest run
+bun test packages/client/src packages/server/src templates/app-starter/backend/src examples/notes/backend/src
+bun run test:browser:app-shell
 ```
 
 For a new example, add its backend test path to the focused test command. If it
 has frontend tests, include them in the example's README and in the handoff.
 
-## Known Follow-Up Issue
-
-During the example audit, `examples/starter/backend/src/routes/delegations.ts`
-was found to expose error `detail` and `stack` for invalid delegation failures,
-with a comment saying `Revert before merging`. This appears pre-existing. Fix it
-before using that route as the base for more examples, or make the new example
-avoid copying that debug response.
-
 ## Recommended Next Agent Task
 
-Build `examples/notes-bookmarks` as the first new real app example.
+Build the next example after `examples/notes`, such as a small sharing app that
+teaches user-to-user delegation.
 
 Start with a narrow implementation:
 
 - copy the React + Express example structure
-- rename the app to Notes or Bookmarks
-- add one data model
-- store metadata in SQL and content in KV
+- rename the app to a sharing-focused product, for example Shared Lists
+- add one shared data model
+- store ownership/sharing metadata in SQL and item content in KV
+- include a user-to-user delegation grant and revoke path
 - add backend tests
 - write a focused README
 - keep UI simple and functional

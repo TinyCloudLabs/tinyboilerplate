@@ -132,7 +132,7 @@ export function resolveManifestDelegationPermissions(
 /**
  * Resolve one app-relative path with the manifest's prefix rules. This is
  * useful for frontend code that needs to subscribe to or display a runtime
- * path that matches the manifest namespace.
+ * path that matches the manifest prefix rules.
  */
 export function resolveManifestPermissionPath(
   manifest: Manifest,

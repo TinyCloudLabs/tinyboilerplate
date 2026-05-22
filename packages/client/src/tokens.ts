@@ -6,6 +6,8 @@ export interface StoredSession {
   address?: string; // Which user this session belongs to
 }
 
+export const DEFAULT_SESSION_STORAGE_KEY = "tinycloud:app-session";
+
 // ── Session Store ───────────────────────────────────────────────────
 
 /**
@@ -21,7 +23,7 @@ export class SessionStore {
   /** Buffer before actual expiry (30 seconds). */
   private static readonly EXPIRY_BUFFER_MS = 30_000;
 
-  constructor(storageKey = "tinyboilerplate:session") {
+  constructor(storageKey = DEFAULT_SESSION_STORAGE_KEY) {
     this.storageKey = storageKey;
     this._loadFromStorage();
   }

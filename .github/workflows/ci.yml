@@ -31,3 +31,6 @@ jobs:
 
       - name: Test
         run: bun run test
+
+      - name: Standalone scaffold integration
+        run: bun run test:scaffold:integration

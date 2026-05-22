@@ -1,7 +1,11 @@
 # SPEC: App Manifest v1 + Capability Chain Delegation
 
-**Status:** Draft implementation
+**Status:** Draft architecture reference
 **Target repos:** `tinycloud-node`, `js-sdk`, consuming apps
+
+For new app creation, treat `docs/new-app.md` and
+`docs/tinycloud-example-app-skill-notes.md` as the operational sources of
+truth. This document explains the manifest/delegation shape behind that flow.
 
 ## Motivation
 
@@ -41,9 +45,9 @@ App delivers those delegations out of band
 ```jsonc
 {
   "manifest_version": 1,
-  "app_id": "com.tinycloud.conversation-sync",
-  "name": "Conversation Sync",
-  "description": "Sync meeting transcripts into TinyCloud.",
+  "app_id": "xyz.tinycloud.notes",
+  "name": "TinyCloud Notes",
+  "description": "Create, edit, search, and delete user-owned notes stored in TinyCloud.",
   "icon": "/icon.png",
   "appVersion": "0.1.0",
 
@@ -54,21 +58,27 @@ App delivers those delegations out of band
   "space": "applications",
 
   // Optional. Missing means app_id.
-  "prefix": "com.tinycloud.conversation-sync",
+  "prefix": "xyz.tinycloud.notes",
 
-  // Optional. Missing means true.
-  "defaults": true,
+  // Optional. Missing means true. New app examples usually set this to false
+  // and request explicit app-scoped resources.
+  "defaults": false,
 
   // Optional. Missing means "30d".
   "expiry": "30d",
 
   "permissions": [
     {
-      "service": "tinycloud.hooks",
-      "path": "sql/com.tinycloud.conversation-sync/conversations/conversation",
-      "actions": ["subscribe"],
-      "skipPrefix": true,
-      "description": "Subscribe to conversation row write events for live updates."
+      "service": "tinycloud.sql",
+      "path": "notes_index",
+      "actions": ["read", "write"],
+      "description": "Store note metadata including title, URL, tags, and body pointer."
+    },
+    {
+      "service": "tinycloud.kv",
+      "path": "entries/",
+      "actions": ["get", "put", "del", "list"],
+      "description": "Store note body content by note id."
     }
   ],
 
@@ -82,7 +92,7 @@ App delivers those delegations out of band
 | Field | Required | Semantics |
 |---|---:|---|
 | `manifest_version` | no | Schema version. Missing means `1`. |
-| `app_id` | yes | Stable app namespace and default path prefix. |
+| `app_id` | yes | Stable app identifier and default path prefix. |
 | `name` | yes | Human-readable app or delegate name. |
 | `description` | no | User/agent-readable description of what the app does and what its data means. |
 | `did` | no | Delegate DID. If absent, permissions can still be requested but no automatic delegation target is created. |
@@ -111,7 +121,7 @@ interface PermissionEntry {
 
 `space` is optional. Missing means the manifest's default space, which itself defaults to `applications`.
 
-Paths are app-relative by default. The SDK prefixes each path with `prefix` or `app_id`. `skipPrefix: true` means the path is already absolute in the service's namespace and should not be prefixed.
+Paths are app-relative by default. The SDK prefixes each path with `prefix` or `app_id`. `skipPrefix: true` means the path is already absolute for that service's capability scope and should not be prefixed.
 
 Actions can be short names like `get`, `put`, `read`, and `write`; the SDK expands them to full TinyCloud action URNs.
 
@@ -207,15 +217,24 @@ const all = await tcw.materializeDelegations(request);
 
 These helpers only create delegations that were declared by manifests with `did`. Transport is app-specific: POST to a backend, hand to an agent, QR code, local channel, etc.
 
-## Listen Implementation
+## Current Implementations
 
-Listen has one app manifest at:
+The canonical blank app manifest is in:
 
 ```text
-examples/conversation-sync/manifest.json
+templates/app-starter/manifest.json
 ```
 
-The backend exposes an app-defined `/api/server-info` response with its DID and the permissions it needs. The frontend converts that response into a backend delegate manifest with the same `app_id`, composes it with the app manifest, signs one request, and then materializes the backend delegation:
+The first real product example manifest is in:
+
+```text
+examples/notes/manifest.json
+```
+
+Both examples keep backend policy out of the manifest. The backend exposes an
+app-defined `/api/server-info` response with its DID, policy name, expiry,
+permissions, and `policyHash`. The frontend composes that response with the app
+manifest, signs one request, and then materializes the backend delegation:
 
 ```ts
 const appManifest = await loadAppManifest("/api/manifest");
@@ -231,4 +250,7 @@ const { serialized } = await createManifestDelegation(tcw, info.did, request);
 await sendDelegation(BACKEND_URL, serialized, token);
 ```
 
-The backend policy remains app logic. The SDK owns manifest validation, permission composition, one signed capability request, account registry grants, and materialized subdelegations.
+The backend policy remains app logic. The SDK owns manifest validation,
+permission composition, one signed capability request, account registry grants,
+and materialized subdelegations. Policy hash changes must invalidate stored
+delegations and surface `stale` as a first-class delegation status.

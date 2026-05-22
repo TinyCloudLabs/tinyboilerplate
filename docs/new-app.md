@@ -1,64 +1,229 @@
-# Building a New App from TinyBoilerplate
+# New TinyCloud App Architecture
 
-TinyBoilerplate is the clean starting point for new TinyCloud + OpenKey apps.
-For a new product, start from the minimal React + Express example unless you
-explicitly need the advanced transcript-sync surface.
+Use this as the dependency-agnostic blueprint for building a new TinyCloud app.
+It intentionally avoids references to existing scaffolds, named applications,
+UI frameworks, source integrations, or repository-local file paths.
 
-Listen is a separate reference implementation. It is not a dependency,
-submodule, or fork base for this repo. This repo does include
-`examples/conversation-sync`, which is a large Listen-derived reference app.
-Treat it as advanced reference material, not as the default starter.
+The durable contract is the architecture: the browser owns user consent, the
+backend works only through delegated capability, and TinyCloud remains the data
+and permission boundary.
 
-## 1. Choose the Starting Point
+## 1. Roles
 
-Use `examples/starter` by default. It is the intended scaffold for a new
-app and demonstrates the reusable substrate:
+Every backend-mediated app should keep these jobs separate:
 
-- OpenKey popup sign-in
-- TinyCloud session creation and space auto-provisioning
-- manifest-backed delegation from the user to the backend
-- JWT-authenticated API routes
-- backend-mediated KV, SQL, and DuckDB CRUD
-- direct browser TinyCloud KV, SQL, and DuckDB access
+- **Browser/client**: owns the user's identity session, TinyCloud sign-in,
+  consent, source setup, direct user-owned writes, and sensitive secret writes.
+- **Backend**: verifies user sessions, stores portable delegations keyed by the
+  user's stable identity, activates delegated TinyCloud access, runs app jobs,
+  and persists normalized app data through delegated access.
+- **TinyCloud**: stores user-owned app data, stores secrets and grants, enforces
+  capability boundaries, and stores backend-owned operational state only when
+  the backend signs in as itself.
+- **Optional worker or agent**: receives only explicitly delegated capability.
+  It should be represented as another delegatee with its own DID and permission
+  policy, not as an implicit extension of the backend.
 
-Use `examples/conversation-sync` only when the new product really needs the
-same category of advanced behavior:
+Do not let backend data routes rely on wallet credentials, raw private keys, or
+frontend-local state. The backend operates on user data only through a portable
+delegation the user signs.
 
-- transcript ingestion
-- Fireflies or Google Meet integration
-- webhooks and pending queues
-- TinyCloud Secrets grants to a backend
-- multi-resource delegation bundles
-- agent/OpenCode delegation handoff
-- an inbox/detail/search UI for conversations
+## 2. Sign-In And Delegation
 
-Do not copy `examples/conversation-sync` as a normal app starter. It still
-contains Listen-shaped identifiers, copy, styles, app ids, source integrations,
-and agent docs.
+The default boot order is:
 
-## 2. Copy and Rename Packages
+1. Connect the user's identity or wallet provider.
+2. Request an app backend nonce for the connected address or primary DID.
+3. Fetch unauthenticated backend policy from `/api/server-info`.
+4. Fetch the runtime app manifest from `/api/manifest`.
+5. Convert backend or worker policy into delegate manifests, then compose those
+   manifests with the app manifest.
+6. Create the TinyCloud user session with the backend nonce, auto-create the app
+   space when appropriate, and include the composed capability request.
+7. Verify the signed user session with the backend and store only the backend
+   session token in app session storage.
+8. Check `/api/delegations/status`.
+9. If the delegation is missing, expired, or stale, create a manifest-backed
+   portable delegation and post it to `/api/delegations`.
+10. Enable delegated backend routes only after the backend reports active
+    delegated access.
 
-Start by copying or forking the whole TinyBoilerplate repo. The examples depend
-on the workspace packages in `packages/*`, so copying only `examples/starter`
-is not self-contained unless you also copy, publish, or replace those packages.
+A restored backend session token can be enough for backend-mediated reads when
+delegation is still active. It is not enough to create a new delegation, expand
+permissions, or share a secret. Those states must ask the user to reconnect the
+identity or wallet provider.
 
-```bash
-git clone https://github.com/tinycloudlabs/tinyboilerplate.git my-new-app
-cd my-new-app
-```
+## 3. Backend Policy Contract
 
-Then use `examples/starter` as the app surface. Rename package names in:
+In this architecture, `/api/server-info` is the backend's advertised delegation
+policy endpoint. It should return:
 
-- root `package.json`
-- `examples/starter/package.json`
-- `examples/starter/frontend/package.json`
-- `examples/starter/backend/package.json`
+- `did`: backend DID
+- `status`: readiness state
+- `name`: user-facing delegate name
+- `expiry`: suggested delegation lifetime
+- `policyHash`: stable hash of the resolved backend delegation policy. This is
+  required for every backend, worker, or agent that participates in delegation.
+- `permissions`: app-relative permissions with `service`, `path`, `actions`,
+  optional `space`, optional `skipPrefix`, and a useful `description`
+- `features`: optional availability flags for environment-dependent features
 
-Keep shared imports as `@tinyboilerplate/*` while developing inside this
-monorepo. Rename or publish those shared packages only if the new app is being
-split into its own package namespace.
+The backend must derive its requested permissions from code, validate that they
+are a subset of the runtime manifest, resolve app-relative paths before
+comparing capabilities, and hash the resolved policy. Store that policy hash
+with every accepted delegation. Non-delegating health or discovery endpoints may
+omit `policyHash`; delegation backends must not.
 
-## 3. Set App Identity
+Policy coverage is necessary but not sufficient. Any accepted delegation must
+also bind to the authenticated user identity and to the current backend or
+worker DID. Do not store a delegation under the current backend session merely
+because its resources cover the requested policy.
+
+If the policy hash changes, the stored delegation is stale. The delegation
+status route and delegation middleware must evict the old record and return a
+state that causes the browser to re-sign before delegated routes run again. Do
+not keep using stale delegations after requested paths, actions, spaces, or
+service permissions change.
+
+## 4. Runtime Manifest Contract
+
+`/api/manifest` should return the runtime app manifest. Keep the manifest as the
+user-facing capability surface for the app's own data. Add delegate-specific
+grant paths at runtime only when they depend on the current backend or worker
+DID.
+
+Do not encode backend delegation policy in legacy or implementation-specific
+manifest fields. Compose delegations from app code by turning delegatee policy
+into manifests and passing those manifests to the SDK composer.
+
+Permission descriptions should be precise enough for a user or agent to
+understand why each capability is requested. Descriptions are explanatory; they
+do not expand capability.
+
+### Manifest Creation Checklist
+
+Create a v1 JSON manifest as the app's user-facing capability contract. Serve
+the runtime form from `/api/manifest`.
+
+Include these required top-level fields:
+
+- `app_id`: stable app identifier and default storage path prefix. Choose this
+  before users create data; changing it later is a migration.
+- `name`: user-facing app name.
+
+Use optional top-level fields deliberately:
+
+- `manifest_version`: use `1`; if omitted, version `1` is assumed.
+- `description`: short explanation of what the app does and what its data
+  represents.
+- `space`: default TinyCloud space for manifest permissions. If omitted,
+  `applications` is assumed.
+- `prefix`: default path prefix. If omitted, `app_id` is used; an empty string
+  disables prefixing.
+- `defaults`: set deliberately. When true or omitted, the app requests built-in
+  app-scoped defaults. When false, only explicit permissions are requested.
+- `expiry`: default capability expiry.
+- `permissions`: explicit capabilities beyond the defaults.
+- `includePublicSpace`: include public-space companion behavior. If omitted, it
+  is enabled.
+- `did`: only for a manifest that is itself a delegation target.
+
+A permission entry should contain:
+
+- `service`: TinyCloud service name.
+- `path`: app-relative path by default.
+- `actions`: requested actions for that service.
+- `description`: why this specific capability is needed.
+
+Use optional permission fields when needed:
+
+- `space`: override the manifest's default space for one permission.
+- `skipPrefix`: set to true only when the path is already absolute for that
+  service's capability grouping.
+- `expiry`: override the manifest expiry for one permission.
+
+By default, permission paths are resolved under the manifest prefix. Keep paths
+app-relative unless the service requires an already-resolved path, then mark
+that permission with `skipPrefix: true`. Actions may use service-specific short
+names if the manifest resolver expands them for that service.
+
+The standard default tier includes app-scoped KV read/write/list/metadata
+capabilities, app-scoped SQL read/write capabilities, and app-scoped
+capability-read access. Higher tiers may exist, but a new app should prefer
+`defaults: false` plus explicit permissions when it needs a small or easily
+audited grant surface.
+
+When composing manifests, expect the composer to validate v1 manifests, expand
+defaults and explicit permissions, apply prefixing, default missing spaces,
+dedupe equivalent permissions, record delegation targets for manifests with
+`did`, and produce one capability request for one user signature. If multiple
+manifests use the same `app_id`, their permissions merge under the same app id
+scope; different `app_id` values preserve distinct app id scopes. Account
+registry permissions may be included by default so signed-in apps can be
+discoverable later; disable that only when the product explicitly does not want
+registry writes.
+
+Use the SDK manifest helpers for app code: load and validate manifests before
+composition, resolve manifests when comparing concrete capability surfaces, and
+compose all app and delegatee manifests into one capability request before
+sign-in. If both a single manifest and a composed capability request are passed
+to the sign-in client, the composed request is the authority.
+
+Keep delegate-specific policy out of the app manifest. Backend, worker, or
+agent permissions should be advertised by `/api/server-info` and composed with
+the app manifest during sign-in. Do not add legacy `backend` or `delegations`
+sections to a v1 manifest.
+
+If the app chooses to serve a runtime manifest and a permission depends on a
+runtime DID or another runtime value, append only that permission in the
+`/api/manifest` response. The source manifest should remain the stable app and
+data contract.
+
+Before accepting delegated access, resolve the backend or worker policy against
+the runtime manifest, verify it is covered by the manifest-granted
+capabilities, and store a hash of the resolved policy with the delegation. If
+that hash changes, require a fresh user signature.
+
+## 5. Delegation Handling
+
+`POST /api/delegations` should:
+
+1. Require a verified backend session.
+2. Accept a serialized portable delegation or supported delegation bundle.
+3. Deserialize it.
+4. Extract the delegation identity metadata needed to compare the delegator or
+   owner against the authenticated backend session's stable user identity.
+5. Verify the delegatee is the current backend, worker, or agent DID.
+6. Extract resources and normalize service, space, path, and action names.
+7. Verify that granted resources cover the current resolved backend policy and
+   record the current policy hash.
+8. Activate the delegation against TinyCloud before storing it.
+9. Persist the serialized delegation, expiry, resolved resources, and policy
+   hash keyed by the user's stable identity.
+10. Cache active delegated access for the request path.
+
+If the serialized form cannot expose enough identity metadata to verify both
+the user and delegatee binding, treat that as a blocker for accepting the
+delegation. Do not activate and store an unbound delegation as a fallback.
+
+For a multi-resource delegation bundle, activate each resource as needed and
+combine only the delegated handle for the service that resource grants. Avoid
+blindly copying every handle exposed by an SDK access object, because a handle
+for one active resource can overwrite a correctly scoped handle for another
+service.
+
+`GET /api/delegations/status` should return at least `none`, `expired`, `stale`,
+or `active`. If the stored policy hash is stale, remove the delegation and return
+`stale` or another documented state that causes the client to request a fresh
+signature. Make stale-policy behavior first-class in shared types, frontend
+state, OpenAPI or equivalent contracts, and tests.
+
+Delegation middleware should run after backend session authentication. It should
+load active delegated access from cache when valid, re-activate from persistent
+storage on cache miss, evict expired or stale-policy records, and attach only
+the delegated TinyCloud access needed by downstream routes.
+
+## 6. Storage Boundaries
 
 Choose a stable app id before users create data. Recommended format:
 
@@ -66,124 +231,154 @@ Choose a stable app id before users create data. Recommended format:
 xyz.tinycloud.<app-name>
 ```
 
-For `examples/starter`, replace:
+Changing the app id after users have data is a migration, not a rename.
 
-- `examples/starter/frontend/public/manifest.json`: `app_id`, `name`, `description`
-- `examples/starter/backend/src/routes/items.ts`: `APP_ID`
-- `examples/starter/frontend/src/components/DirectStorage.tsx`: `APP_ID`
+Name user-owned data under the app id:
 
-Also rename app-facing display text:
+- KV prefixes: `xyz.tinycloud.<app>/<model>/...`
+- SQL databases: `xyz.tinycloud.<app>/<database>`
+- DuckDB databases: `xyz.tinycloud.<app>/<database>`
+- Hook paths: resolved from the same manifest paths
 
-- `examples/starter/frontend/src/App.tsx`: title/subtitle/footer copy
-- `examples/starter/backend/src/routes/server-info.ts`: backend display name and permission descriptions
-- `examples/starter/backend/openapi.yaml`: API title if the app exposes docs
-- `examples/starter/README.md`: product name, setup notes, and data model examples
+TinyCloud KV reads may return JSON documents either as the raw string that was
+written or as an already-parsed object, depending on the SDK path and content
+handling. Any storage helper that writes structured JSON should decode both
+shapes. Add a regression test that writes a record, then lists or reads it
+through a mock KV implementation that returns parsed JSON, so a successful
+create cannot be followed by an empty list.
 
-Do not reuse `xyz.tinycloud.starter` for a real product.
+For named SQL or DuckDB databases, treat the fully resolved database identifier
+as part of the storage contract. Always open the database through an explicit
+helper that receives the resolved identifier, and make every route use that
+helper instead of a default query or execute shortcut. Do not assume two paths
+are isolated merely because their prefixes differ; if the storage layer
+normalizes or aliases by database name or final path segment, colliding suffixes
+can point at the same physical store. Choose globally distinct database names,
+resolve them from the manifest and policy layer, and test that reads and writes
+hit the intended store.
 
-## 4. Configure Auth and Environment
+Backend-owned TinyCloud storage is only for backend state such as delegation
+records, operational queues, webhook bookkeeping, or failed job records. Do not
+mix backend-owned state with the user's app data.
 
-1. Copy the child app env files:
+Backend-owned state must also be isolated per app. If multiple apps or examples
+can run with the same backend private key, do not share a default backend KV
+prefix or unqualified keys such as `delegations/{user}` across apps. Use an
+app-specific operational prefix or include the app id in every backend-owned
+record key. Validate that the prefix is accepted by backend sign-in; some
+backend-owned prefixes may need a different shape from user-owned app data
+paths.
 
-```bash
-cp examples/starter/backend/.env.example examples/starter/backend/.env
-cp examples/starter/frontend/.env.example examples/starter/frontend/.env
-```
+For models split across SQL metadata and KV bodies, design partial-failure
+semantics deliberately. Prefer writing the KV body before creating SQL metadata,
+cleaning up the body if metadata creation fails. On update, avoid changing SQL
+metadata if a body write fails; if metadata fails after a body write, restore or
+otherwise reconcile the prior body. On delete, avoid deleting metadata before
+the body delete succeeds, or record deterministic cleanup work. Tests should
+cover partial failures so SQL rows and KV bodies do not silently drift.
 
-2. Set backend values:
-   - `BACKEND_PRIVATE_KEY`: generate with `bun run generate-key`
-   - `TINYCLOUD_HOST`: optional, defaults to the production TinyCloud node
-   - `FRONTEND_URL`: exact frontend origin
-   - `PORT`: backend port
-3. Set frontend values:
-   - `VITE_OPENKEY_HOST`: OpenKey issuer, usually `https://openkey.so`
-   - `VITE_BACKEND_URL`: exact backend origin
+When an external account connection completes through a backend callback, keep
+the same ownership boundary. The callback may exchange a one-time code and use
+the user's stored delegation to write provider tokens or connection config into
+the user's app-scoped TinyCloud storage. Protect the callback with single-use
+state, require an active delegation before writing, and store backend
+subscriptions or delivery bookkeeping separately in backend-owned operational
+storage.
 
-Backend identity is app-owned. User data access happens through user-granted
-TinyCloud delegation.
+For long-running imports, syncs, webhook deliveries, or background jobs, design
+an explicit recovery loop. Stream progress events for interactive runs, make
+every write idempotent with a stable external or content-derived key, and treat
+missing delegation, expired credentials, unavailable grants, or temporarily
+lapsed subscriptions as recoverable states rather than silent drops. Store
+pending and failed job records in backend-owned operational storage with enough
+metadata to replay or diagnose them, expose authenticated replay and clear
+endpoints, and have the client check those endpoints after sign-in or reconnect
+so queued work can resume and the UI can refresh once replay completes.
 
-## 5. Update Storage and Session Names
+## 7. Secrets Boundary
 
-Rename storage keys before shipping a real app:
+Secrets are never posted to the backend as raw values. Use this flow:
 
-- TinyCloud KV prefixes derived from `APP_ID`
-- TinyCloud SQL and DuckDB database names derived from `APP_ID`
-- browser storage keys such as `tinyboilerplate:session` and `tinycloud-starter:storeType`
-- CSRF/request header display values if branded diagnostics matter
-- OpenKey app display names passed through the auth flow
+1. Browser unlocks TinyCloud Secrets.
+2. Browser writes the secret directly to TinyCloud.
+3. Browser ensures backend delegation is active.
+4. Browser shares or re-encrypts the secret for the backend DID.
+5. Backend reads the secret only through delegated Secrets access after the
+   grant exists.
 
-Changing these after users have data is a migration, not a rename.
+If the backend cannot read a shared secret, surface a "finish access" or
+"reconnect" state. Do not silently fall back to storing secrets in app KV, SQL,
+environment variables, logs, or backend request bodies.
 
-## 6. Replace the Example Domain Model
+Backend delegated secret writes and deletes should be unsupported unless the
+product has an explicit reason and a separate consent flow.
 
-`examples/starter` uses `Item` as the placeholder model. Replace it with
-your product model in this order:
+## 8. Product State Model
 
-1. Update shared types in `packages/core/src/index.ts`.
-2. Copy `backend/src/routes/items.ts` to a new route module.
-3. Rename KV prefixes, database names, table names, and SQL statements.
-4. Mount the new route in `backend/src/index.ts`.
-5. Replace `frontend/src/components/ItemsCRUD.tsx` with the new product UI.
-6. Update `frontend/public/manifest.json` and `/api/server-info` permissions so
-   they cover only the storage surfaces the app actually uses.
+Gate the app on explicit states:
 
-Keep the auth, session, delegation, CSRF, and API-client flow intact unless the
-new app has a specific reason to change it.
+- unauthenticated
+- signing in
+- backend session restored without a live user wallet or identity provider
+- checking delegation
+- delegation missing, expired, or stale
+- no user data or source connected yet
+- user credential exists but backend grant is missing
+- ready state
+- import, sync, or background job pending
+- recoverable error requiring reconnect or re-consent
 
-## 7. Verify the Scaffold
+Avoid treating restored backend sessions as fully interactive wallet sessions.
+If the app needs a fresh signature, expanded permissions, or a new secret grant,
+ask the user to reconnect.
 
-From the TinyBoilerplate repo before copying or after rebasing:
+## 9. Domain Model Replacement
 
-```bash
-rm -rf node_modules
-bun install --frozen-lockfile
-bun run format:check
-bun run build
-bun test packages/client/src packages/server/src examples/starter/backend/src examples/conversation-sync/backend/src
-cd examples/conversation-sync/frontend && bunx vitest run
-```
+When building a product, replace placeholder domain concepts in this order:
 
-For a copied full-repo scaffold using React + Express, run at least:
+1. Define shared types and API contracts for the product model.
+2. Define the app's storage paths, database names, table names, and migration
+   or schema initialization strategy.
+3. Update the runtime manifest and backend policy so they cover only the
+   required storage surfaces.
+4. Implement backend routes behind session authentication and delegation
+   middleware.
+5. Implement browser views and direct TinyCloud access only where direct user
+   ownership is part of the product experience.
+6. Update OpenAPI or equivalent API documentation if the app exposes HTTP
+   routes. Treat it as a contract: include auth schemes, request bodies,
+   response schemas, reusable error responses, and state enums such as
+   delegation status.
+7. Add tests for policy shape, delegation status, stale-policy invalidation,
+   user/delegatee binding, storage helpers, partial SQL/KV failures, and at
+   least one happy-path product workflow.
 
-```bash
-bun install --frozen-lockfile
-bun run build
-bun test packages/client/src packages/server/src examples/starter/backend/src
-```
+Keep auth, session, delegation, CSRF, and API-client flow intact unless the
+product has a specific reason to change it.
 
-Then run the app locally:
+## 10. Verification
 
-```bash
-bun run dev
-```
+Before treating a scaffold as ready:
 
-Sign in, grant the backend delegation, and complete one read/write path through
-the backend. If the app exposes direct browser TinyCloud access, verify one
-direct KV, SQL, or DuckDB operation too.
+- install dependencies with the repository's locked install mode
+- run formatting and type checks
+- run unit tests for shared client/server packages
+- run backend route tests for auth, delegation, policy, and storage behavior
+- run API contract tests when an OpenAPI or similar spec exists
+- run a browser smoke test such as `bun run test:browser:app-shell` that avoids
+  real credentials, covers app-shell rendering, and checks for unexpected console
+  errors
+- run an opt-in real identity-provider/TinyCloud pass only when credentials and
+  an operator-owned test account are available
 
-## 8. Conversation Sync Is Advanced Reference
+Do not require production credentials, real secrets, or live third-party source
+accounts for the default CI path.
 
-`examples/conversation-sync` is intentionally not the default fork base. It is
-useful for inspecting mature patterns, including:
+For local identity-provider or passkey checks, use HTTP localhost when the
+identity flow supports it; otherwise use trusted HTTPS. Never use HTTPS with a
+browser certificate warning for WebAuthn. A browser that has clicked through a
+certificate warning may still block WebAuthn or surface misleading network
+errors.
 
-- manifest-backed delegation with runtime grants
-- backend policy-hash checks for stale delegations
-- portable multi-resource delegation activation
-- TinyCloud Secrets sharing with a backend DID
-- Fireflies and Google Meet sync flows
-- webhook verification and pending queues
-- agent delegation handoff to an OpenCode-style container
-
-If you do copy it for a transcript product, rename all Listen-specific surfaces:
-
-- `manifest.json`: `xyz.tinycloud.listen` and hook paths
-- frontend title, shell branding, landing copy, and localStorage keys
-- Fireflies and Google Meet source labels if the product does not use them
-- `docker-compose.yml` service, image, container, volume, and prefix names
-- `agent/CLAUDE.md` product name, schema notes, and command examples
-- README files, generated readme HTML, OpenAPI title, and portless hostnames
-- tests that assert Listen-specific app ids, copy, storage paths, or source names
-
-Do not copy Listen product code into a new app by default. Fireflies, Granola,
-Google Meet, transcript UI, and Listen-specific storage schemas belong to
-Listen unless the new product explicitly needs them.
+Searchable error:
+`WebAuthn is not supported on sites with TLS certificate errors`.

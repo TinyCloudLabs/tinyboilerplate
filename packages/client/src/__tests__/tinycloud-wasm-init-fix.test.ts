@@ -48,18 +48,18 @@ describe("patchTinyCloudWasmInit", () => {
     expect(result.content).toContain("Object.getPrototypeOf(A)===Object.prototype");
   });
 
-  test("removes stale starter frontend Vite dependency caches with the deprecated wasm init warning", () => {
-    const root = mkdtempSync(join(tmpdir(), "tinyboilerplate-wasm-init-"));
+  test("removes stale generated frontend Vite dependency caches with the deprecated wasm init warning", () => {
+    const root = mkdtempSync(join(tmpdir(), "generated-app-wasm-init-"));
 
     try {
       writeFileSync(
         join(root, "package.json"),
         JSON.stringify({
-          workspaces: ["examples/starter/frontend", "packages/client"],
+          workspaces: ["apps/generated/frontend", "packages/client"],
         }),
       );
 
-      const staleCache = join(root, "examples/starter/frontend/node_modules/.vite");
+      const staleCache = join(root, "apps/generated/frontend/node_modules/.vite");
       const staleFile = join(staleCache, "deps/@tinycloud_web-sdk.js");
       mkdirSync(join(staleCache, "deps"), { recursive: true });
       writeFileSync(

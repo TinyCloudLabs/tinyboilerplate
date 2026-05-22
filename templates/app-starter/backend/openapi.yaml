@@ -1,0 +1,401 @@
+openapi: 3.1.0
+info:
+  title: TinyCloud App Starter API
+  version: 0.1.0
+  description: API contract for the reusable TinyCloud app starter backend.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Backend is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, app]
+                properties:
+                  ok:
+                    type: boolean
+                  app:
+                    type: string
+
+  /api/manifest:
+    get:
+      operationId: getManifest
+      summary: Runtime TinyCloud app manifest
+      security: []
+      responses:
+        "200":
+          description: Runtime manifest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Manifest"
+
+  /api/server-info:
+    get:
+      operationId: getServerInfo
+      summary: Backend delegation policy
+      security: []
+      responses:
+        "200":
+          description: Backend DID, status, policy, and policy hash
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerInfo"
+
+  /api/auth/nonce:
+    get:
+      operationId: createNonce
+      summary: Create SIWE nonce
+      security: []
+      parameters:
+        - name: address
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: "^0x[0-9a-fA-F]{40}$"
+      responses:
+        "200":
+          description: Nonce created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [nonce]
+                properties:
+                  nonce:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/auth/verify:
+    post:
+      operationId: verifySession
+      summary: Verify SIWE session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, signature]
+              properties:
+                message:
+                  type: string
+                signature:
+                  type: string
+      responses:
+        "200":
+          description: Backend session token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expiresIn, address]
+                properties:
+                  token:
+                    type: string
+                  expiresIn:
+                    type: integer
+                  address:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /api/delegations/status:
+    get:
+      operationId: getDelegationStatus
+      summary: Check stored delegation status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Delegation status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationResponse"
+              examples:
+                active:
+                  value:
+                    status: active
+                    expiresAt: "2026-05-20T12:00:00.000Z"
+                expired:
+                  value:
+                    status: expired
+                    expiresAt: "2026-05-19T12:00:00.000Z"
+                stale:
+                  value:
+                    status: stale
+                    expiresAt: null
+                none:
+                  value:
+                    status: none
+                    expiresAt: null
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /api/delegations:
+    post:
+      operationId: storeDelegation
+      summary: Store and activate a portable delegation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serialized]
+              properties:
+                serialized:
+                  type: string
+      responses:
+        "200":
+          description: Delegation active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    delete:
+      operationId: revokeDelegation
+      summary: Remove stored delegation
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Delegation removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DelegationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /api/probe:
+    get:
+      operationId: getProbe
+      summary: Read the delegated KV storage probe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Probe value or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProbeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/DelegationRequired"
+        "500":
+          $ref: "#/components/responses/StoreError"
+    put:
+      operationId: putProbe
+      summary: Write the delegated KV storage probe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutProbeRequest"
+      responses:
+        "200":
+          description: Probe value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProbeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/DelegationRequired"
+        "500":
+          $ref: "#/components/responses/StoreError"
+    delete:
+      operationId: deleteProbe
+      summary: Delete the delegated KV storage probe
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Probe deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/DelegationRequired"
+        "500":
+          $ref: "#/components/responses/StoreError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Backend session token returned by SIWE verification.
+
+  schemas:
+    ApiError:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    Manifest:
+      type: object
+      required: [manifest_version, app_id, name, defaults, permissions]
+      properties:
+        manifest_version:
+          type: integer
+          const: 1
+        app_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        defaults:
+          type: boolean
+          const: false
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Permission"
+      additionalProperties: true
+
+    Permission:
+      type: object
+      required: [service, path, actions]
+      properties:
+        service:
+          type: string
+        space:
+          type: string
+        path:
+          type: string
+        actions:
+          type: array
+          items:
+            type: string
+        skipPrefix:
+          type: boolean
+        description:
+          type: string
+
+    ServerInfo:
+      type: object
+      required: [did, status, name, expiry, permissions, policyHash]
+      properties:
+        did:
+          type: string
+        status:
+          type: string
+        name:
+          type: string
+        expiry:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Permission"
+        policyHash:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+
+    DelegationStatus:
+      type: string
+      enum: [active, expired, none, stale]
+
+    DelegationResponse:
+      type: object
+      required: [status, expiresAt]
+      properties:
+        status:
+          $ref: "#/components/schemas/DelegationStatus"
+        expiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    PutProbeRequest:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+          maxLength: 1024
+
+    ProbeValue:
+      type: object
+      required: [value, updatedAt]
+      properties:
+        value:
+          type: string
+          maxLength: 1024
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProbeResponse:
+      type: object
+      required: [probe]
+      properties:
+        probe:
+          anyOf:
+            - $ref: "#/components/schemas/ProbeValue"
+            - type: "null"
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthenticated:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    DelegationRequired:
+      description: Active delegation required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    StoreError:
+      description: Delegated storage operation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"

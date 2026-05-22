@@ -36,6 +36,8 @@ export {
 
 export { requestNonce, verifySession, type VerifyResponse } from "./auth.js";
 
+export { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./request-headers.js";
+
 export { SessionStore, type StoredSession } from "./tokens.js";
 
 export { createApiClient, type ApiClient, type ApiClientConfig } from "./api.js";

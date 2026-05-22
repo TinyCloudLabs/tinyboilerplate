@@ -7,6 +7,7 @@ interface StoredDelegation {
   expiresAt: string;
   actions: string[];
   path: string;
+  delegateDid?: string;
 }
 
 function createMockNode() {
@@ -81,6 +82,30 @@ describe("DelegationStore", () => {
       const parsed = typeof value === "string" ? JSON.parse(value) : value;
       expect(parsed.grantedAt >= before).toBe(true);
       expect(parsed.grantedAt <= after).toBe(true);
+    });
+
+    test("persists policy delegatee metadata", async () => {
+      const metadata = {
+        ...makeMetadata({
+          policyHash: "policy-a",
+          resources: [
+            {
+              service: "tinycloud.kv",
+              path: "xyz.tinycloud.app/probe/",
+              actions: ["get"],
+            },
+          ],
+        }),
+        delegateDid: "did:key:z6MkBackend",
+      };
+
+      await store.store("0xABC", "data", metadata);
+
+      const [, value] = mockNode.kv.put.mock.calls[0];
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      expect(parsed.policyHash).toBe("policy-a");
+      expect(parsed.delegateDid).toBe("did:key:z6MkBackend");
+      expect(parsed.resources).toEqual(metadata.resources);
     });
   });
 

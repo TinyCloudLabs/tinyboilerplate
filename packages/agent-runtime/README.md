@@ -55,7 +55,7 @@ agent (OpenCode) ──▶ bash: tc kv / tc sql ──▶ /root/.tinycloud/profi
 | `TC_PROFILES_ROOT` | `/root/.tinycloud` |
 | `TC_PROFILE_NAME` | `default` |
 | `REFRESH_INTERVAL_MS` | `1500000` (25 min) |
-| `TC_AGENT_PREFIX` | `tc-agent` — override per-app to avoid TC-level space-namespace collisions |
+| `TC_AGENT_PREFIX` | `tc-agent` — override per-app to avoid TinyCloud space prefix collisions |
 
 **Layer-1 migration note:** if a pre-existing Layer-1 named volume is remounted at `DELEGATION_SIDECAR_DIR` on upgrade, the sidecar reads the existing `agent-key.json` (same filename in both layouts — DID stays stable) and falls back to `$DELEGATION_SIDECAR_DIR/delegation.txt` when `delegation.json` is missing, rewriting it as JSON on the next grant.
 

@@ -1,37 +1,20 @@
 # TinyBoilerplate
 
-Full-stack boilerplate for [TinyCloud](https://tinycloud.xyz) + [OpenKey](https://openkey.so). Framework-agnostic core with example apps.
+Full-stack starter substrate for [TinyCloud](https://tinycloud.xyz) +
+[OpenKey](https://openkey.so), plus product examples that show the substrate in
+use.
 
-## Architecture
+## What to Start From
 
-```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│   Frontend   │       │   Backend    │       │  TinyCloud   │
-│   (browser)  │       │   (server)   │       │   (storage)  │
-│              │       │              │       │              │
-│ OpenKey auth ├──JWT──► Verify JWT   │       │              │
-│ TC sign-in   │       │              │       │              │
-│ Create deleg ├──────►│ Store deleg  ├──────►│ BE's KV      │
-│              │       │ Cache access │       │              │
-│ CRUD via API ├──────►│ Use deleg    ├──────►│ User's KV/SQL│
-│              │       │              │       │              │
-│ Direct KV/SQL├──────────────────────────────►│ User's KV/SQL│
-└──────────────┘       └──────────────┘       └──────────────┘
-```
+`templates/app-starter` is the canonical blank TinyCloud app source inside this
+repo. For a user-facing or skill-generated app, use the scaffold command rather
+than copying the template directly. The scaffold materializes the template with
+new ids, package names, ports, env examples, and standalone workspace files.
 
-**Two data access patterns:**
-
-| Pattern | Path | Use case |
-|---------|------|----------|
-| Delegated (via backend) | Frontend → Backend → TinyCloud | Server-side logic, validation, multi-user |
-| Direct (browser-only) | Frontend → TinyCloud | Simple reads/writes, no backend needed |
-
-**Two auth layers:**
-
-| Layer | Mechanism | Purpose |
-|-------|-----------|---------|
-| Authentication | OpenKey JWT (JWKS-verified) | "Who are you?" |
-| Authorization | TinyCloud delegation (PortableDelegation) | "What can you do in this user's space?" |
+Use `examples/notes` as the first real product example. It builds on the same
+delegation contract with an app-specific Notes domain, backend-owned operational
+state, and a user-data model worth copying when you need more than the blank
+probe.
 
 ## Quick Start
 
@@ -44,35 +27,130 @@ bun install
 # 2. Build packages
 bun run build
 
-# 3. Generate a backend private key
+# 3. Generate or provide a backend private key for the app-starter backend
 bun run generate-key
 
-# 4. Configure environment
-cp examples/starter/backend/.env.example examples/starter/backend/.env
-cp examples/starter/frontend/.env.example examples/starter/frontend/.env
-# Edit examples/starter/backend/.env and set BACKEND_PRIVATE_KEY
+# 4. Configure the blank starter
+cp templates/app-starter/frontend/.env.example templates/app-starter/frontend/.env
+# If templates/app-starter/backend/.env already existed, the generator printed a
+# key instead of overwriting it. Paste that value into BACKEND_PRIVATE_KEY.
 
-# 5. Run the example
+# 5. Run the blank starter
+bun run dev:app-starter
+```
+
+The app-starter frontend runs on `http://localhost:5175` by default. The
+app-starter backend runs on `http://localhost:3003`. If trusted local certs exist
+at `templates/app-starter/frontend/localhost.pem` and
+`templates/app-starter/frontend/localhost-key.pem`, both dev servers switch to
+HTTPS on the same ports.
+
+To run Notes instead:
+
+```bash
+bun run packages/server/scripts/generate-key.ts examples/notes/backend/.env
+cp examples/notes/frontend/.env.example examples/notes/frontend/.env
+# If examples/notes/backend/.env already existed, replace BACKEND_PRIVATE_KEY
+# with the printed key.
+bun run dev:notes
+```
+
+Notes uses `http://localhost:5174` for the frontend and `http://localhost:3002`
+for the backend, with HTTPS on those same ports when trusted local certs are
+present.
+
+## Scaffold a Standalone App
+
+Use the scaffold pipeline when creating an app outside this repo:
+
+```bash
+bun run scaffold:app -- --out ../scratch-app --app-id xyz.tinycloud.scratch --app-name "Scratch TinyCloud App" --backend-prefix xyz.tinycloud.scratch-backend --frontend-package @scratch/tinycloud-frontend --backend-package @scratch/tinycloud-backend --frontend-port 5185 --backend-port 3013
+```
+
+A scaffolded app is standalone. In addition to `templates/app-starter`, it copies
+the shared workspace packages and root config the starter needs:
+
+- `packages/core`
+- `packages/client`
+- `packages/server`
+- root `package.json`
+- `tsconfig.base.json`
+- `turbo.json`
+- `.gitignore`
+
+Raw template copy alone is not standalone: the template package manifests use
+`workspace:*` dependencies, and the TypeScript configs assume the source repo's
+workspace layout. The scaffold should also exclude generated artifacts
+(`dist`, `.turbo`, `node_modules`, `*.tsbuildinfo`) and use a hidden-file-aware
+walker or `rg -uu` so hidden files such as `.env.example` are included in the
+copy, rename, and replacement pass.
+
+Generated apps intentionally keep the copied shared packages under the
+`@tinyboilerplate/*` internal substrate package scope. User-facing identity must come
+from the generated app name in the manifest, OpenKey configuration, HTML title,
+OpenAPI, and backend policy surfaces.
+
+Verify the in-repo starter with:
+
+```bash
+bun install --frozen-lockfile
+bun run format:check
+bun run build
+bun test templates/app-starter/backend/src
+bun run test:scaffold:integration
+bun run test:browser:app-shell
+```
+
+Verify a scratch scaffold with:
+
+```bash
+cd ../scratch-app
+bun install
+bun run generate-key
+bun run build
+bun run test
+cp frontend/.env.example frontend/.env
+# If backend/.env already existed, replace BACKEND_PRIVATE_KEY with the printed key.
 bun run dev
 ```
 
-The starter frontend runs on `http://localhost:5173` by default, or `https://localhost:5173` when local certs are present. The backend runs on `http://localhost:3001`.
-If `examples/starter/frontend/localhost.pem` and `examples/starter/frontend/localhost-key.pem` are present, set `FRONTEND_URL=https://localhost:5173` in `examples/starter/backend/.env` so CORS matches the frontend origin.
-For the Listen conversation-sync example, you can also run stable HTTPS local
-URLs with `bun run dev:conversation-sync:portless`.
+Build and backend tests are unauthenticated smoke checks. They verify that the
+generated workspace compiles, the OpenAPI/server-info surfaces are coherent, and
+the backend route tests pass. They do not prove that OpenKey sign-in, WebAuthn,
+TinyCloud space creation, or browser-to-backend delegation works end to end.
+`bun run test:browser:app-shell` is also unauthenticated; it renders the starter
+and Notes frontend shells with mocked-away backend use and checks for browser
+console errors.
+
+For a real runtime verification, open the running app in a browser and complete
+the OpenKey/TinyCloud flow:
+
+- Starter or scaffolded app: sign in, grant the backend delegation, then read
+  and update the probe.
+- Notes: sign in, grant the backend delegation, then create, edit, list, and
+  delete a note.
+
+OpenKey/passkey checks may use HTTP localhost when the identity flow supports
+it; otherwise use trusted HTTPS. Never use HTTPS with a browser certificate
+warning for WebAuthn. It can fail with `WebAuthn is not supported on sites with
+TLS certificate errors` even after you click through the warning page.
 
 ## Project Structure
 
-```
+```text
 tinyboilerplate/
 ├── packages/
-│   ├── core/                        # Shared types + constants
-│   ├── client/                      # Browser helpers (auth, delegation, API client)
-│   └── server/                      # Server helpers (identity, delegation store, JWT)
+│   ├── core/                        # Shared types and constants
+│   ├── client/                      # Browser helpers for auth/delegation/API calls
+│   └── server/                      # Server helpers for identity/delegations/sessions
+├── templates/
+│   └── app-starter/                 # Blank reusable TinyCloud app starter
+│       ├── frontend/                # React + Vite, port 5175
+│       └── backend/                 # Express + Bun, port 3003
 ├── examples/
-│   └── starter/                     # Clean starter app
-│       ├── frontend/                # React + Vite
-│       └── backend/                 # Express + Bun
+│   └── notes/                       # First real product example
+│       ├── frontend/                # React + Vite, port 5174
+│       └── backend/                 # Express + Bun, port 3002
 ├── package.json                     # Bun workspace root
 └── tsconfig.base.json
 ```
@@ -83,9 +161,8 @@ tinyboilerplate/
 
 Shared types and constants used by both client and server.
 
-- `Item`, `CreateItemInput`, `UpdateItemInput` — CRUD entity types
-- `DelegationInfo`, `StoredDelegation`, `ServerInfo` — delegation/server types
-- `DEFAULT_DELEGATION_EXPIRY_MS`, `DELEGATION_CACHE_TTL_MS` — delegation lifetime constants
+- `DelegationInfo`, `StoredDelegation`, `ServerInfo` - delegation/server types
+- `DEFAULT_DELEGATION_EXPIRY_MS`, `DELEGATION_CACHE_TTL_MS` - delegation lifetime constants
 
 ### `@tinyboilerplate/client`
 
@@ -94,7 +171,6 @@ Framework-agnostic browser helpers.
 | Export | Description |
 |--------|-------------|
 | `createOpenKey(config?)` | Create an OpenKey instance |
-| `startOAuthFlow(openkey, oauthConfig)` | Run OAuth PKCE flow, return JWT tokens |
 | `connectWallet(openkey)` | Connect wallet, return EIP-1193 provider |
 | `createTinyCloudWeb(provider, config?)` | Create TinyCloudWeb instance |
 | `signIn(tcw)` | Sign into TinyCloud, sets `tcw.did` and `tcw.spaceId` |
@@ -104,7 +180,7 @@ Framework-agnostic browser helpers.
 | `sendDelegation(url, serialized, token)` | POST delegation to backend |
 | `checkDelegationStatus(url, token)` | Check if backend has active delegation |
 | `revokeDelegation(url, token)` | Revoke backend's delegation |
-| `TokenStore` | In-memory JWT storage with auto-refresh |
+| `TokenStore` | In-memory session token storage |
 | `createApiClient(url, tokenStore, config?)` | Fetch wrapper with Bearer auth + 401 retry |
 
 ### `@tinyboilerplate/server`
@@ -114,107 +190,96 @@ Framework-agnostic Node.js/Bun helpers.
 | Export | Description |
 |--------|-------------|
 | `createBackendIdentity(config)` | Initialize TinyCloudNode, sign in, return `{ node, did }` |
-| `withSessionRefresh(node, fn)` | Retry on session expiry (auto re-sign-in) |
-| `DelegationStore` | Persist delegations in backend's own TC KV store |
-| `DelegationCache` | In-memory cache for `DelegatedAccess` (50-min TTL) |
-| `createJWTVerifier(issuerUrl, config?)` | JWKS-backed JWT verification function |
-| `fetchUserInfo(openKeyUrl, token)` | Fetch user profile from OpenKey userinfo endpoint |
+| `withSessionRefresh(node, fn)` | Retry on session expiry |
+| `DelegationStore` | Persist delegations in backend-owned TinyCloud KV |
+| `DelegationCache` | In-memory cache for `DelegatedAccess` |
 
 ## How It Works
 
-### 1. User authenticates via OpenKey
+### 1. User Connects Browser Identity
 
-```
+```text
 Frontend                    OpenKey
-   │── OAuth PKCE popup ──────►│
-   │◄── JWT (access + refresh) │
    │── connect() ─────────────►│
    │◄── EIP-1193 provider ─────│
 ```
 
-The JWT authenticates the user to your backend. The EIP-1193 provider enables TinyCloud signing.
+The EIP-1193 provider enables TinyCloud signing and backend session proof.
 
-### 2. Frontend signs into TinyCloud
+### 2. Frontend Signs Into TinyCloud
 
 ```typescript
 const tcw = createTinyCloudWeb(wallet.provider);
 await signIn(tcw);
-// tcw.did → user's primary DID (did:pkh:eip155:...)
-// tcw.spaceId → user's space ID
+// tcw.did -> user's primary DID (did:pkh:eip155:...)
+// tcw.spaceId -> user's space ID
 ```
 
-### 3. Frontend delegates access to backend
+### 3. Frontend Delegates Access To Backend
 
-```
+```text
 Frontend                    Backend                    TinyCloud
    │── GET /api/server-info ──►│                           │
-   │◄── { did: "did:key:..." } │                           │
+   │◄── { did, policyHash } ───│                           │
    │                           │                           │
    │ materializeDelegation(backendDID)                     │
    │── POST /api/delegations ─►│                           │
-   │                           │── store delegation ──────►│ (BE's KV)
+   │                           │── store delegation ──────►│ (backend KV)
    │                           │── cache DelegatedAccess   │
    │◄── { status: "active" } ──│                           │
 ```
 
-### 4. Backend operates on user's data via delegation
+### 4. Backend Operates On User Data Via Delegation
 
-```
+```text
 Frontend                    Backend                    TinyCloud
-   │── GET /api/items ────────►│                           │
-   │                           │── kv.list("xyz.tinycloud.starter/items/") ─►│
-   │◄── { items: [...] } ──────│                           │
+   │── GET /api/probe ────────►│                           │
+   │                           │── kv.get("xyz.tinycloud.app-starter/probe/value") ─►│
+   │◄── { probe } ─────────────│                           │
 ```
 
-The delegation middleware resolves `DelegatedAccess` from cache (or store on miss) before any data route.
-
-### 5. Frontend accesses TinyCloud directly (no backend)
-
-```
-Frontend                                       TinyCloud
-   │── tcw.kv.put("key", value) ──────────────►│ (User's space)
-   │◄── Result<KVResponse> ───────────────────│
-   │                                           │
-   │── tcw.sql.query("SELECT * FROM items") ──►│
-   │◄── Result<{ columns, rows }> ────────────│
-```
-
-The `DirectStorage` panel uses the `TinyCloudWeb` instance directly — `tcw.kv.*` for key-value and `tcw.sql.*` for SQL. No delegation or backend involved. This only works with a fresh sign-in session (not session restore).
+The delegation middleware resolves `DelegatedAccess` from cache or persistent
+backend storage before any delegated data route.
 
 ## Building Your Own App
 
-1. **Define your model** in `packages/core/src/index.ts` (replace `Item` with your types)
-2. **Update the manifest** — change `app_id`, name, description, and any permissions in `manifest.json`
-3. **Write your routes** — copy `examples/starter/backend/src/routes/items.ts` as a template
-4. **Wire up the frontend** — use `createApiClient` to call your new routes
-5. **Store type** — the example supports both `kv` and `sql` via `?store=kv|sql` query param
+1. Scaffold from `templates/app-starter` using `bun run scaffold:app -- ...`.
+2. Replace the probe route and UI with your app's model.
+3. Use `examples/notes` as the reference for a real app-level data model,
+   OpenAPI contract, and policy-staleness flow.
 
-The delegation chain is the same regardless of your data model: authenticate (JWT), delegate (PortableDelegation), then operate (KV/SQL via `DelegatedAccess`).
+The delegation chain is the same regardless of your data model: connect
+identity, sign into TinyCloud, delegate the backend policy, then operate on
+TinyCloud via `DelegatedAccess`.
 
 ## Environment Variables
 
-### Backend
+### App Starter Backend
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `BACKEND_PRIVATE_KEY` | Yes | — | Ethereum private key (0x-prefixed). Generate with `bun run generate-key` |
+| `BACKEND_PRIVATE_KEY` | Yes | - | Ethereum private key (0x-prefixed). Generate with `bun run generate-key` |
 | `TINYCLOUD_HOST` | No | `https://node.tinycloud.xyz` | TinyCloud node URL |
-| `FRONTEND_URL` | No | `http://localhost:5173` | Frontend origin allowed by backend CORS |
-| `PORT` | No | `3001` | Backend port |
+| `FRONTEND_URL` | No | Derived from cert mode, usually `http://localhost:5175` | Frontend origin allowed by backend CORS |
+| `PORT` | No | `3003` | Backend port |
 
-### Frontend (Vite)
+### App Starter Frontend
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `VITE_OPENKEY_HOST` | No | `https://openkey.so` | OpenKey host |
-| `VITE_BACKEND_URL` | No | `http://localhost:3001` | Backend URL |
+| `VITE_BACKEND_URL` | No | Derived from page protocol, usually `http://localhost:3003` | Backend URL override. Leave unset unless you need a custom or trusted-HTTPS backend origin |
 
 ## Known Constraints
 
-- **Wallet-mode session cap**: TinyCloud wallet-mode sessions expire after 1 hour. The `DelegationCache` uses a 50-minute TTL to stay under this cap. On expiry, the delegation is re-activated from the persistent store.
-- **WASM ESM fix**: `@tinycloud/node-sdk-wasm` ships CJS wrappers that break in ESM. The `postinstall` script in `@tinyboilerplate/server` patches this automatically.
-- **Delegation expiry**: Default 7 days. After expiry, the user must grant a new delegation from the frontend.
-- **Backend identity**: The backend has its own TinyCloud space (auto-created on first boot). Delegations are stored in the backend's KV, not the user's.
+- **Trusted local HTTPS for passkeys**: OpenKey/WebAuthn flows fail on pages with TLS certificate errors, even after clicking through the browser warning. Use HTTP fallback or trusted local certs.
+- **Smoke vs. real auth**: `bun run build`, backend route tests, and scaffold
+  smoke checks are useful hygiene, but the real OpenKey/TinyCloud flow still
+  requires browser sign-in and a successful backend delegation grant.
+- **Wallet-mode session cap**: TinyCloud wallet-mode sessions expire after 1 hour. The `DelegationCache` uses a 50-minute TTL to stay under this cap.
+- **WASM ESM fix**: `@tinycloud/node-sdk-wasm` ships CJS wrappers that break in ESM. The package postinstall patch keeps local builds working.
+- **Delegation expiry**: App-starter delegations default to 7 days. After expiry or policy drift, the user must grant a new delegation from the frontend.
+- **Backend identity**: The backend has its own TinyCloud space. Delegations are stored in backend-owned KV, not in the user's app data.
 
 ## License
 

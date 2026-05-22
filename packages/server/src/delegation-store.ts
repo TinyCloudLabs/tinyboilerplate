@@ -10,6 +10,7 @@ export interface DelegationMetadata {
   actions: string[];
   path: string;
   policyHash?: string;
+  delegateDid?: string;
   resources?: StoredDelegation["resources"];
 }
 
@@ -36,6 +37,7 @@ export class DelegationStore {
       actions: metadata.actions,
       path: metadata.path,
       policyHash: metadata.policyHash,
+      delegateDid: metadata.delegateDid,
       resources: metadata.resources,
     };
 

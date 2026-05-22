@@ -1,4 +1,5 @@
 import type { ApiError } from "@tinyboilerplate/core";
+import { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./request-headers.js";
 import type { SessionStore } from "./tokens.js";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ export function createApiClient(backendUrl: string, config: ApiClientConfig): Ap
       headers: {
         ...init.headers,
         Authorization: `Bearer ${token}`,
-        "X-Requested-With": "TinyBoilerplate",
+        [DEFAULT_REQUEST_HEADER_NAME]: DEFAULT_REQUEST_HEADER_VALUE,
       },
     });
 

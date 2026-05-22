@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 
 let lastTinyCloudConfig: any = null;
 let lastRestoreAddress: string | undefined;
@@ -17,6 +17,7 @@ const signInSession = {
 
 mock.module("@tinycloud/web-sdk", () => ({
   BrowserSessionStorage: class BrowserSessionStorage {},
+  serializeDelegation: (delegation: any) => delegation.serialized ?? "serialized-delegation",
   TinyCloudWeb: class TinyCloudWeb {
     provider: unknown;
 
@@ -46,6 +47,14 @@ mock.module("@tinycloud/web-sdk", () => ({
 
 const { createTinyCloudWeb, createAndSignIn, restoreTinyCloudWebSession } =
   await import("../tinycloud.js");
+const { checkDelegationStatus, createManifestDelegation, revokeDelegation, sendDelegation } =
+  await import("../delegation.js");
+
+const originalFetch = globalThis.fetch;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 describe("createTinyCloudWeb", () => {
   test("uses the current provider option and stores composed request manifests", () => {
@@ -111,13 +120,13 @@ describe("createAndSignIn", () => {
     const result = await createAndSignIn(provider, {
       address: "0xAbC",
       nonce: "fresh-backend-nonce",
-      siweConfig: { statement: "Sign in to the starter" },
+      siweConfig: { statement: "Sign in to this app" },
     });
 
     expect(result.session).toBe(signInSession);
     expect(lastTinyCloudConfig.nonce).toBe("fresh-backend-nonce");
     expect(lastTinyCloudConfig.siweConfig).toEqual({
-      statement: "Sign in to the starter",
+      statement: "Sign in to this app",
       nonce: "fresh-backend-nonce",
     });
     expect(lastClearPersistedSessionAddress).toBe("0xAbC");
@@ -157,5 +166,101 @@ describe("restoreTinyCloudWebSession", () => {
     expect(result.tcw).toBeNull();
     expect(lastRestoreAddress).toBe("0xabc");
     expect(lastCleanupCalled).toBe(true);
+  });
+});
+
+describe("delegation API requests", () => {
+  test("serializes multi-space delegation bundles with a neutral format marker", async () => {
+    const tcw = {
+      delegateTo: async (_did: string, permissions: Array<{ space: string }>) => ({
+        delegation: { serialized: `${permissions[0]?.space ?? "unknown"}-delegation` },
+        prompted: false,
+      }),
+    };
+    const capabilityRequest = {
+      delegationTargets: [
+        {
+          did: "did:key:backend",
+          expiryMs: Date.now() + 60_000,
+          permissions: [
+            {
+              service: "tinycloud.kv",
+              space: "applications",
+              path: "com.example.app/",
+              actions: ["tinycloud.kv/get"],
+            },
+            {
+              service: "tinycloud.sql",
+              space: "user",
+              path: "profile",
+              actions: ["tinycloud.sql/read"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = await createManifestDelegation(
+      tcw as any,
+      "did:key:backend",
+      capabilityRequest as any,
+    );
+
+    expect(JSON.parse(result.serialized)).toEqual({
+      format: "tinycloud.delegation-bundle",
+      version: 1,
+      delegations: ["applications-delegation", "user-delegation"],
+    });
+  });
+
+  test("sendDelegation uses the neutral CSRF request header default", async () => {
+    let capturedInit: RequestInit | undefined;
+
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      capturedInit = init;
+      return new Response(JSON.stringify({ active: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    await sendDelegation("https://api.example.com", "delegation", "session-token");
+
+    expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
+      "XMLHttpRequest",
+    );
+  });
+
+  test("checkDelegationStatus uses the neutral CSRF request header default", async () => {
+    let capturedInit: RequestInit | undefined;
+
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      capturedInit = init;
+      return new Response(JSON.stringify({ active: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    await checkDelegationStatus("https://api.example.com", "session-token");
+
+    expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
+      "XMLHttpRequest",
+    );
+  });
+
+  test("revokeDelegation uses the neutral CSRF request header default", async () => {
+    let capturedInit: RequestInit | undefined;
+
+    globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+      capturedInit = init;
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+
+    await revokeDelegation("https://api.example.com", "session-token");
+
+    expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
+      "XMLHttpRequest",
+    );
   });
 });

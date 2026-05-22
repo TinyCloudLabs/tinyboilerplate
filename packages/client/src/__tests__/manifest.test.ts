@@ -30,19 +30,17 @@ describe("resolveManifestPermissions", () => {
         permissions: [
           {
             service: "tinycloud.sql",
-            path: "conversations",
+            path: "records",
             actions: ["read", "write"],
-            description: "Store transcript rows",
+            description: "Store record rows",
           },
         ],
       },
     );
 
     expect(request.delegationTargets[0]?.did).toBe("did:key:backend");
-    expect(request.delegationTargets[0]?.permissions[0]?.path).toBe(
-      "com.example.app/conversations",
-    );
-    expect(request.delegationTargets[0]?.permissions[0]?.description).toBe("Store transcript rows");
+    expect(request.delegationTargets[0]?.permissions[0]?.path).toBe("com.example.app/records");
+    expect(request.delegationTargets[0]?.permissions[0]?.description).toBe("Store record rows");
     expect(request.resources.some((permission) => permission.space === "account")).toBe(true);
   });
 
@@ -62,9 +60,9 @@ describe("resolveManifestPermissions", () => {
         },
         {
           service: "tinycloud.sql",
-          path: "conversations",
+          path: "records",
           actions: ["read", "write"],
-          description: "Conversation records",
+          description: "Example records",
         },
       ],
     );
@@ -80,9 +78,9 @@ describe("resolveManifestPermissions", () => {
       {
         service: "tinycloud.sql",
         space: "applications",
-        path: "com.example.app/conversations",
+        path: "com.example.app/records",
         actions: ["tinycloud.sql/read", "tinycloud.sql/write"],
-        description: "Conversation records",
+        description: "Example records",
       },
       {
         service: "tinycloud.capabilities",
@@ -112,9 +110,9 @@ describe("resolveManifestDelegationPermissions", () => {
           },
           {
             service: "tinycloud.sql",
-            path: "conversations",
+            path: "records",
             actions: ["read", "write"],
-            description: "Conversation records",
+            description: "Example records",
           },
         ],
       },
@@ -132,9 +130,9 @@ describe("resolveManifestDelegationPermissions", () => {
       {
         service: "tinycloud.sql",
         space: "applications",
-        path: "com.example.app/conversations",
+        path: "com.example.app/records",
         actions: ["tinycloud.sql/read", "tinycloud.sql/write"],
-        description: "Conversation records",
+        description: "Example records",
       },
       {
         service: "tinycloud.capabilities",
@@ -166,8 +164,8 @@ describe("resolveManifestDelegationPermissions", () => {
           name: "Example App",
         },
         "tinycloud.sql",
-        "conversations/conversation",
+        "records/record",
       ),
-    ).toBe("com.example.app/conversations/conversation");
+    ).toBe("com.example.app/records/record");
   });
 });

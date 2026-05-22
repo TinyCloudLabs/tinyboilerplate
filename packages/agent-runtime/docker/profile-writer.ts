@@ -110,7 +110,6 @@ export function writeInitialProfile(input: ProfileSynthesisInput): void {
 
   const profilePath = join(dir, "profile.json");
   const keyPath = join(dir, "key.json");
-  const sessionPath = join(dir, "session.json");
 
   const createdAt = loadExistingCreatedAt(profilePath) ?? new Date().toISOString();
 

@@ -7,7 +7,7 @@ description: Helps Codex create, scaffold, verify, explain, or debug a new TinyC
 
 ## Source Order
 
-Start from `/Users/roman/Documents/GitHub/development/repositories/tinyboilerplate`.
+Start from the tinyboilerplate repository that contains this skill. If the current working directory is elsewhere, locate the checkout by finding a repo with `scripts/scaffold-app.ts`, `templates/app-starter/**`, and `docs/app-architecture.md`; if there is more than one candidate, ask which checkout to use.
 
 Treat these as canonical:
 

@@ -6,6 +6,10 @@ use.
 
 ## What to Start From
 
+Use `docs/app-architecture.md` as the durable app-creation contract. It defines
+the browser, backend, delegation, manifest, OpenAPI, and storage boundaries that
+new apps should preserve.
+
 `templates/app-starter` is the canonical blank TinyCloud app source inside this
 repo. For a user-facing or skill-generated app, use the scaffold command rather
 than copying the template directly. The scaffold materializes the template with

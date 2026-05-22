@@ -3,8 +3,8 @@
 **Status:** Draft architecture reference
 **Target repos:** `tinycloud-node`, `js-sdk`, consuming apps
 
-For new app creation, treat `docs/new-app.md` and
-`docs/tinycloud-example-app-skill-notes.md` as the operational sources of
+For new app creation, treat `docs/app-architecture.md`, `README.md`,
+`templates/app-starter`, and `examples/notes` as the operational sources of
 truth. This document explains the manifest/delegation shape behind that flow.
 
 ## Motivation

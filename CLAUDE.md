@@ -9,9 +9,7 @@ that materializes standalone TinyCloud apps.
 Use these files first when creating or evaluating a new app:
 
 - `README.md` - human-facing setup, scaffold, verification, and runtime notes
-- `docs/new-app.md` - architecture contract for app creation
-- `docs/tinycloud-example-app-skill-notes.md` - skill-source notes distilled
-  from app-starter and Notes
+- `docs/app-architecture.md` - durable architecture contract for app creation
 - `templates/app-starter` - canonical blank starter source
 - `examples/notes` - first real product example
 

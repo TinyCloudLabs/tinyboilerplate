@@ -1,0 +1,4 @@
+interface:
+  display_name: "TinyCloud New App"
+  short_description: "Scaffold and verify new TinyCloud apps from tinyboilerplate."
+  default_prompt: "Create or debug a new TinyCloud app scaffold, verify it with the current tinyboilerplate workflow, and explain remaining auth or runtime caveats."

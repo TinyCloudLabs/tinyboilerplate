@@ -126,8 +126,43 @@ TinyCloud space creation, or browser-to-backend delegation works end to end.
 and Notes frontend shells with mocked-away backend use and checks for browser
 console errors.
 
-For a real runtime verification, open the running app in a browser and complete
-the OpenKey/TinyCloud flow:
+The real-auth fixture is the scripted path for exercising the actual
+OpenKey/WebAuthn/TinyCloud login and backend delegation flow. It has two phases:
+
+```bash
+# Interactive: a human completes OpenKey/WebAuthn sign-in and grants delegation.
+bun run test:real-auth:setup
+
+# Replay: reuse the saved browser auth state to verify the flow.
+bun run test:real-auth
+```
+
+Interactive setup launches installed Chrome when available so platform passkeys
+behave like a normal browser. If the prompt still asks for an external security
+key or says to insert a key, rerun setup with an explicit browser/profile:
+
+```bash
+REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+```
+
+When using trusted mkcert HTTPS, Bun's backend polling may also need the mkcert
+root CA. The real-auth commands auto-detect local mkcert certs when possible;
+if your shell cannot find `mkcert`, run with the CA path explicitly:
+
+```bash
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth
+```
+
+Treat the saved Playwright auth state as credential material. Use a disposable
+test identity, keep the delegation short-lived, store artifacts only on your
+local machine, and never commit or upload `.auth/`, traces, videos, screenshots,
+or similar Playwright output. Re-run `bun run test:real-auth:setup` whenever the
+auth state expires, the delegation is stale, or backend policy changes require a
+new grant.
+
+For a manual real runtime verification, open the running app in a browser and
+complete the OpenKey/TinyCloud flow:
 
 - Starter or scaffolded app: sign in, grant the backend delegation, then read
   and update the probe.
@@ -278,8 +313,10 @@ TinyCloud via `DelegatedAccess`.
 
 - **Trusted local HTTPS for passkeys**: OpenKey/WebAuthn flows fail on pages with TLS certificate errors, even after clicking through the browser warning. Use HTTP fallback or trusted local certs.
 - **Smoke vs. real auth**: `bun run build`, backend route tests, and scaffold
-  smoke checks are useful hygiene, but the real OpenKey/TinyCloud flow still
-  requires browser sign-in and a successful backend delegation grant.
+  smoke checks are useful hygiene, but they do not cover OpenKey/WebAuthn,
+  TinyCloud space setup, or backend delegation. Use the real-auth setup command
+  to create a local credential fixture, then the real-auth replay command to
+  reuse it.
 - **Wallet-mode session cap**: TinyCloud wallet-mode sessions expire after 1 hour. The `DelegationCache` uses a 50-minute TTL to stay under this cap.
 - **WASM ESM fix**: `@tinycloud/node-sdk-wasm` ships CJS wrappers that break in ESM. The package postinstall patch keeps local builds working.
 - **Delegation expiry**: App-starter delegations default to 7 days. After expiry or policy drift, the user must grant a new delegation from the frontend.

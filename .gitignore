@@ -7,5 +7,12 @@ dist/
 *.pem
 .turbo/
 .claude/
+.auth/
+test-results/
+playwright-report/
+blob-report/
+traces/
+videos/
+screenshots/
 test/.passkey.json
 test/.last-run.log

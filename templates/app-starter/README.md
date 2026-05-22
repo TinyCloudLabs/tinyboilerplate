@@ -72,11 +72,40 @@ bun test templates/app-starter/backend/src
 ```
 
 Those checks do not exercise OpenKey, WebAuthn, TinyCloud space setup, or the
-browser delegation grant. For runtime verification, start the app, sign in in a
-browser, grant the backend policy, then read and update the probe. Use HTTP
-localhost when supported by the identity flow, or a trusted HTTPS localhost
-certificate. Do not treat a browser TLS warning page as a valid passkey test
-environment.
+browser delegation grant. From the repo root, use the real-auth fixture when you
+need scripted coverage of the actual identity and delegation flow:
+
+```bash
+bun run test:real-auth:setup
+bun run test:real-auth
+```
+
+The setup command is interactive and saves Playwright browser auth state for
+replay. It launches installed Chrome when available so platform passkeys behave
+like a normal browser. If it asks for an external security key or says to insert
+a key, rerun with:
+
+```bash
+REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+```
+
+When using trusted mkcert HTTPS, Bun's backend polling may also need the mkcert
+root CA. The real-auth commands auto-detect local mkcert certs when possible;
+if your shell cannot find `mkcert`, run with the CA path explicitly:
+
+```bash
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth
+```
+
+Treat saved auth state as credential material: use a disposable test identity,
+keep the delegation short-lived, keep `.auth/`, traces, videos, and screenshots
+local-only, and re-run setup when the state expires or the backend policy is stale.
+
+For manual runtime verification, start the app, sign in in a browser, grant the
+backend policy, then read and update the probe. Use HTTP localhost when
+supported by the identity flow, or a trusted HTTPS localhost certificate. Do not
+treat a browser TLS warning page as a valid passkey test environment.
 
 ## Scaffolding From This Template
 

@@ -81,6 +81,7 @@ describe("scaffold-app CLI", () => {
       "tsconfig.base.json",
       "turbo.json",
       "eslint.config.js",
+      "test/package.json",
       ".gitignore",
     ]);
 
@@ -94,6 +95,9 @@ describe("scaffold-app CLI", () => {
       "packages/core/tsconfig.tsbuildinfo",
       "packages/client/node_modules",
       "packages/server/dist",
+      "test/app-shell-smoke.ts",
+      "test/node_modules",
+      "test/.auth",
     ]);
 
     const generatedPaths = await listGeneratedPaths(out);
@@ -108,7 +112,7 @@ describe("scaffold-app CLI", () => {
       private: true,
       type: "module",
       packageManager: "bun@1.3.9",
-      workspaces: ["packages/*", "frontend", "backend"],
+      workspaces: ["packages/*", "frontend", "backend", "test"],
       scripts: {
         dev: "turbo run dev --filter=@scratch/tinycloud-frontend --filter=@scratch/tinycloud-backend",
         "build:packages":
@@ -120,6 +124,8 @@ describe("scaffold-app CLI", () => {
           "bun run --cwd packages/core test && bun run --cwd packages/client test && bun run --cwd packages/server test",
         build: "bun run build:packages && bun run build:backend && bun run build:frontend",
         test: "bun run test:backend && bun run test:packages",
+        "test:real-auth:setup": "bun run --cwd test real-auth:setup",
+        "test:real-auth": "bun run --cwd test real-auth",
         lint: "eslint .",
         "lint:fix": "eslint . --fix",
         "generate-key": "bun run packages/server/scripts/generate-key.ts backend/.env",
@@ -215,6 +221,22 @@ describe("scaffold-app CLI", () => {
       "appName: APP_NAME",
       '<h1>{"Scratch TinyCloud App"}</h1>',
     ]);
+    await expectFileContains(join(out, "test/real-auth-fixture.ts"), [
+      'export const DEFAULT_FRONTEND_URL = "http://localhost:5185";',
+      'export const DEFAULT_BACKEND_URL = "http://localhost:3013";',
+      'export const DEFAULT_SESSION_STORAGE_KEY = "xyz.tinycloud.scratch:session";',
+    ]);
+    await expectFileContains(join(out, "test/real-auth-fixture.test.ts"), [
+      'appId: "xyz.tinycloud.scratch"',
+      'backendUrl: "http://localhost:3013"',
+      'frontendUrl: "http://localhost:5185"',
+      'expect(env.FRONTEND_URL).toBe("https://localhost:5185");',
+      'expect(env.BACKEND_URL).toBe("https://localhost:3013");',
+      'name: "xyz.tinycloud.scratch:session"',
+    ]);
+    await expectFileContains(join(out, "test/real-auth-replay.ts"), [
+      "Scratch TinyCloud App backend session token",
+    ]);
     await expectFileContains(join(out, "frontend/index.html"), [
       "<title>Scratch TinyCloud App</title>",
     ]);
@@ -239,10 +261,25 @@ describe("scaffold-app CLI", () => {
       "writes `BACKEND_PRIVATE_KEY` to `backend/.env`",
       "bun run test",
       "The root test command runs the backend tests and copied shared package tests.",
-      "valid passkey test environment.\n\n## Standalone App",
+      "bun run test:real-auth:setup",
+      "bun run test:real-auth",
+      "This is not an auth bypass.",
+      "REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile",
+      "says to insert a key",
+      'NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"',
+      "Treat saved Playwright auth state under `.auth/` as credential material.",
+      "valid passkey test environment.",
+      "## Standalone App",
     ]);
     await expectFileOmits(join(out, "README.md"), ["The default ids are"]);
     await expectFileOmits(join(out, "README.md"), ["bun test"]);
+    await expectFileContains(join(out, ".gitignore"), [
+      ".auth/",
+      "test-results/",
+      "playwright-report/",
+      "blob-report/",
+      ".playwright/",
+    ]);
 
     const generateKey = await runBun(["run", "generate-key"], out);
     expect(

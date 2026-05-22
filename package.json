@@ -34,6 +34,8 @@
     "generate-key": "bun run packages/server/scripts/generate-key.ts templates/app-starter/backend/.env",
     "test:browser:install": "bun run --cwd test install:browsers",
     "test:browser:app-shell": "bun run --cwd test app-shell-smoke",
+    "test:real-auth:setup": "bun run --cwd test real-auth:setup",
+    "test:real-auth": "bun run --cwd test real-auth",
     "test": "turbo run test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

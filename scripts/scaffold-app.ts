@@ -61,10 +61,12 @@ async function main() {
       join(outDir, "packages", packageName),
     );
   }
+  await copyDirectory(join(repoRoot, "test"), join(outDir, "test"));
   await copyFile(join(repoRoot, "tsconfig.base.json"), join(outDir, "tsconfig.base.json"));
   await copyFile(join(repoRoot, "turbo.json"), join(outDir, "turbo.json"));
   await copyFile(join(repoRoot, "eslint.config.js"), join(outDir, "eslint.config.js"));
   await copyFile(join(repoRoot, ".gitignore"), join(outDir, ".gitignore"));
+  await appendGeneratedGitignoreEntries(join(outDir, ".gitignore"));
 
   await writeRootPackageJson(outDir, options);
   await rewriteJsonFiles(outDir, options);
@@ -194,7 +196,7 @@ async function writeRootPackageJson(outDir: string, options: ScaffoldOptions): P
     private: true,
     type: "module",
     packageManager: sourcePackage.packageManager,
-    workspaces: ["packages/*", "frontend", "backend"],
+    workspaces: ["packages/*", "frontend", "backend", "test"],
     overrides: sourcePackage.overrides ?? {},
     scripts: {
       dev: `turbo run dev --filter=${options.frontendPackage} --filter=${options.backendPackage}`,
@@ -207,6 +209,8 @@ async function writeRootPackageJson(outDir: string, options: ScaffoldOptions): P
         "bun run --cwd packages/core test && bun run --cwd packages/client test && bun run --cwd packages/server test",
       build: "bun run build:packages && bun run build:backend && bun run build:frontend",
       test: "bun run test:backend && bun run test:packages",
+      "test:real-auth:setup": "bun run --cwd test real-auth:setup",
+      "test:real-auth": "bun run --cwd test real-auth",
       lint: "eslint .",
       "lint:fix": "eslint . --fix",
       "generate-key": "bun run packages/server/scripts/generate-key.ts backend/.env",
@@ -422,6 +426,8 @@ async function rewriteTextFiles(outDir: string, options: ScaffoldOptions): Promi
       ['import { APP_ID } from "../manifest.js";\n', ""],
     ]);
   }
+
+  await rewriteGeneratedTestWorkspace(outDir, options);
 }
 
 async function rewriteGeneratedReadme(path: string): Promise<void> {
@@ -447,6 +453,45 @@ async function rewriteGeneratedReadme(path: string): Promise<void> {
       "browser, grant the backend policy, then read and update the probe. Use HTTP",
       "localhost or a trusted HTTPS localhost certificate; do not treat a browser TLS",
       "warning page as a valid passkey test environment.",
+      "",
+      "For replayable real-auth coverage, first run the setup in a headed browser:",
+      "",
+      "```bash",
+      "bun run test:real-auth:setup",
+      "```",
+      "",
+      "That setup must complete the real OpenKey/WebAuthn/TinyCloud space and",
+      "delegation flow with a human present. It saves Playwright auth state under",
+      "`.auth/`.",
+      "Interactive setup launches installed Chrome when available so platform",
+      "passkeys behave like a normal browser. If it asks for an external security",
+      "key or says to insert a key, rerun with:",
+      "",
+      "```bash",
+      "REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup",
+      "```",
+      "",
+      "When using trusted mkcert HTTPS, Bun's backend polling may also need the",
+      "mkcert root CA. The real-auth commands auto-detect local mkcert certs when",
+      "possible; if your shell cannot find `mkcert`, run with the CA path explicitly:",
+      "",
+      "```bash",
+      'NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup',
+      'NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth',
+      "```",
+      "",
+      "Treat saved Playwright auth state under `.auth/` as credential material.",
+      "Keep it local, and rerun setup when the session or delegation expires.",
+      "This is not an auth bypass.",
+      "",
+      "Replay the captured real-auth fixture with:",
+      "",
+      "```bash",
+      "bun run test:real-auth",
+      "```",
+      "",
+      "Do not commit `.auth/`, browser traces, screenshots, videos, or reports from",
+      "real-auth runs.",
       "",
       "",
     ].join("\n");
@@ -481,6 +526,68 @@ async function rewriteGeneratedReadme(path: string): Promise<void> {
     "",
   ].join("\n");
   await writeFile(path, `${content.slice(0, start)}${standaloneSection}${content.slice(end)}`);
+}
+
+async function rewriteGeneratedTestWorkspace(
+  outDir: string,
+  options: ScaffoldOptions,
+): Promise<void> {
+  await rm(join(outDir, "test/app-shell-smoke.ts"), { force: true });
+
+  const testPackagePath = join(outDir, "test/package.json");
+  const testPackage = await readJson(testPackagePath);
+  delete testPackage.scripts?.["app-shell-smoke"];
+  await writeJson(testPackagePath, testPackage);
+
+  await replaceInFile(join(outDir, "test/real-auth-fixture.ts"), [
+    [
+      'export const DEFAULT_FRONTEND_URL = "http://localhost:5175";',
+      `export const DEFAULT_FRONTEND_URL = "http://localhost:${options.frontendPort}";`,
+    ],
+    [
+      'export const DEFAULT_BACKEND_URL = "http://localhost:3003";',
+      `export const DEFAULT_BACKEND_URL = "http://localhost:${options.backendPort}";`,
+    ],
+    [
+      'export const DEFAULT_SESSION_STORAGE_KEY = "tinycloud-app-starter:session";',
+      `export const DEFAULT_SESSION_STORAGE_KEY = ${tsString(`${options.appId}:session`)};`,
+    ],
+  ]);
+
+  await replaceInFile(join(outDir, "test/real-auth-replay.ts"), [
+    [
+      "Real auth fixture does not contain an app-starter backend session token.",
+      `Real auth fixture does not contain a ${options.appName} backend session token.`,
+    ],
+  ]);
+
+  await replaceInFile(join(outDir, "test/real-auth-fixture.test.ts"), [
+    ["http://localhost:5175", `http://localhost:${options.frontendPort}`],
+    ["http://localhost:3003", `http://localhost:${options.backendPort}`],
+    ["https://localhost:5175", `https://localhost:${options.frontendPort}`],
+    ["https://localhost:3003", `https://localhost:${options.backendPort}`],
+    ["xyz.tinycloud.app-starter", options.appId],
+    ["tinycloud-app-starter:session", `${options.appId}:session`],
+  ]);
+}
+
+async function appendGeneratedGitignoreEntries(path: string): Promise<void> {
+  const header = "# Real-auth browser fixtures and artifacts";
+  const patterns = [
+    ".auth/",
+    "test-results/",
+    "playwright-report/",
+    "blob-report/",
+    ".playwright/",
+  ];
+  const existing = await readFile(path, "utf-8");
+  const lines = new Set(existing.split(/\r?\n/));
+  const missingPatterns = patterns.filter((entry) => !lines.has(entry));
+  if (missingPatterns.length === 0 && lines.has(header)) return;
+
+  const separator = existing.endsWith("\n") ? "" : "\n";
+  const missing = lines.has(header) ? missingPatterns : [header, ...missingPatterns];
+  await writeFile(path, `${existing}${separator}\n${missing.join("\n")}\n`);
 }
 
 async function replaceInFile(path: string, replacements: Array<[string, string]>): Promise<void> {

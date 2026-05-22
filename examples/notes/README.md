@@ -62,8 +62,38 @@ bun test examples/notes/backend/src
 ```
 
 They verify the app shell and backend contract without a browser identity. To
-verify the real Notes flow, start the app, sign in with OpenKey, grant the
-backend delegation, then create, edit, list, and delete a note. Use HTTP
-localhost when supported by the identity flow, or a trusted HTTPS localhost
+exercise OpenKey/WebAuthn, TinyCloud space setup, and backend delegation through
+the scripted real-auth fixture, run from the repo root:
+
+```bash
+bun run test:real-auth:setup
+bun run test:real-auth
+```
+
+The setup command requires a human to sign in and grant the delegation, then the
+replay command reuses the saved Playwright auth state. It launches installed
+Chrome when available so platform passkeys behave like a normal browser. If it
+asks for an external security key or says to insert a key, rerun with:
+
+```bash
+REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+```
+
+When using trusted mkcert HTTPS, Bun's backend polling may also need the mkcert
+root CA. The real-auth commands auto-detect local mkcert certs when possible;
+if your shell cannot find `mkcert`, run with the CA path explicitly:
+
+```bash
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth
+```
+
+Treat saved auth state as credential material: use a disposable test identity,
+keep the delegation short-lived, keep `.auth/`, traces, videos, and screenshots
+local-only, and re-run setup when the state expires or the backend policy is stale.
+
+To verify the real Notes flow manually, start the app, sign in with OpenKey,
+grant the backend delegation, then create, edit, list, and delete a note. Use
+HTTP localhost when supported by the identity flow, or a trusted HTTPS localhost
 certificate. An HTTPS warning page is not a valid WebAuthn/passkey test
 environment.

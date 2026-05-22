@@ -151,8 +151,11 @@ if your shell cannot find `mkcert`, run with the CA path explicitly:
 
 ```bash
 NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 bun run test:real-auth
 ```
+
+Do not use browser certificate-error bypasses for setup/WebAuthn. A replay-only
+bypass can hide local TLS trust problems, so prefer fixing mkcert trust instead.
 
 Treat the saved Playwright auth state as credential material. Use a disposable
 test identity, keep the delegation short-lived, store artifacts only on your
@@ -160,6 +163,24 @@ local machine, and never commit or upload `.auth/`, traces, videos, screenshots,
 or similar Playwright output. Re-run `bun run test:real-auth:setup` whenever the
 auth state expires, the delegation is stale, or backend policy changes require a
 new grant.
+
+### Optional Manual CI Replay
+
+The optional `Real Auth Replay` GitHub Actions workflow is manual-only
+(`workflow_dispatch`). It is intentionally separate from PR CI and fails closed
+unless all credential fixture secrets are present:
+
+- `REAL_AUTH_STORAGE_STATE_B64`: base64 of `.auth/tinycloud-real-auth.json`
+- `REAL_AUTH_METADATA_B64`: base64 of `.auth/tinycloud-real-auth.meta.json`
+- `REAL_AUTH_BACKEND_PRIVATE_KEY`: the same backend private key used when the
+  fixture was created
+
+Run the workflow with `use_https` enabled when the fixture metadata was captured
+against `https://localhost:5175` and `https://localhost:3003`; leave it disabled
+for fixtures captured against HTTP localhost. HTTPS mode installs a local mkcert
+CA instead of bypassing browser certificate errors. The workflow restores the
+fixture inside the runner, starts app-starter, runs `bun run test:real-auth`,
+and does not upload auth state, browser traces, screenshots, or videos.
 
 For a manual real runtime verification, open the running app in a browser and
 complete the OpenKey/TinyCloud flow:

@@ -34,3 +34,6 @@ jobs:
 
       - name: Standalone scaffold integration
         run: bun run test:scaffold:integration
+
+      - name: Workflow contracts
+        run: bun run test:workflows

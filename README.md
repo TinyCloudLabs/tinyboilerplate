@@ -167,8 +167,9 @@ new grant.
 ### Optional Manual CI Replay
 
 The optional `Real Auth Replay` GitHub Actions workflow is manual-only
-(`workflow_dispatch`). It is intentionally separate from PR CI and fails closed
-unless all credential fixture secrets are present:
+(`workflow_dispatch`) and its job only runs from `main`. It is intentionally
+separate from PR CI and fails closed unless all credential fixture secrets are
+present in the protected `real-auth-replay` GitHub Environment:
 
 - `REAL_AUTH_STORAGE_STATE_B64`: base64 of `.auth/tinycloud-real-auth.json`
 - `REAL_AUTH_METADATA_B64`: base64 of `.auth/tinycloud-real-auth.meta.json`
@@ -181,6 +182,16 @@ for fixtures captured against HTTP localhost. HTTPS mode installs a local mkcert
 CA instead of bypassing browser certificate errors. The workflow restores the
 fixture inside the runner, starts app-starter, runs `bun run test:real-auth`,
 and does not upload auth state, browser traces, screenshots, or videos.
+
+Fixture policy:
+
+- Use a disposable test-only OpenKey/TinyCloud identity and space.
+- Store fixture secrets only in the `real-auth-replay` environment, with a
+  `main`-only deployment branch policy. Add required reviewer approval when the
+  repository plan supports environment reviewer gates.
+- Keep the delegation short-lived; seven days is the default maximum.
+- Rotate the fixture when it expires, the backend key changes, the backend policy
+  hash changes, app URLs change, or exposure is suspected.
 
 For a manual real runtime verification, open the running app in a browser and
 complete the OpenKey/TinyCloud flow:

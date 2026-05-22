@@ -15,8 +15,11 @@ permissions:
 jobs:
   real-auth-replay:
     name: Real auth replay
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: real-auth-replay
 
     steps:
       - uses: actions/checkout@v4

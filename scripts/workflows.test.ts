@@ -46,6 +46,14 @@ describe("real-auth manual workflow", () => {
           REAL_AUTH_BACKEND_PRIVATE_KEY: \${{ secrets.REAL_AUTH_BACKEND_PRIVATE_KEY }}`);
   });
 
+  test("runs only from main behind the real-auth replay environment", () => {
+    const workflow = readWorkflow();
+
+    expect(workflow).toContain("if: ${{ github.ref == 'refs/heads/main' }}");
+    expect(workflow).toContain(`    environment:
+      name: real-auth-replay`);
+  });
+
   test("restores the fixture locally and runs replay against app-starter", () => {
     const workflow = readWorkflow();
 

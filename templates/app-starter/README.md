@@ -95,8 +95,11 @@ if your shell cannot find `mkcert`, run with the CA path explicitly:
 
 ```bash
 NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 bun run test:real-auth
 ```
+
+Do not use browser certificate-error bypasses for setup/WebAuthn. A replay-only
+bypass can hide local TLS trust problems, so prefer fixing mkcert trust instead.
 
 Treat saved auth state as credential material: use a disposable test identity,
 keep the delegation short-lived, keep `.auth/`, traces, videos, and screenshots

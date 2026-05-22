@@ -126,72 +126,39 @@ TinyCloud space creation, or browser-to-backend delegation works end to end.
 and Notes frontend shells with mocked-away backend use and checks for browser
 console errors.
 
-The real-auth fixture is the scripted path for exercising the actual
-OpenKey/WebAuthn/TinyCloud login and backend delegation flow. It has two phases:
+The real-auth command is the scripted path for exercising the actual
+OpenKey/WebAuthn/TinyCloud login and backend delegation flow with a human
+present:
 
 ```bash
-# Interactive: a human completes OpenKey/WebAuthn sign-in and grants delegation.
-bun run test:real-auth:setup
-
-# Replay: reuse the saved browser auth state to verify the flow.
 bun run test:real-auth
 ```
 
-Interactive setup launches installed Chrome when available so platform passkeys
-behave like a normal browser. If the prompt still asks for an external security
-key or says to insert a key, rerun setup with an explicit browser/profile:
+Playwright opens a headed browser, you complete OpenKey/WebAuthn sign-in and
+grant the backend delegation normally, and Playwright keeps using that same live
+browser session to update and verify the starter probe. This is not an auth
+bypass.
+
+The command launches installed Chrome when available so platform passkeys behave
+like a normal browser. If the prompt still asks for an external security key or
+says to insert a key, rerun with an explicit browser/profile:
 
 ```bash
-REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth
 ```
 
 When using trusted mkcert HTTPS, Bun's backend polling may also need the mkcert
-root CA. The real-auth commands auto-detect local mkcert certs when possible;
-if your shell cannot find `mkcert`, run with the CA path explicitly:
+root CA. The real-auth command auto-detects local mkcert certs when possible;
+it only auto-switches to HTTPS when the mkcert root CA is available. If your
+shell cannot find `mkcert`, run with the CA path explicitly:
 
 ```bash
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 bun run test:real-auth
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth
 ```
 
-Do not use browser certificate-error bypasses for setup/WebAuthn. A replay-only
-bypass can hide local TLS trust problems, so prefer fixing mkcert trust instead.
-
-Treat the saved Playwright auth state as credential material. Use a disposable
-test identity, keep the delegation short-lived, store artifacts only on your
-local machine, and never commit or upload `.auth/`, traces, videos, screenshots,
-or similar Playwright output. Re-run `bun run test:real-auth:setup` whenever the
-auth state expires, the delegation is stale, or backend policy changes require a
-new grant.
-
-### Optional Manual CI Replay
-
-The optional `Real Auth Replay` GitHub Actions workflow is manual-only
-(`workflow_dispatch`) and its job only runs from `main`. It is intentionally
-separate from PR CI and fails closed unless all credential fixture secrets are
-present in the protected `real-auth-replay` GitHub Environment:
-
-- `REAL_AUTH_STORAGE_STATE_B64`: base64 of `.auth/tinycloud-real-auth.json`
-- `REAL_AUTH_METADATA_B64`: base64 of `.auth/tinycloud-real-auth.meta.json`
-- `REAL_AUTH_BACKEND_PRIVATE_KEY`: the same backend private key used when the
-  fixture was created
-
-Run the workflow with `use_https` enabled when the fixture metadata was captured
-against `https://localhost:5175` and `https://localhost:3003`; leave it disabled
-for fixtures captured against HTTP localhost. HTTPS mode installs a local mkcert
-CA instead of bypassing browser certificate errors. The workflow restores the
-fixture inside the runner, starts app-starter, runs `bun run test:real-auth`,
-and does not upload auth state, browser traces, screenshots, or videos.
-
-Fixture policy:
-
-- Use a disposable test-only OpenKey/TinyCloud identity and space.
-- Store fixture secrets only in the `real-auth-replay` environment, with a
-  `main`-only deployment branch policy. Add required reviewer approval when the
-  repository plan supports environment reviewer gates.
-- Keep the delegation short-lived; seven days is the default maximum.
-- Rotate the fixture when it expires, the backend key changes, the backend policy
-  hash changes, app URLs change, or exposure is suspected.
+Do not commit `.auth/`, browser traces, videos, screenshots, or similar
+Playwright output. Use a disposable test identity and keep the delegation
+short-lived.
 
 For a manual real runtime verification, open the running app in a browser and
 complete the OpenKey/TinyCloud flow:
@@ -346,9 +313,9 @@ TinyCloud via `DelegatedAccess`.
 - **Trusted local HTTPS for passkeys**: OpenKey/WebAuthn flows fail on pages with TLS certificate errors, even after clicking through the browser warning. Use HTTP fallback or trusted local certs.
 - **Smoke vs. real auth**: `bun run build`, backend route tests, and scaffold
   smoke checks are useful hygiene, but they do not cover OpenKey/WebAuthn,
-  TinyCloud space setup, or backend delegation. Use the real-auth setup command
-  to create a local credential fixture, then the real-auth replay command to
-  reuse it.
+  TinyCloud space setup, or backend delegation. Use `bun run test:real-auth` for
+  a local headed browser check where a human signs in and Playwright continues
+  with that same browser session.
 - **Wallet-mode session cap**: TinyCloud wallet-mode sessions expire after 1 hour. The `DelegationCache` uses a 50-minute TTL to stay under this cap.
 - **WASM ESM fix**: `@tinycloud/node-sdk-wasm` ships CJS wrappers that break in ESM. The package postinstall patch keeps local builds working.
 - **Delegation expiry**: App-starter delegations default to 7 days. After expiry or policy drift, the user must grant a new delegation from the frontend.

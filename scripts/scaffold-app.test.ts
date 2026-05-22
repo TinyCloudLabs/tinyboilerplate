@@ -124,7 +124,6 @@ describe("scaffold-app CLI", () => {
           "bun run --cwd packages/core test && bun run --cwd packages/client test && bun run --cwd packages/server test",
         build: "bun run build:packages && bun run build:backend && bun run build:frontend",
         test: "bun run test:backend && bun run test:packages",
-        "test:real-auth:setup": "bun run --cwd test real-auth:setup",
         "test:real-auth": "bun run --cwd test real-auth",
         lint: "eslint .",
         "lint:fix": "eslint . --fix",
@@ -221,22 +220,25 @@ describe("scaffold-app CLI", () => {
       "appName: APP_NAME",
       '<h1>{"Scratch TinyCloud App"}</h1>',
     ]);
-    await expectFileContains(join(out, "test/real-auth-fixture.ts"), [
+    await expectFileContains(join(out, "test/real-auth-support.ts"), [
       'export const DEFAULT_FRONTEND_URL = "http://localhost:5185";',
       'export const DEFAULT_BACKEND_URL = "http://localhost:3013";',
       'export const DEFAULT_SESSION_STORAGE_KEY = "xyz.tinycloud.scratch:session";',
     ]);
-    await expectFileContains(join(out, "test/real-auth-fixture.test.ts"), [
-      'appId: "xyz.tinycloud.scratch"',
-      'backendUrl: "http://localhost:3013"',
-      'frontendUrl: "http://localhost:5185"',
+    await expectFileContains(join(out, "test/real-auth-support.test.ts"), [
+      'expect(config.backendUrl).toBe("http://localhost:3013");',
+      'expect(config.frontendUrl).toBe("http://localhost:5185");',
       'expect(env.FRONTEND_URL).toBe("https://localhost:5185");',
       'expect(env.BACKEND_URL).toBe("https://localhost:3013");',
       'name: "xyz.tinycloud.scratch:session"',
     ]);
-    await expectFileContains(join(out, "test/real-auth-replay.ts"), [
-      "Scratch TinyCloud App backend session token",
+    await expectFileContains(join(out, "test/real-auth-manual.ts"), [
+      "Complete the real OpenKey/TinyCloud sign-in",
+      "Verified delegated probe",
     ]);
+    expect(existsSync(join(out, "test/real-auth-replay.ts"))).toBe(false);
+    expect(existsSync(join(out, "test/real-auth-setup.ts"))).toBe(false);
+    expect(existsSync(join(out, "test/real-auth-command.ts"))).toBe(false);
     await expectFileContains(join(out, "frontend/index.html"), [
       "<title>Scratch TinyCloud App</title>",
     ]);
@@ -261,15 +263,20 @@ describe("scaffold-app CLI", () => {
       "writes `BACKEND_PRIVATE_KEY` to `backend/.env`",
       "bun run test",
       "The root test command runs the backend tests and copied shared package tests.",
-      "bun run test:real-auth:setup",
       "bun run test:real-auth",
       "This is not an auth bypass.",
       "REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile",
       "says to insert a key",
       'NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"',
-      "Treat saved Playwright auth state under `.auth/` as credential material.",
-      "valid passkey test environment.",
+      "FRONTEND_URL=https://localhost:5185 BACKEND_URL=https://localhost:3013",
+      "Playwright keeps using that same live browser session",
+      "WebAuthn is not supported on sites with TLS certificate errors",
       "## Standalone App",
+    ]);
+    await expectFileOmits(join(out, "README.md"), [
+      "test:real-auth:setup",
+      "saved Playwright auth state",
+      "REAL_AUTH_IGNORE_HTTPS_ERRORS",
     ]);
     await expectFileOmits(join(out, "README.md"), ["The default ids are"]);
     await expectFileOmits(join(out, "README.md"), ["bun test"]);

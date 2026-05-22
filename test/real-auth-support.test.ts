@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -8,49 +8,77 @@ import {
   extractSessionToken,
   resolveRealAuthCommandEnv,
   resolveRealAuthConfig,
-  validateFixtureForReplay,
-  type RealAuthMetadata,
-} from "./real-auth-fixture.ts";
+} from "./real-auth-support.ts";
 
 const repoRoot = new URL("..", import.meta.url).pathname;
 
 describe("real auth harness package scripts", () => {
-  test("exposes setup and replay commands from the test package", () => {
-    const pkg = JSON.parse(readFileSync(join(repoRoot, "test/package.json"), "utf8"));
+  test("exposes one local interactive real-auth command", () => {
+    const rootPkg = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
+    const testPkg = JSON.parse(readFileSync(join(repoRoot, "test/package.json"), "utf8"));
 
-    expect(pkg.scripts["real-auth:setup"]).toBe("bun real-auth-command.ts setup");
-    expect(pkg.scripts["real-auth"]).toBe("bun real-auth-command.ts replay");
+    expect(rootPkg.scripts["test:real-auth"]).toBe("bun run --cwd test real-auth");
+    expect(rootPkg.scripts["test:real-auth:setup"]).toBeUndefined();
+    expect(rootPkg.scripts["test:workflows"]).toBeUndefined();
+    expect(testPkg.scripts["real-auth"]).toBe("bun real-auth-manual.ts");
+    expect(testPkg.scripts["real-auth:setup"]).toBeUndefined();
+  });
+
+  test("does not keep the optional CI replay workflow surface", () => {
+    const ciWorkflow = readFileSync(join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+
+    expect(existsSync(join(repoRoot, ".github/workflows/real-auth.yml"))).toBe(false);
+    expect(existsSync(join(repoRoot, "scripts/workflows.test.ts"))).toBe(false);
+    expect(ciWorkflow).not.toContain("Workflow contracts");
+    expect(ciWorkflow).not.toContain("test:workflows");
+    expect(ciWorkflow).not.toContain("real-auth-replay");
+  });
+
+  test("manual runner keeps Playwright in the live browser session", () => {
+    const runnerPath = join(repoRoot, "test/real-auth-manual.ts");
+    expect(existsSync(runnerPath)).toBe(true);
+
+    const manualRunner = readFileSync(runnerPath, "utf8");
+
+    expect(manualRunner).toContain("Complete the real OpenKey/TinyCloud sign-in");
+    expect(manualRunner).toContain("Verified delegated probe");
+    expect(manualRunner).toContain(
+      "WebAuthn is not supported on sites with TLS certificate errors",
+    );
+    expect(manualRunner).toContain("fetchProbe");
+    expect(manualRunner).not.toContain("storageState:");
+    expect(manualRunner).not.toContain("ignoreHTTPSErrors");
+    expect(manualRunner).not.toContain("writePrivateJsonFile");
+    expect(manualRunner).not.toContain("REAL_AUTH_IGNORE_HTTPS_ERRORS");
   });
 });
 
-describe("real auth fixture config", () => {
-  test("defaults to app-starter local ports and repo-local auth files", () => {
+describe("real auth manual config", () => {
+  test("defaults to app-starter local ports without fixture files", () => {
     const config = resolveRealAuthConfig({ cwd: repoRoot, env: {} });
 
     expect(config.frontendUrl).toBe("http://localhost:5175");
     expect(config.backendUrl).toBe("http://localhost:3003");
-    expect(config.fixturePath).toBe(join(repoRoot, ".auth/tinycloud-real-auth.json"));
-    expect(config.metadataPath).toBe(join(repoRoot, ".auth/tinycloud-real-auth.meta.json"));
+    expect("fixturePath" in config).toBe(false);
+    expect("metadataPath" in config).toBe(false);
+    expect(config.probeValue).toContain("TinyCloud real-auth manual");
     expect(config.browserChannel).toBeUndefined();
     expect(config.userDataDir).toBeUndefined();
   });
 
-  test("lets callers override urls, fixture path, and setup browser", () => {
+  test("lets callers override urls and the manual-login browser profile", () => {
     const config = resolveRealAuthConfig({
       cwd: repoRoot,
       env: {
         FRONTEND_URL: "https://localhost:4443",
         BACKEND_URL: "http://localhost:3999",
         REAL_AUTH_BROWSER: "chrome",
-        REAL_AUTH_STATE: "/tmp/state.json",
         REAL_AUTH_USER_DATA_DIR: ".auth/chrome-profile",
       },
     });
 
     expect(config.frontendUrl).toBe("https://localhost:4443");
     expect(config.backendUrl).toBe("http://localhost:3999");
-    expect(config.fixturePath).toBe("/tmp/state.json");
-    expect(config.metadataPath).toBe("/tmp/state.meta.json");
     expect(config.browserChannel).toBe("chrome");
     expect(config.userDataDir).toBe(join(repoRoot, ".auth/chrome-profile"));
   });
@@ -72,6 +100,26 @@ describe("real auth fixture config", () => {
       expect(env.FRONTEND_URL).toBe("https://localhost:5175");
       expect(env.BACKEND_URL).toBe("https://localhost:3003");
       expect(env.NODE_EXTRA_CA_CERTS).toBe(join(root, "mkcert/rootCA.pem"));
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  test("does not auto-wire HTTPS URLs from certificate files without a mkcert root CA", async () => {
+    const root = await mkdtemp(join(tmpdir(), "tinyboilerplate-real-auth-"));
+    try {
+      await mkdir(join(root, "frontend"), { recursive: true });
+      await writeFile(join(root, "frontend/localhost.pem"), "cert");
+      await writeFile(join(root, "frontend/localhost-key.pem"), "key");
+
+      const env = resolveRealAuthCommandEnv({
+        cwd: root,
+        env: { REAL_AUTH_MKCERT_CAROOT: join(root, "missing-mkcert") },
+      });
+
+      expect(env.FRONTEND_URL).toBeUndefined();
+      expect(env.BACKEND_URL).toBeUndefined();
+      expect(env.NODE_EXTRA_CA_CERTS).toBeUndefined();
     } finally {
       await rm(root, { force: true, recursive: true });
     }
@@ -102,57 +150,8 @@ describe("real auth fixture config", () => {
   });
 });
 
-describe("real auth fixture validation", () => {
-  const metadata: RealAuthMetadata = {
-    appId: "xyz.tinycloud.app-starter",
-    backendDid: "did:key:z6Mkharness",
-    backendUrl: "http://localhost:3003",
-    delegationStatus: "active",
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
-    fixturePath: "/repo/.auth/tinycloud-real-auth.json",
-    frontendUrl: "http://localhost:5175",
-    policyHash: "sha256:fixture",
-    savedAt: new Date().toISOString(),
-    sessionExpiresAt: Date.now() + 60_000,
-  };
-
-  test("accepts current active metadata for the same frontend and backend", () => {
-    expect(() =>
-      validateFixtureForReplay(metadata, {
-        backendUrl: metadata.backendUrl,
-        frontendUrl: metadata.frontendUrl,
-        now: Date.now(),
-      }),
-    ).not.toThrow();
-  });
-
-  test("rejects expired, stale, and mismatched metadata", () => {
-    expect(() =>
-      validateFixtureForReplay(
-        { ...metadata, expiresAt: new Date(Date.now() - 1).toISOString() },
-        { backendUrl: metadata.backendUrl, frontendUrl: metadata.frontendUrl, now: Date.now() },
-      ),
-    ).toThrow(/expired/i);
-
-    expect(() =>
-      validateFixtureForReplay(
-        { ...metadata, delegationStatus: "stale" },
-        { backendUrl: metadata.backendUrl, frontendUrl: metadata.frontendUrl, now: Date.now() },
-      ),
-    ).toThrow(/active/i);
-
-    expect(() =>
-      validateFixtureForReplay(metadata, {
-        backendUrl: "http://127.0.0.1:4000",
-        frontendUrl: metadata.frontendUrl,
-        now: Date.now(),
-      }),
-    ).toThrow(/backend/i);
-  });
-});
-
-describe("storage state session extraction", () => {
-  test("extracts the app-starter bearer token from Playwright storage state", () => {
+describe("live browser session extraction", () => {
+  test("extracts the app-starter bearer token from the current browser context state", () => {
     const token = extractSessionToken({
       cookies: [],
       origins: [

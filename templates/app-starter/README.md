@@ -72,43 +72,44 @@ bun test templates/app-starter/backend/src
 ```
 
 Those checks do not exercise OpenKey, WebAuthn, TinyCloud space setup, or the
-browser delegation grant. From the repo root, use the real-auth fixture when you
-need scripted coverage of the actual identity and delegation flow:
+browser delegation grant. From the repo root, use the interactive real-auth
+check when you need scripted coverage of the actual identity and delegation
+flow:
 
 ```bash
-bun run test:real-auth:setup
 bun run test:real-auth
 ```
 
-The setup command is interactive and saves Playwright browser auth state for
-replay. It launches installed Chrome when available so platform passkeys behave
+Playwright opens a headed browser, a human completes the real
+OpenKey/WebAuthn/TinyCloud space and backend delegation flow, and then
+Playwright keeps using that same live browser session to update and verify the
+probe. This is not an auth bypass.
+
+The command launches installed Chrome when available so platform passkeys behave
 like a normal browser. If it asks for an external security key or says to insert
 a key, rerun with:
 
 ```bash
-REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth
 ```
 
 When using trusted mkcert HTTPS, Bun's backend polling may also need the mkcert
-root CA. The real-auth commands auto-detect local mkcert certs when possible;
-if your shell cannot find `mkcert`, run with the CA path explicitly:
+root CA. The real-auth command auto-detects local mkcert certs when possible;
+it only auto-switches to HTTPS when the mkcert root CA is available. If your
+shell cannot find `mkcert`, run with the CA path explicitly:
 
 ```bash
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 bun run test:real-auth
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth
 ```
 
-Do not use browser certificate-error bypasses for setup/WebAuthn. A replay-only
-bypass can hide local TLS trust problems, so prefer fixing mkcert trust instead.
-
-Treat saved auth state as credential material: use a disposable test identity,
-keep the delegation short-lived, keep `.auth/`, traces, videos, and screenshots
-local-only, and re-run setup when the state expires or the backend policy is stale.
+Use a disposable test identity, keep the delegation short-lived, and keep
+`.auth/`, traces, videos, and screenshots local-only.
 
 For manual runtime verification, start the app, sign in in a browser, grant the
 backend policy, then read and update the probe. Use HTTP localhost when
 supported by the identity flow, or a trusted HTTPS localhost certificate. Do not
-treat a browser TLS warning page as a valid passkey test environment.
+treat a browser TLS warning page as a valid passkey test environment; WebAuthn is
+not supported on sites with TLS certificate errors.
 
 ## Scaffolding From This Template
 

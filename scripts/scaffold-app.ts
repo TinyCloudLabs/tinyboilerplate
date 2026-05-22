@@ -209,7 +209,6 @@ async function writeRootPackageJson(outDir: string, options: ScaffoldOptions): P
         "bun run --cwd packages/core test && bun run --cwd packages/client test && bun run --cwd packages/server test",
       build: "bun run build:packages && bun run build:backend && bun run build:frontend",
       test: "bun run test:backend && bun run test:packages",
-      "test:real-auth:setup": "bun run --cwd test real-auth:setup",
       "test:real-auth": "bun run --cwd test real-auth",
       lint: "eslint .",
       "lint:fix": "eslint . --fix",
@@ -305,7 +304,7 @@ async function rewriteTextFiles(outDir: string, options: ScaffoldOptions): Promi
     ["localhost:5175", `localhost:${options.frontendPort}`],
     ["localhost:3003", `localhost:${options.backendPort}`],
   ]);
-  await rewriteGeneratedReadme(join(outDir, "README.md"));
+  await rewriteGeneratedReadme(join(outDir, "README.md"), options);
 
   await replaceInFile(join(outDir, "backend/.env.example"), [
     ["PORT=3003", `PORT=${options.backendPort}`],
@@ -430,7 +429,7 @@ async function rewriteTextFiles(outDir: string, options: ScaffoldOptions): Promi
   await rewriteGeneratedTestWorkspace(outDir, options);
 }
 
-async function rewriteGeneratedReadme(path: string): Promise<void> {
+async function rewriteGeneratedReadme(path: string, options: ScaffoldOptions): Promise<void> {
   let content = await readFile(path, "utf-8");
   content = content
     .replace("The default ids are:", "This app was generated with:")
@@ -449,49 +448,39 @@ async function rewriteGeneratedReadme(path: string): Promise<void> {
       "```",
       "",
       "Those checks do not exercise OpenKey, WebAuthn, TinyCloud space setup, or the",
-      "browser delegation grant. For runtime verification, start the app, sign in in a",
-      "browser, grant the backend policy, then read and update the probe. Use HTTP",
-      "localhost or a trusted HTTPS localhost certificate; do not treat a browser TLS",
-      "warning page as a valid passkey test environment.",
-      "",
-      "For replayable real-auth coverage, first run the setup in a headed browser:",
-      "",
-      "```bash",
-      "bun run test:real-auth:setup",
-      "```",
-      "",
-      "That setup must complete the real OpenKey/WebAuthn/TinyCloud space and",
-      "delegation flow with a human present. It saves Playwright auth state under",
-      "`.auth/`.",
-      "Interactive setup launches installed Chrome when available so platform",
-      "passkeys behave like a normal browser. If it asks for an external security",
-      "key or says to insert a key, rerun with:",
-      "",
-      "```bash",
-      "REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup",
-      "```",
-      "",
-      "When using trusted mkcert HTTPS, Bun's backend polling may also need the",
-      "mkcert root CA. The real-auth commands auto-detect local mkcert certs when",
-      "possible; if your shell cannot find `mkcert`, run with the CA path explicitly:",
-      "",
-      "```bash",
-      'NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup',
-      'NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth',
-      "```",
-      "",
-      "Treat saved Playwright auth state under `.auth/` as credential material.",
-      "Keep it local, and rerun setup when the session or delegation expires.",
-      "This is not an auth bypass.",
-      "",
-      "Replay the captured real-auth fixture with:",
+      "browser delegation grant. For runtime verification, start the app and run the",
+      "interactive real-auth check from another terminal:",
       "",
       "```bash",
       "bun run test:real-auth",
       "```",
       "",
-      "Do not commit `.auth/`, browser traces, screenshots, videos, or reports from",
-      "real-auth runs.",
+      "Playwright opens a headed browser, a human completes the real",
+      "OpenKey/WebAuthn/TinyCloud space and backend delegation flow, and then",
+      "Playwright keeps using that same live browser session to update and verify",
+      "the probe. This is not an auth bypass.",
+      "",
+      "The command launches installed Chrome when available so platform passkeys",
+      "behave like a normal browser. If it asks for an external security key or",
+      "says to insert a key, rerun with:",
+      "",
+      "```bash",
+      "REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth",
+      "```",
+      "",
+      "When using trusted mkcert HTTPS, Bun's backend polling may also need the",
+      "mkcert root CA. The real-auth command auto-detects local mkcert certs when",
+      "possible; it only auto-switches to HTTPS when the mkcert root CA is",
+      "available. If your shell cannot find `mkcert`, run with the CA path explicitly:",
+      "",
+      "```bash",
+      `NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:${options.frontendPort} BACKEND_URL=https://localhost:${options.backendPort} REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth`,
+      "```",
+      "",
+      "Use HTTP localhost or trusted HTTPS. Stop and fix the local certificate setup",
+      "if the browser shows a TLS warning page; WebAuthn is not supported on sites",
+      "with TLS certificate errors. Do not commit `.auth/`, browser traces,",
+      "screenshots, videos, or reports from real-auth runs.",
       "",
       "",
     ].join("\n");
@@ -539,7 +528,7 @@ async function rewriteGeneratedTestWorkspace(
   delete testPackage.scripts?.["app-shell-smoke"];
   await writeJson(testPackagePath, testPackage);
 
-  await replaceInFile(join(outDir, "test/real-auth-fixture.ts"), [
+  await replaceInFile(join(outDir, "test/real-auth-support.ts"), [
     [
       'export const DEFAULT_FRONTEND_URL = "http://localhost:5175";',
       `export const DEFAULT_FRONTEND_URL = "http://localhost:${options.frontendPort}";`,
@@ -554,14 +543,7 @@ async function rewriteGeneratedTestWorkspace(
     ],
   ]);
 
-  await replaceInFile(join(outDir, "test/real-auth-replay.ts"), [
-    [
-      "Real auth fixture does not contain an app-starter backend session token.",
-      `Real auth fixture does not contain a ${options.appName} backend session token.`,
-    ],
-  ]);
-
-  await replaceInFile(join(outDir, "test/real-auth-fixture.test.ts"), [
+  await replaceInFile(join(outDir, "test/real-auth-support.test.ts"), [
     ["http://localhost:5175", `http://localhost:${options.frontendPort}`],
     ["http://localhost:3003", `http://localhost:${options.backendPort}`],
     ["https://localhost:5175", `https://localhost:${options.frontendPort}`],
@@ -572,7 +554,7 @@ async function rewriteGeneratedTestWorkspace(
 }
 
 async function appendGeneratedGitignoreEntries(path: string): Promise<void> {
-  const header = "# Real-auth browser fixtures and artifacts";
+  const header = "# Real-auth browser profiles and artifacts";
   const patterns = [
     ".auth/",
     "test-results/",

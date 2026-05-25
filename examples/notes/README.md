@@ -4,6 +4,18 @@ TinyCloud Notes is the first real TinyCloud example app in this repo. It uses
 OpenKey for identity, a backend session for API authentication, and delegated
 TinyCloud access for user-owned note data.
 
+## UI Style
+
+Notes demonstrates the preferred example-app surface: a compact header with
+sign-in and tucked-away connection details, then the app's real work. The first
+screen should be the note list beside the create/edit panel, not an account
+status dashboard.
+
+When extending the example, keep the minimal tool style: neutral gray page,
+white panels, subtle borders, compact system typography, and no fake nav or
+protocol explainer panels. Add navigation only when there are real routes or
+modes.
+
 ## Local TLS
 
 OpenKey/passkey checks may use HTTP localhost when the identity flow supports
@@ -62,38 +74,23 @@ bun test examples/notes/backend/src
 ```
 
 They verify the app shell and backend contract without a browser identity. To
-exercise OpenKey/WebAuthn, TinyCloud space setup, and backend delegation through
-the scripted real-auth fixture, run from the repo root:
+verify the real Notes flow, start the app, sign in with OpenKey, grant the
+backend delegation, then create, edit, list, and delete a note.
 
-```bash
-bun run test:real-auth:setup
-bun run test:real-auth
+Use HTTP localhost when supported by the identity flow, or a trusted HTTPS
+localhost certificate. An HTTPS warning page is not a valid WebAuthn/passkey
+test environment. If the browser reports:
+
+```text
+WebAuthn is not supported on sites with TLS certificate errors
 ```
 
-The setup command requires a human to sign in and grant the delegation, then the
-replay command reuses the saved Playwright auth state. It launches installed
-Chrome when available so platform passkeys behave like a normal browser. If it
-asks for an external security key or says to insert a key, rerun with:
+stop and fix local TLS instead of clicking through the warning or using
+`ignoreHTTPSErrors`.
+
+When using trusted mkcert HTTPS, Bun/backend requests may also need the mkcert
+root CA:
 
 ```bash
-REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
+NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" bun run dev:notes
 ```
-
-When using trusted mkcert HTTPS, Bun's backend polling may also need the mkcert
-root CA. The real-auth commands auto-detect local mkcert certs when possible;
-if your shell cannot find `mkcert`, run with the CA path explicitly:
-
-```bash
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_BROWSER=chrome REAL_AUTH_USER_DATA_DIR=.auth/chrome-profile bun run test:real-auth:setup
-NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem" FRONTEND_URL=https://localhost:5175 BACKEND_URL=https://localhost:3003 REAL_AUTH_IGNORE_HTTPS_ERRORS=1 bun run test:real-auth
-```
-
-Treat saved auth state as credential material: use a disposable test identity,
-keep the delegation short-lived, keep `.auth/`, traces, videos, and screenshots
-local-only, and re-run setup when the state expires or the backend policy is stale.
-
-To verify the real Notes flow manually, start the app, sign in with OpenKey,
-grant the backend delegation, then create, edit, list, and delete a note. Use
-HTTP localhost when supported by the identity flow, or a trusted HTTPS localhost
-certificate. An HTTPS warning page is not a valid WebAuthn/passkey test
-environment.

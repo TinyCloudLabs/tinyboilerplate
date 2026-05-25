@@ -12,6 +12,18 @@ Template defaults are:
 - Frontend package: `@tinyboilerplate/app-starter-frontend`
 - Backend package: `@tinyboilerplate/app-starter-backend`
 
+## UI Style
+
+The starter UI is intentionally minimal. It should open as a clean tool, not a
+landing page or backend dashboard: app name and sign-in live in the header,
+connection details live in a compact header disclosure, and the main content is
+only the delegated probe work surface.
+
+Preserve the restrained dashboard baseline when changing or scaffolding from
+this template: neutral gray background, white panels, subtle gray borders,
+system sans typography, compact spacing, and 8px-or-smaller radius. Avoid fake
+nav, hero copy, decorative backgrounds, and always-visible protocol details.
+
 ## Local TLS
 
 OpenKey/passkey checks may use HTTP localhost when the identity flow supports

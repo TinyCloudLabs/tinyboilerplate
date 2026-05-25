@@ -53,6 +53,34 @@ bun run dev
 
 Use HTTP localhost first unless trusted HTTPS is configured. Never use a browser HTTPS certificate-warning page for OpenKey/WebAuthn checks.
 
+## UI Style
+
+Default to a minimal operational app surface. A generated app should open into
+the real product workflow, not a landing page, protocol demo, or backend status
+dashboard.
+
+- Use a compact header with the app name and one clear sign-in/reconnect action.
+- Hide unavailable account actions instead of showing disabled header clutter.
+- Keep connection diagnostics, provider state, delegation state, DID, address,
+  and policy hash inside a small header disclosure such as `Connection details`.
+- Keep the main canvas focused on app work: starter/probe for the blank
+  baseline, list plus create/edit for product examples.
+- Loading is part of the app work. During boot, session restore, policy fetch,
+  delegation checks, list/detail fetches, saves, and deletes, show compact
+  readiness/status states in the affected region. Do not show empty lists,
+  editable forms, or enabled work controls until the app is actually ready for
+  that surface.
+- Do not add fake navigation, hero sections, decorative backgrounds, onboarding
+  prose, or always-visible protocol explainer panels.
+- Use the restrained dashboard baseline from tinyboilerplate: neutral gray page
+  background, white panels, subtle gray borders, compact system typography, and
+  8px-or-smaller radius.
+- Align browser shell smoke tests with this contract when frontend structure
+  changes: no console errors, plain page background, no fake nav, and
+  connection details outside main content. For list/create/edit apps, include a
+  restored-session or delayed-backend loading assertion so loading cannot
+  regress into a misleading empty state.
+
 ## Source Repo Verification
 
 When editing tinyboilerplate itself, run the relevant subset and broaden as risk grows:

@@ -10,6 +10,7 @@ dist/
 .auth/
 test-results/
 playwright-report/
+.playwright-mcp/
 blob-report/
 traces/
 videos/

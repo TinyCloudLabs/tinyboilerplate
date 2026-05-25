@@ -62,9 +62,12 @@ export function App() {
   const [probeInput, setProbeInput] = useState("TinyCloud delegated KV is online.");
   const [error, setError] = useState<string | null>(null);
 
+  const busy = isBusyState(state);
   const canUseProbe = api !== null && (state === "ready" || state === "saving");
   const needsLiveProvider =
     state === "needsDelegation" || state === "delegationExpired" || state === "delegationStale";
+  const shouldShowSignIn = !address || needsLiveProvider || state === "recoverableError";
+  const surfaceStatus = getSurfaceStatus(state, error);
 
   const fetchPolicy = useCallback(async () => {
     const response = await fetch(`${BACKEND_URL}/api/server-info`);
@@ -241,74 +244,87 @@ export function App() {
   };
 
   return (
-    <main className="app-shell">
-      <aside className="status-rail">
-        <div className="brand">
+    <main className="dashboard-shell" data-shell="dashboard">
+      <header className="app-header">
+        <div>
           <p className="eyebrow">TinyCloud</p>
           <h1>App Starter</h1>
         </div>
-
-        <ConnectionPanel
-          address={address}
-          delegationStatus={delegationStatus}
-          did={did}
-          error={error}
-          policyHash={policy?.policyHash ?? null}
-          providerLive={providerLive}
-          state={state}
-        />
-
-        <div className="action-row">
-          <button className="primary" onClick={signIn} disabled={state === "connectingIdentity"}>
-            {needsLiveProvider ? "Reconnect" : address ? "Refresh" : "Sign in"}
-          </button>
-          <button onClick={signOut} disabled={!address && state !== "recoverableError"}>
-            Sign out
-          </button>
-        </div>
-      </aside>
-
-      <section className="work-surface">
-        <div className="surface-header">
-          <div>
-            <p className="eyebrow">Delegated KV Probe</p>
-            <h2>{probe ? "Probe value stored" : "Probe value empty"}</h2>
-          </div>
-          <button onClick={() => loadProbe()} disabled={!canUseProbe}>
-            Refresh
-          </button>
-        </div>
-
-        <label className="probe-field">
-          <span>Value</span>
-          <textarea
-            maxLength={1024}
-            value={probeInput}
-            onChange={(event) => setProbeInput(event.target.value)}
-            disabled={!canUseProbe}
+        <div className="header-actions">
+          <ConnectionDetails
+            address={address}
+            delegationStatus={delegationStatus}
+            did={did}
+            error={error}
+            policyHash={policy?.policyHash ?? null}
+            providerLive={providerLive}
+            state={state}
           />
-        </label>
-
-        <div className="probe-footer">
-          <div className="probe-meta">
-            <span>{probeInput.length}/1024</span>
-            <span>{probe?.updatedAt ? formatDate(probe.updatedAt) : "Not stored"}</span>
-          </div>
-          <div className="action-row">
-            <button onClick={deleteProbeValue} disabled={!canUseProbe || !probe}>
-              Delete
+          {shouldShowSignIn && (
+            <button className="primary" onClick={signIn} disabled={busy}>
+              {primaryActionLabel(state, Boolean(needsLiveProvider && address))}
             </button>
-            <button className="primary" onClick={saveProbe} disabled={!canUseProbe}>
-              {state === "saving" ? "Saving" : "Save probe"}
+          )}
+          {(address || state === "recoverableError") && (
+            <button onClick={signOut} disabled={busy}>
+              Sign out
             </button>
-          </div>
+          )}
         </div>
+      </header>
+
+      <section className="dashboard-content">
+        <section className="panel work-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow">Delegated KV Probe</p>
+              <h2>{probe ? "Probe value stored" : "Probe value empty"}</h2>
+            </div>
+            <button onClick={() => loadProbe()} disabled={!canUseProbe || state === "saving"}>
+              Refresh
+            </button>
+          </div>
+
+          {surfaceStatus && <SurfaceStatus {...surfaceStatus} />}
+
+          <label className="field-label probe-field">
+            <span>Value</span>
+            <textarea
+              maxLength={1024}
+              value={probeInput}
+              onChange={(event) => setProbeInput(event.target.value)}
+              disabled={!canUseProbe}
+            />
+          </label>
+
+          <div className="probe-footer">
+            <div className="probe-meta">
+              <span>{probeInput.length}/1024</span>
+              <span>{probe?.updatedAt ? formatDate(probe.updatedAt) : "Not stored"}</span>
+            </div>
+            <div className="action-row">
+              <button
+                onClick={deleteProbeValue}
+                disabled={!canUseProbe || state === "saving" || !probe}
+              >
+                Delete
+              </button>
+              <button
+                className="primary"
+                onClick={saveProbe}
+                disabled={!canUseProbe || state === "saving"}
+              >
+                {state === "saving" ? "Saving" : "Save probe"}
+              </button>
+            </div>
+          </div>
+        </section>
       </section>
     </main>
   );
 }
 
-function ConnectionPanel(props: {
+function ConnectionDetails(props: {
   address: string | null;
   delegationStatus: DelegationStatus;
   did: string | null;
@@ -318,15 +334,29 @@ function ConnectionPanel(props: {
   state: AppState;
 }) {
   return (
-    <section className="connection-panel">
-      <span className={`status-pill ${props.state}`}>{stateLabel(props.state)}</span>
-      <StatusRow label="Provider" value={props.providerLive ? "live" : "not connected"} />
-      <StatusRow label="Delegation" value={props.delegationStatus} />
-      <StatusRow label="Address" value={props.address ?? "none"} mono />
-      <StatusRow label="DID" value={props.did ?? "none"} mono />
-      <StatusRow label="Policy" value={props.policyHash ?? "not fetched"} mono />
-      {props.error && <p className="error-text">{props.error}</p>}
-    </section>
+    <details className="connection-details">
+      <summary>
+        <span className={`status-pill ${props.state}`}>{stateLabel(props.state)}</span>
+        <span>Connection details</span>
+      </summary>
+      <div className="connection-panel">
+        <StatusRow label="Provider" value={props.providerLive ? "live" : "not connected"} />
+        <StatusRow label="Delegation" value={props.delegationStatus} />
+        <StatusRow label="Address" value={props.address ?? "none"} mono />
+        <StatusRow label="DID" value={props.did ?? "none"} mono />
+        <StatusRow label="Policy" value={props.policyHash ?? "not fetched"} mono />
+        {props.error && <p className="error-text">{props.error}</p>}
+      </div>
+    </details>
+  );
+}
+
+function SurfaceStatus(props: { title: string; body: string; tone?: "default" | "error" }) {
+  return (
+    <div className={`surface-status ${props.tone ?? "default"}`}>
+      <strong>{props.title}</strong>
+      <span>{props.body}</span>
+    </div>
   );
 }
 
@@ -337,6 +367,100 @@ function StatusRow(props: { label: string; value: string; mono?: boolean }) {
       {props.mono ? <code>{props.value}</code> : <strong>{props.value}</strong>}
     </div>
   );
+}
+
+function isBusyState(state: AppState): boolean {
+  return (
+    state === "booting" ||
+    state === "backendSessionRestored" ||
+    state === "connectingIdentity" ||
+    state === "fetchingPolicy" ||
+    state === "signingTinyCloudSession" ||
+    state === "verifyingBackendSession" ||
+    state === "checkingDelegation" ||
+    state === "saving"
+  );
+}
+
+function primaryActionLabel(state: AppState, reconnect: boolean): string {
+  const labels: Partial<Record<AppState, string>> = {
+    booting: "Starting",
+    backendSessionRestored: "Restoring",
+    connectingIdentity: "Connecting",
+    fetchingPolicy: "Checking",
+    signingTinyCloudSession: "Signing in",
+    verifyingBackendSession: "Verifying",
+    checkingDelegation: "Checking",
+    saving: "Saving",
+  };
+  return (
+    labels[state] ??
+    (reconnect ? "Reconnect" : state === "recoverableError" ? "Try again" : "Sign in")
+  );
+}
+
+function getSurfaceStatus(
+  state: AppState,
+  error: string | null,
+): { title: string; body: string; tone?: "default" | "error" } | null {
+  const statuses: Partial<
+    Record<AppState, { title: string; body: string; tone?: "default" | "error" }>
+  > = {
+    booting: {
+      title: "Starting up",
+      body: "Restoring any local session before enabling the probe.",
+    },
+    unauthenticated: {
+      title: "Signed out",
+      body: "Sign in to use delegated storage from this starter.",
+    },
+    backendSessionRestored: {
+      title: "Session found",
+      body: "Checking whether the backend session can still be used.",
+    },
+    connectingIdentity: {
+      title: "Connecting identity",
+      body: "Finish the OpenKey prompt to continue.",
+    },
+    fetchingPolicy: {
+      title: "Checking policy",
+      body: "Loading the backend capability request.",
+    },
+    signingTinyCloudSession: {
+      title: "Signing in",
+      body: "Creating a TinyCloud session for this app.",
+    },
+    verifyingBackendSession: {
+      title: "Verifying session",
+      body: "Confirming the signed session with the backend.",
+    },
+    checkingDelegation: {
+      title: "Checking delegation",
+      body: "Confirming this app can reach its delegated KV storage.",
+    },
+    needsDelegation: {
+      title: "Consent needed",
+      body: "Reconnect to approve backend access for this app.",
+    },
+    delegationExpired: {
+      title: "Consent expired",
+      body: "Reconnect to refresh backend access.",
+    },
+    delegationStale: {
+      title: "Policy changed",
+      body: "Reconnect to approve the current backend policy.",
+    },
+    saving: {
+      title: "Saving",
+      body: "Writing the probe value to delegated storage.",
+    },
+    recoverableError: {
+      title: "Needs attention",
+      body: error ?? "The last action failed. Try again or sign out.",
+      tone: "error",
+    },
+  };
+  return statuses[state] ?? null;
 }
 
 function stateLabel(state: AppState): string {

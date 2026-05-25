@@ -28,6 +28,44 @@ Do not let backend data routes rely on wallet credentials, raw private keys, or
 frontend-local state. The backend operates on user data only through a portable
 delegation the user signs.
 
+## UI Surface Contract
+
+New TinyCloud apps should open directly into the usable product surface, not a
+landing page, implementation dashboard, or protocol demo. Keep the default
+visual language minimal and operational:
+
+- Use a quiet app shell: neutral gray page background, white work surfaces,
+  subtle gray borders, compact spacing, system sans typography, and corners no
+  larger than 8px unless the app has a deliberate product-specific system.
+- Make the header do only durable app work: product name, account/sign-in
+  action, and optional compact utility controls.
+- Keep sign-in clean. The primary unauthenticated affordance should be a single
+  sign-in button in the header. Hide unavailable secondary account actions
+  instead of showing disabled clutter.
+- Keep connection, delegation, policy hash, DID, address, and provider details
+  out of the main canvas. Put them in a header-adjacent disclosure such as
+  `Connection details`, and surface errors there unless the error blocks the
+  main workflow.
+- Do not add fake navigation, tabs, section bars, hero copy, decorative
+  backgrounds, onboarding prose, or implementation explainer panels. Add
+  navigation only when there are real routes or modes a user can switch between.
+- Make the main canvas about the app's job. A blank starter should show the
+  smallest useful probe/work surface. A product example should show its core
+  list/create/edit flow directly.
+- Treat loading as part of the product surface. During boot, session restore,
+  backend policy fetches, delegation checks, list/detail fetches, saves, and
+  deletes, show compact readiness/status surfaces in the affected region. Do
+  not render empty states, editable forms, or enabled work controls until the
+  app has enough data and authority for that surface to be true.
+- Avoid visual assets in the starter unless the specific app domain requires
+  them. The starter and generic examples should feel like clean tools, not
+  marketing pages.
+- Keep browser-shell smoke tests aligned with this contract: the shell should
+  render without console errors, use a plain page background, avoid fake nav,
+  keep connection details outside the main content, and cover at least one
+  restored-session or delayed-backend loading path that must not look like an
+  empty ready state.
+
 ## 2. Sign-In And Delegation
 
 The default boot order is:

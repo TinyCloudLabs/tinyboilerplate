@@ -20,6 +20,20 @@ delegation contract with an app-specific Notes domain, backend-owned operational
 state, and a user-data model worth copying when you need more than the blank
 probe.
 
+## UI Style
+
+TinyCloud starter and example apps should feel like clean operational tools.
+Open directly into the product surface: a compact header, a single clear
+sign-in action, and the app's create/list/edit work in the main canvas. Keep
+connection diagnostics, delegation status, DIDs, addresses, and policy hashes
+inside a small header disclosure instead of a prominent page panel.
+
+Use a restrained dashboard baseline: neutral gray page background, white
+surfaces, subtle gray borders, system sans typography, compact spacing, and
+8px-or-smaller radius. Do not add fake nav bars, hero sections, decorative
+backgrounds, or protocol explainer panels unless the app has real routes or a
+specific product reason.
+
 ## Quick Start
 
 ```bash

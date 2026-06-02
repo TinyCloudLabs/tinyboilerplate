@@ -6,10 +6,11 @@ import {
   type ResourceCapability,
 } from "@tinycloud/web-sdk";
 import { type DelegationResponse } from "@tinyboilerplate/core";
+import { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./request-headers.js";
 
 // ── Create Delegation ────────────────────────────────────────────────
 
-const DELEGATION_BUNDLE_FORMAT = "tinyboilerplate.delegation-bundle";
+const DELEGATION_BUNDLE_FORMAT = "tinycloud.delegation-bundle";
 
 interface DelegationBundle {
   format: typeof DELEGATION_BUNDLE_FORMAT;
@@ -111,7 +112,7 @@ export async function sendDelegation(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${sessionToken}`,
-      "X-Requested-With": "TinyBoilerplate",
+      [DEFAULT_REQUEST_HEADER_NAME]: DEFAULT_REQUEST_HEADER_VALUE,
     },
     body: JSON.stringify({ serialized }),
   });
@@ -133,7 +134,7 @@ export async function checkDelegationStatus(
   const res = await fetch(`${backendUrl}/api/delegations/status`, {
     headers: {
       Authorization: `Bearer ${sessionToken}`,
-      "X-Requested-With": "TinyBoilerplate",
+      [DEFAULT_REQUEST_HEADER_NAME]: DEFAULT_REQUEST_HEADER_VALUE,
     },
   });
 
@@ -152,7 +153,7 @@ export async function revokeDelegation(backendUrl: string, sessionToken: string)
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${sessionToken}`,
-      "X-Requested-With": "TinyBoilerplate",
+      [DEFAULT_REQUEST_HEADER_NAME]: DEFAULT_REQUEST_HEADER_VALUE,
     },
   });
 

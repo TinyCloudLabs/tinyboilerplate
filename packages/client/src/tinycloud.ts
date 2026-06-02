@@ -2,10 +2,12 @@ import { TinyCloudWeb, BrowserSessionStorage } from "@tinycloud/web-sdk";
 import type {
   ClientSession,
   ComposedManifestRequest,
+  Config as TinyCloudWebSdkConfig,
   Manifest,
+  SessionRestoreResult,
   SiweConfig,
 } from "@tinycloud/web-sdk";
-import type { providers } from "ethers";
+import type { EIP1193Provider } from "./openkey.js";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -24,6 +26,15 @@ export interface TinyCloudWebConfig {
   capabilityRequest?: ComposedManifestRequest;
   /** Include implicit account registry permissions when composing `manifest`. Default true in the SDK. */
   includeAccountRegistryPermissions?: boolean;
+  /** SIWE nonce override. If set, `siweConfig.nonce` still wins inside the SDK. */
+  nonce?: string;
+}
+
+export interface RestoreTinyCloudWebSessionResult {
+  tcw: TinyCloudWeb | null;
+  status: SessionRestoreResult["status"];
+  session?: ClientSession;
+  error?: Error;
 }
 
 // ── TinyCloudWeb Instance ────────────────────────────────────────────
@@ -32,27 +43,25 @@ export interface TinyCloudWebConfig {
  * Create a TinyCloudWeb instance with BrowserSessionStorage for session persistence.
  */
 export function createTinyCloudWeb(
-  web3Provider: providers.Web3Provider,
+  web3Provider: EIP1193Provider,
   config?: TinyCloudWebConfig,
 ): TinyCloudWeb {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
-  const tcw = new (TinyCloudWeb as any)({
-    providers: { web3: { driver: web3Provider } },
+  const tcwConfig: TinyCloudWebSdkConfig = {
+    provider: web3Provider,
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
     tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
     autoCreateSpace: config?.autoCreateSpace ?? true,
     sessionStorage: new BrowserSessionStorage(),
+    nonce: config?.nonce,
     siweConfig: config?.siweConfig,
     manifest,
     capabilityRequest: config?.capabilityRequest,
     includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
-  });
+  };
 
-  // Set provider for SDK signing paths that still read the provider property.
-  tcw.provider = web3Provider;
-
-  return tcw;
+  return new TinyCloudWeb(tcwConfig);
 }
 
 /**
@@ -64,13 +73,60 @@ export function createTinyCloudWeb(
  * containing the signed SIWE message and signature.
  */
 export async function createAndSignIn(
-  web3Provider: providers.Web3Provider,
-  config?: TinyCloudWebConfig & { nonce?: string },
+  web3Provider: EIP1193Provider,
+  config?: TinyCloudWebConfig & { address?: string },
 ): Promise<{ tcw: TinyCloudWeb; session: ClientSession }> {
   const siweConfig = config?.nonce
     ? { ...config?.siweConfig, nonce: config.nonce }
     : config?.siweConfig;
   const tcw = createTinyCloudWeb(web3Provider, { ...config, siweConfig });
-  const session = await tcw.signIn();
+  if (config?.nonce) {
+    await tcw.clearPersistedSession(config.address);
+  }
+  const session = await tcw.signIn(config?.nonce ? { nonce: config.nonce } : undefined);
   return { tcw, session };
+}
+
+/**
+ * Restore a browser TinyCloudWeb session from BrowserSessionStorage without
+ * connecting a wallet. The returned instance is session-only: it can use the
+ * restored TinyCloud delegation for direct storage, but cannot create new
+ * wallet-signed delegations until a provider is connected later.
+ */
+export async function restoreTinyCloudWebSession(
+  address: string,
+  config?: TinyCloudWebConfig,
+): Promise<RestoreTinyCloudWebSessionResult> {
+  const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
+  const tcwConfig: TinyCloudWebSdkConfig = {
+    tinycloudHosts: config?.tinycloudHosts,
+    tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
+    tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
+    autoCreateSpace: config?.autoCreateSpace ?? false,
+    sessionStorage: new BrowserSessionStorage(),
+    nonce: config?.nonce,
+    siweConfig: config?.siweConfig,
+    manifest,
+    capabilityRequest: config?.capabilityRequest,
+    includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
+  };
+
+  const tcw = new TinyCloudWeb(tcwConfig);
+
+  try {
+    const result = await tcw.restoreSession(address);
+    if (result.status === "restored") {
+      return { tcw, status: result.status, session: result.session };
+    }
+
+    tcw.cleanup();
+    return { tcw: null, status: result.status, error: result.error };
+  } catch (err) {
+    tcw.cleanup();
+    return {
+      tcw: null,
+      status: "restore-failed",
+      error: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
 }

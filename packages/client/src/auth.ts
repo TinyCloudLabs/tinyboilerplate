@@ -1,3 +1,5 @@
+import { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./request-headers.js";
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface VerifyResponse {
@@ -38,7 +40,7 @@ export async function verifySession(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Requested-With": "TinyBoilerplate",
+      [DEFAULT_REQUEST_HEADER_NAME]: DEFAULT_REQUEST_HEADER_VALUE,
     },
     body: JSON.stringify({ message: siwe, signature }),
   });

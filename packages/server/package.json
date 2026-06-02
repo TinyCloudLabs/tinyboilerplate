@@ -6,6 +6,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
@@ -19,7 +20,7 @@
   },
   "dependencies": {
     "@tinyboilerplate/core": "workspace:*",
-    "@tinycloud/node-sdk": "2.2.0-beta.10",
+    "@tinycloud/node-sdk": "2.2.0-beta.12",
     "jose": "^5.0.0",
     "siwe": "^2.3.2"
   },

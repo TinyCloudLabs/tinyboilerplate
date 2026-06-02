@@ -6,6 +6,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
@@ -13,26 +14,20 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "postinstall": "node scripts/fix-web-wasm-init.mjs",
     "test": "bun test src/__tests__"
   },
   "dependencies": {
     "@tinyboilerplate/core": "workspace:*",
-    "@tinycloud/sdk-core": "2.2.0-beta.10"
+    "@tinycloud/sdk-core": "2.2.0-beta.12"
   },
   "peerDependencies": {
     "@openkey/sdk": ">=0.8.0",
-    "@tinycloud/web-sdk": ">=2.2.0-beta.10",
-    "ethers": "^5.7.0"
-  },
-  "peerDependenciesMeta": {
-    "ethers": {
-      "optional": true
-    }
+    "@tinycloud/web-sdk": ">=2.2.0-beta.12"
   },
   "devDependencies": {
     "@openkey/sdk": "^0.8.4",
-    "@tinycloud/web-sdk": "2.2.0-beta.10",
-    "ethers": "^5.7.2",
+    "@tinycloud/web-sdk": "2.2.0-beta.12",
     "typescript": "^5.7.0"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 1,
+  "app_id": "xyz.tinycloud.notes",
+  "name": "TinyCloud Notes",
+  "description": "Create, edit, search, and delete user-owned notes stored in TinyCloud.",
+  "defaults": false,
+  "permissions": [
+    {
+      "service": "tinycloud.sql",
+      "path": "notes_index",
+      "actions": ["read", "write"],
+      "description": "Store note metadata including title, URL, tags, and body pointer."
+    },
+    {
+      "service": "tinycloud.kv",
+      "path": "entries/",
+      "actions": ["get", "put", "del", "list"],
+      "description": "Store note body content by note id."
+    }
+  ]
+}

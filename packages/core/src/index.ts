@@ -1,26 +1,6 @@
-// ── Item (the abstract CRUD entity) ──────────────────────────────────
-
-export interface Item {
-  id: string;
-  title: string;
-  data?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateItemInput {
-  title: string;
-  data?: string;
-}
-
-export interface UpdateItemInput {
-  title?: string;
-  data?: string;
-}
-
 // ── Delegation ───────────────────────────────────────────────────────
 
-export type DelegationStatus = "active" | "expired" | "none";
+export type DelegationStatus = "active" | "expired" | "none" | "stale";
 
 export interface StoredDelegation {
   serialized: string;
@@ -30,6 +10,8 @@ export interface StoredDelegation {
   path: string;
   /** Hash of the backend permission policy this delegation was issued for. */
   policyHash?: string;
+  /** Backend, worker, or agent DID this delegation was issued to. */
+  delegateDid?: string;
   /** Full multi-resource grant metadata when available. */
   resources?: ServerInfoPermission[];
 }
@@ -66,6 +48,12 @@ export interface ServerInfoPermission {
 export interface ServerInfo {
   did: string;
   status: string;
+  /**
+   * Stable hash of the backend delegation policy. Required when this
+   * server-info response advertises permissions for a delegation backend;
+   * optional only for non-delegating endpoints.
+   */
+  policyHash?: string;
   /** Human-readable name for the permission modal. Optional. */
   name?: string;
   /**
@@ -82,15 +70,20 @@ export interface ServerInfo {
   permissions?: ServerInfoPermission[];
 }
 
+export type NonEmptyServerInfoPermissions = [ServerInfoPermission, ...ServerInfoPermission[]];
+
+/**
+ * Stricter `/api/server-info` contract for backends, workers, or agents that
+ * participate in delegation. A delegating backend must publish a stable
+ * `policyHash` and at least one requested permission so clients can detect
+ * stale stored delegations after policy changes.
+ */
+export interface DelegatingServerInfo extends ServerInfo {
+  policyHash: string;
+  permissions: NonEmptyServerInfoPermissions;
+}
+
 // ── API Responses ────────────────────────────────────────────────────
-
-export interface ItemResponse {
-  item: Item;
-}
-
-export interface ItemListResponse {
-  items: Item[];
-}
 
 export interface DelegationResponse {
   status: DelegationStatus;

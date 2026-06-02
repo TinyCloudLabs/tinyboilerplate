@@ -1,5 +1,4 @@
 import OpenKey from "@openkey/sdk";
-import { providers } from "ethers";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -14,16 +13,22 @@ export interface ConnectWalletResult {
   address: string;
   keyId: string;
   openkey: OpenKey;
-  web3Provider: providers.Web3Provider;
+  web3Provider: EIP1193Provider;
 }
 
 // ── EIP-1193 Provider ────────────────────────────────────────────────
+
+export interface EIP1193Provider {
+  on(event: string, listener: (...args: any[]) => void): void;
+  removeListener(event: string, listener: (...args: any[]) => void): void;
+  request(args: { method: string; params?: any[] }): Promise<any>;
+}
 
 /**
  * EIP-1193 compatible provider that routes signing to OpenKey.
  * TinyCloudWeb treats this like any browser wallet.
  */
-class OpenKeyEIP1193Provider {
+class OpenKeyEIP1193Provider implements EIP1193Provider {
   constructor(
     private openkey: OpenKey,
     private address: string,
@@ -69,14 +74,13 @@ function hexToString(hex: string): string {
 /**
  * Connect wallet via OpenKey passkey authentication.
  *
- * Returns an EIP-1193-compatible provider (wrapped in ethers Web3Provider)
- * and the wallet address. No OAuth tokens — authentication is handled
- * separately via SIWE.
+ * Returns an EIP-1193-compatible provider and the wallet address.
+ * TinyCloudWeb wraps the provider internally for SIWE signing.
  */
 export async function connectWallet(config?: ConnectWalletConfig): Promise<ConnectWalletResult> {
   const openkey = new OpenKey({
     host: config?.host ?? "https://openkey.so",
-    appName: config?.appName ?? "TinyBoilerplate",
+    appName: config?.appName ?? "TinyCloud App",
   });
 
   // Passkey authentication via iframe — user authenticates, we get signing capability
@@ -92,13 +96,10 @@ export async function connectWallet(config?: ConnectWalletConfig): Promise<Conne
     config?.chainId ?? "0x1",
   );
 
-  // Wrap in ethers Web3Provider for TinyCloudWeb compatibility
-  const web3Provider = new providers.Web3Provider(eip1193);
-
   return {
     address: authResult.address,
     keyId: authResult.keyId,
     openkey,
-    web3Provider,
+    web3Provider: eip1193,
   };
 }

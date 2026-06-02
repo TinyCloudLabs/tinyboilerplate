@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { withSessionRefresh } from "../identity.js";
+import { validateBackendPrefix, withSessionRefresh } from "../identity.js";
 
 function createMockNode() {
   return {
@@ -126,5 +126,25 @@ describe("withSessionRefresh", () => {
         expect(node.signIn).not.toHaveBeenCalled();
       });
     }
+  });
+});
+
+describe("validateBackendPrefix", () => {
+  test("returns a slash- and backslash-free backend operational prefix", () => {
+    expect(validateBackendPrefix("ops.auditprefix.backend")).toBe("ops.auditprefix.backend");
+  });
+
+  test("requires an explicit backend operational prefix", () => {
+    expect(() => validateBackendPrefix(undefined)).toThrow("requires an explicit prefix");
+    expect(() => validateBackendPrefix("")).toThrow("requires an explicit prefix");
+  });
+
+  test("rejects prefixes with slashes or backslashes", () => {
+    expect(() => validateBackendPrefix("xyz.tinycloud.notes/backend")).toThrow(
+      "must be slash- and backslash-free",
+    );
+    expect(() => validateBackendPrefix("xyz.tinycloud.notes\\backend")).toThrow(
+      "must be slash- and backslash-free",
+    );
   });
 });

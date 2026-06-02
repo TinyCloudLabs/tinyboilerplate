@@ -2,7 +2,13 @@
 
 export { connectWallet, type ConnectWalletConfig, type ConnectWalletResult } from "./openkey.js";
 
-export { createTinyCloudWeb, createAndSignIn, type TinyCloudWebConfig } from "./tinycloud.js";
+export {
+  createTinyCloudWeb,
+  createAndSignIn,
+  restoreTinyCloudWebSession,
+  type RestoreTinyCloudWebSessionResult,
+  type TinyCloudWebConfig,
+} from "./tinycloud.js";
 
 export {
   loadAppManifest,
@@ -29,6 +35,8 @@ export {
 } from "./delegation.js";
 
 export { requestNonce, verifySession, type VerifyResponse } from "./auth.js";
+
+export { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./request-headers.js";
 
 export { SessionStore, type StoredSession } from "./tokens.js";
 

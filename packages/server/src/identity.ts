@@ -8,7 +8,7 @@ export interface BackendIdentityConfig {
   /** TinyCloud node host */
   host?: string;
   /** KV key prefix for backend data */
-  prefix?: string;
+  prefix: string;
   /** Automatically create a space if one doesn't exist */
   autoCreateSpace?: boolean;
 }
@@ -20,6 +20,20 @@ export interface BackendIdentity {
 
 // ── Create Backend Identity ──────────────────────────────────────────
 
+export function validateBackendPrefix(prefix: string | undefined): string {
+  if (typeof prefix !== "string" || prefix.length === 0) {
+    throw new Error(
+      "createBackendIdentity requires an explicit prefix for backend-owned operational state",
+    );
+  }
+
+  if (prefix.includes("/") || prefix.includes("\\")) {
+    throw new Error("createBackendIdentity prefix must be slash- and backslash-free");
+  }
+
+  return prefix;
+}
+
 /**
  * Initialize a TinyCloudNode instance with the given private key,
  * sign in, and return the node + its DID.
@@ -30,10 +44,11 @@ export interface BackendIdentity {
 export async function createBackendIdentity(
   config: BackendIdentityConfig,
 ): Promise<BackendIdentity> {
+  const prefix = validateBackendPrefix(config.prefix);
   const node = new TinyCloudNode({
     privateKey: config.privateKey,
     host: config.host ?? "https://node.tinycloud.xyz",
-    prefix: config.prefix ?? "boilerplate-be",
+    prefix,
     autoCreateSpace: config.autoCreateSpace ?? true,
   });
 

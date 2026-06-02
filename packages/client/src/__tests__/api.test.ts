@@ -56,7 +56,7 @@ describe("createApiClient", () => {
       "Bearer test-token",
     );
     expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
-      "TinyBoilerplate",
+      "XMLHttpRequest",
     );
   });
 
@@ -86,7 +86,7 @@ describe("createApiClient", () => {
       "Bearer test-token",
     );
     expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
-      "TinyBoilerplate",
+      "XMLHttpRequest",
     );
     expect(capturedInit?.body).toBe(JSON.stringify({ name: "Alice" }));
   });
@@ -114,7 +114,7 @@ describe("createApiClient", () => {
       "application/json",
     );
     expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
-      "TinyBoilerplate",
+      "XMLHttpRequest",
     );
     expect(capturedInit?.body).toBe(JSON.stringify({ name: "Bob" }));
   });
@@ -139,7 +139,7 @@ describe("createApiClient", () => {
       "Bearer test-token",
     );
     expect((capturedInit?.headers as Record<string, string>)["X-Requested-With"]).toBe(
-      "TinyBoilerplate",
+      "XMLHttpRequest",
     );
   });
 

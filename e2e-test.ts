@@ -1,12 +1,18 @@
 /**
- * E2E test — tests delegation + KV CRUD directly against TinyCloud.
+ * Legacy low-level delegation smoke — tests delegation + KV CRUD directly
+ * against TinyCloud.
  *
  * This test does NOT go through the Express API (which requires real OpenKey tokens).
  * Instead, it simulates what the backend does when it receives a delegation:
  * deserialize → useDelegation → operate on the user's space.
  *
+ * It is not a replacement for browser runtime verification. It does not prove
+ * OpenKey sign-in, WebAuthn, session verification, or frontend delegation UX.
+ * For the current starter, run the README smoke checks and then manually verify
+ * sign-in, backend delegation grant, and the probe in a browser.
+ *
  * To run: BACKEND_PRIVATE_KEY=0x... bun run e2e-test.ts
- * Or:     source examples/react-express/backend/.env && bun run e2e-test.ts
+ * Or:     source templates/app-starter/backend/.env && bun run e2e-test.ts
  */
 import { TinyCloudNode, serializeDelegation, deserializeDelegation } from "@tinycloud/node-sdk";
 import { randomBytes } from "crypto";
@@ -16,7 +22,7 @@ import { resolve } from "path";
 // Load backend .env if BACKEND_PRIVATE_KEY isn't set
 if (!process.env.BACKEND_PRIVATE_KEY) {
   try {
-    const envPath = resolve(import.meta.dir, "examples/react-express/backend/.env");
+    const envPath = resolve(import.meta.dir, "templates/app-starter/backend/.env");
     const envContent = readFileSync(envPath, "utf-8");
     for (const line of envContent.split("\n")) {
       if (line.startsWith("#") || !line.includes("=")) continue;
@@ -25,16 +31,17 @@ if (!process.env.BACKEND_PRIVATE_KEY) {
     }
   } catch {
     console.error(
-      "BACKEND_PRIVATE_KEY not set. Run: source examples/react-express/backend/.env && bun run e2e-test.ts",
+      "BACKEND_PRIVATE_KEY not set. Run: source templates/app-starter/backend/.env && bun run e2e-test.ts",
     );
     process.exit(1);
   }
 }
 
-const BACKEND_URL = "http://localhost:3001";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:3003";
 const TINYCLOUD_HOST = process.env.TINYCLOUD_HOST ?? "https://node.tinycloud.xyz";
 const BACKEND_PRIVATE_KEY = process.env.BACKEND_PRIVATE_KEY!;
 const TEST_USER_KEY = `0x${randomBytes(32).toString("hex")}`;
+const TEST_KV_PREFIX = "delegation-smoke/";
 
 // Simple API helper for unauthenticated endpoints
 async function apiGet(path: string) {
@@ -45,7 +52,7 @@ async function apiGet(path: string) {
 }
 
 async function main() {
-  console.log("=== TinyBoilerplate E2E Test ===\n");
+  console.log("=== TinyCloud App-Starter Delegation Smoke ===\n");
 
   // 1. Check backend is up
   console.log("1. Backend info");
@@ -55,9 +62,7 @@ async function main() {
     backendDID = info.did;
     console.log(`   DID: ${backendDID}\n`);
   } catch {
-    console.error(
-      "   Backend not running. Start it with: cd examples/react-express/backend && bun run dev",
-    );
+    console.error("   Backend not running. Start it with: bun run dev:app-starter");
     process.exit(1);
   }
 
@@ -111,7 +116,7 @@ async function main() {
   const backendNode = new TinyCloudNode({
     privateKey: BACKEND_PRIVATE_KEY,
     host: TINYCLOUD_HOST,
-    prefix: "boilerplate-be",
+    prefix: "xyz.tinycloud.app-starter-backend",
     autoCreateSpace: true,
   });
   await backendNode.signIn();
@@ -129,8 +134,8 @@ async function main() {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  const putRes = await access.kv.put("items/e2e-1", item1);
-  console.log(`   PUT items/e2e-1: ok=${putRes.ok}`);
+  const putRes = await access.kv.put(`${TEST_KV_PREFIX}e2e-1`, item1);
+  console.log(`   PUT ${TEST_KV_PREFIX}e2e-1: ok=${putRes.ok}`);
 
   const item2 = {
     id: "e2e-2",
@@ -139,47 +144,47 @@ async function main() {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  const putRes2 = await access.kv.put("items/e2e-2", item2);
-  console.log(`   PUT items/e2e-2: ok=${putRes2.ok}`);
+  const putRes2 = await access.kv.put(`${TEST_KV_PREFIX}e2e-2`, item2);
+  console.log(`   PUT ${TEST_KV_PREFIX}e2e-2: ok=${putRes2.ok}`);
 
   // READ
-  const getRes = await access.kv.get("items/e2e-1");
+  const getRes = await access.kv.get(`${TEST_KV_PREFIX}e2e-1`);
   console.log(
-    `   GET items/e2e-1: ok=${getRes.ok} data=${getRes.ok ? JSON.stringify((getRes.data as any).data).slice(0, 80) : (getRes as any).error?.message}`,
+    `   GET ${TEST_KV_PREFIX}e2e-1: ok=${getRes.ok} data=${getRes.ok ? JSON.stringify((getRes.data as any).data).slice(0, 80) : (getRes as any).error?.message}`,
   );
 
   // LIST
-  const listRes = await access.kv.list({ prefix: "items/" });
+  const listRes = await access.kv.list({ prefix: TEST_KV_PREFIX });
   console.log(
-    `   LIST items/: ok=${listRes.ok} keys=${listRes.ok ? JSON.stringify(listRes.data.keys) : (listRes as any).error?.message}`,
+    `   LIST ${TEST_KV_PREFIX}: ok=${listRes.ok} keys=${listRes.ok ? JSON.stringify(listRes.data.keys) : (listRes as any).error?.message}`,
   );
 
   // UPDATE
   const updated = { ...item1, title: "Updated Item 1", updatedAt: new Date().toISOString() };
-  const updateRes = await access.kv.put("items/e2e-1", updated);
-  console.log(`   PUT items/e2e-1 (update): ok=${updateRes.ok}`);
+  const updateRes = await access.kv.put(`${TEST_KV_PREFIX}e2e-1`, updated);
+  console.log(`   PUT ${TEST_KV_PREFIX}e2e-1 (update): ok=${updateRes.ok}`);
 
-  const getUpdated = await access.kv.get("items/e2e-1");
+  const getUpdated = await access.kv.get(`${TEST_KV_PREFIX}e2e-1`);
   const updatedTitle = getUpdated.ok ? (getUpdated.data as any).data?.title : "?";
-  console.log(`   GET items/e2e-1 (after update): title="${updatedTitle}"`);
+  console.log(`   GET ${TEST_KV_PREFIX}e2e-1 (after update): title="${updatedTitle}"`);
 
   // DELETE
-  const delRes = await access.kv.delete("items/e2e-1");
-  console.log(`   DEL items/e2e-1: ok=${delRes.ok}`);
+  const delRes = await access.kv.delete(`${TEST_KV_PREFIX}e2e-1`);
+  console.log(`   DEL ${TEST_KV_PREFIX}e2e-1: ok=${delRes.ok}`);
 
-  const listAfterDel = await access.kv.list({ prefix: "items/" });
+  const listAfterDel = await access.kv.list({ prefix: TEST_KV_PREFIX });
   console.log(
-    `   LIST items/ (after delete): keys=${listAfterDel.ok ? JSON.stringify(listAfterDel.data.keys) : "?"}`,
+    `   LIST ${TEST_KV_PREFIX} (after delete): keys=${listAfterDel.ok ? JSON.stringify(listAfterDel.data.keys) : "?"}`,
   );
 
   // CLEANUP
-  await access.kv.delete("items/e2e-2");
+  await access.kv.delete(`${TEST_KV_PREFIX}e2e-2`);
   console.log("   Cleanup done");
 
   // 7. Test delegation re-activation (simulates cache expiry in middleware)
   console.log("\n7. Testing delegation re-activation (simulates cache expiry)...");
   const access2 = await backendNode.useDelegation(delegation);
-  const reList = await access2.kv.list({ prefix: "items/" });
+  const reList = await access2.kv.list({ prefix: TEST_KV_PREFIX });
   console.log(`   Re-activated access, LIST: ok=${reList.ok}`);
 
   // 8. Test rapid sequential operations
@@ -191,17 +196,17 @@ async function main() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const r = await access2.kv.put(`items/rapid-${i}`, item);
+    const r = await access2.kv.put(`${TEST_KV_PREFIX}rapid-${i}`, item);
     process.stdout.write(r.ok ? "." : "X");
   }
   console.log("");
-  const rapidList = await access2.kv.list({ prefix: "items/" });
+  const rapidList = await access2.kv.list({ prefix: TEST_KV_PREFIX });
   console.log(
     `   LIST after rapid puts: ${rapidList.ok ? rapidList.data.keys.length + " keys" : "FAILED"}`,
   );
 
   // Cleanup rapid items
-  for (let i = 0; i < 5; i++) await access2.kv.delete(`items/rapid-${i}`);
+  for (let i = 0; i < 5; i++) await access2.kv.delete(`${TEST_KV_PREFIX}rapid-${i}`);
 
   // 9. Verify auth rejects fake tokens
   console.log("\n9. Verifying JWT auth rejects fake tokens...");
@@ -216,8 +221,8 @@ async function main() {
 
   // 10. Verify unauthenticated requests are rejected
   console.log("\n10. Verifying unauthenticated requests are rejected...");
-  const noAuthRes = await fetch(`${BACKEND_URL}/api/items`);
-  console.log(`   GET /api/items without auth: ${noAuthRes.status} (expected 401)`);
+  const noAuthRes = await fetch(`${BACKEND_URL}/api/probe`);
+  console.log(`   GET /api/probe without auth: ${noAuthRes.status} (expected 401)`);
   if (noAuthRes.status !== 401) {
     console.error("   FAIL: Unauthenticated request was not rejected!");
     process.exit(1);

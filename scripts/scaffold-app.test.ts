@@ -133,8 +133,8 @@ describe("scaffold-app CLI", () => {
       },
     });
     expect(rootPackage.overrides).toMatchObject({
-      "@tinycloud/web-sdk": "2.2.0-beta.12",
-      "@tinycloud/node-sdk": "2.2.0-beta.12",
+      "@tinycloud/web-sdk": "2.2.1-beta.0",
+      "@tinycloud/node-sdk": "2.2.1-beta.0",
     });
 
     expect(await readJson(join(out, "frontend/package.json"))).toMatchObject({

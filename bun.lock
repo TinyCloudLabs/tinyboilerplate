@@ -6,7 +6,7 @@
       "name": "tinyboilerplate",
       "devDependencies": {
         "@eslint/js": "^10.0.1",
-        "@tinycloud/node-sdk": "2.2.0-beta.12",
+        "@tinycloud/node-sdk": "2.2.1-beta.0",
         "eslint": "^10.1.0",
         "husky": "^9.1.7",
         "portless": "^0.13.0",
@@ -21,7 +21,7 @@
         "@scalar/express-api-reference": "^0.4.0",
         "@tinyboilerplate/core": "workspace:*",
         "@tinyboilerplate/server": "workspace:*",
-        "@tinycloud/node-sdk": "2.2.0-beta.12",
+        "@tinycloud/node-sdk": "2.2.1-beta.0",
         "cors": "^2.8.5",
         "express": "^4.21.0",
         "express-rate-limit": "^8.3.1",
@@ -41,7 +41,7 @@
         "@openkey/sdk": "^0.8.4",
         "@tinyboilerplate/client": "workspace:*",
         "@tinyboilerplate/core": "workspace:*",
-        "@tinycloud/web-sdk": "2.2.0-beta.12",
+        "@tinycloud/web-sdk": "2.2.1-beta.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
       },
@@ -57,7 +57,7 @@
       "name": "@tinyboilerplate/agent-runtime",
       "version": "0.2.0",
       "dependencies": {
-        "@tinycloud/node-sdk": "2.2.0-beta.12",
+        "@tinycloud/node-sdk": "2.2.1-beta.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -69,16 +69,16 @@
       "version": "0.1.0",
       "dependencies": {
         "@tinyboilerplate/core": "workspace:*",
-        "@tinycloud/sdk-core": "2.2.0-beta.12",
+        "@tinycloud/sdk-core": "2.2.1-beta.0",
       },
       "devDependencies": {
         "@openkey/sdk": "^0.8.4",
-        "@tinycloud/web-sdk": "2.2.0-beta.12",
+        "@tinycloud/web-sdk": "2.2.1-beta.0",
         "typescript": "^5.7.0",
       },
       "peerDependencies": {
         "@openkey/sdk": ">=0.8.0",
-        "@tinycloud/web-sdk": ">=2.2.0-beta.12",
+        "@tinycloud/web-sdk": ">=2.2.1-beta.0",
       },
     },
     "packages/core": {
@@ -93,7 +93,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@tinyboilerplate/core": "workspace:*",
-        "@tinycloud/node-sdk": "2.2.0-beta.12",
+        "@tinycloud/node-sdk": "2.2.1-beta.0",
         "jose": "^5.0.0",
         "siwe": "^2.3.2",
       },
@@ -109,7 +109,7 @@
         "@scalar/express-api-reference": "^0.4.0",
         "@tinyboilerplate/core": "workspace:*",
         "@tinyboilerplate/server": "workspace:*",
-        "@tinycloud/node-sdk": "2.2.0-beta.12",
+        "@tinycloud/node-sdk": "2.2.1-beta.0",
         "cors": "^2.8.5",
         "express": "^4.21.0",
         "express-rate-limit": "^8.3.1",
@@ -129,7 +129,7 @@
         "@openkey/sdk": "^0.8.4",
         "@tinyboilerplate/client": "workspace:*",
         "@tinyboilerplate/core": "workspace:*",
-        "@tinycloud/web-sdk": "2.2.0-beta.12",
+        "@tinycloud/web-sdk": "2.2.1-beta.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
       },
@@ -149,13 +149,13 @@
     },
   },
   "overrides": {
-    "@tinycloud/node-sdk": "2.2.0-beta.12",
-    "@tinycloud/node-sdk-wasm": "1.7.3-beta.1",
-    "@tinycloud/sdk-core": "2.2.0-beta.12",
-    "@tinycloud/sdk-services": "2.2.0-beta.12",
+    "@tinycloud/node-sdk": "2.2.1-beta.0",
+    "@tinycloud/node-sdk-wasm": "1.7.4-beta.0",
+    "@tinycloud/sdk-core": "2.2.1-beta.0",
+    "@tinycloud/sdk-services": "2.2.1-beta.0",
     "@tinycloud/web-core": "1.7.0",
-    "@tinycloud/web-sdk": "2.2.0-beta.12",
-    "@tinycloud/web-sdk-wasm": "1.7.3-beta.1",
+    "@tinycloud/web-sdk": "2.2.1-beta.0",
+    "@tinycloud/web-sdk-wasm": "1.7.4-beta.0",
     "ethers": "6.16.0",
     "ws": "8.20.1",
   },
@@ -400,17 +400,17 @@
 
     "@tinyboilerplate/server": ["@tinyboilerplate/server@workspace:packages/server"],
 
-    "@tinycloud/node-sdk": ["@tinycloud/node-sdk@2.2.0-beta.12", "", { "dependencies": { "@tinycloud/node-sdk-wasm": "1.7.3-beta.2", "@tinycloud/sdk-core": "2.2.0-beta.12", "siwe": "^3.0.0" } }, "sha512-fKZN0pX37bGkpGJ6MLDdPUn+DAg3t9w0r3nXk03embZ/NwJGr/cSKCdR4Xjv2KjLUy9DnR67uiC+AVlD3snhqg=="],
+    "@tinycloud/node-sdk": ["@tinycloud/node-sdk@2.2.1-beta.0", "", { "dependencies": { "@tinycloud/node-sdk-wasm": "1.7.4-beta.0", "@tinycloud/sdk-core": "2.2.1-beta.0", "siwe": "^3.0.0" } }, "sha512-5kk68vzGbDSSO4aZM7ymaWa2alTO2GeqKzKcQZkwUnHd736hfB5Iex1zlWuQBJpzJ19llRCKAVD2au1SpYnarg=="],
 
-    "@tinycloud/node-sdk-wasm": ["@tinycloud/node-sdk-wasm@1.7.3-beta.1", "", {}, "sha512-mCwMxBSwVnrBMdbCbhBKYStud+GvD4a+/Sz6CIST1CPZ/GIxuy6t74DBx8prnI0DOVZerxZ8qHJZ+lV1ws0hVA=="],
+    "@tinycloud/node-sdk-wasm": ["@tinycloud/node-sdk-wasm@1.7.4-beta.0", "", {}, "sha512-o2c54q7sVNoVs7aVfOdMpcxL3gOZ0f/0MW8N6beiZFFTdwYKwfYOtICioa3nOFDAelp2OZENCLv97hzpA5yr8A=="],
 
-    "@tinycloud/sdk-core": ["@tinycloud/sdk-core@2.2.0-beta.12", "", { "dependencies": { "@multiformats/multiaddr": "^13.0.1", "@multiformats/multiaddr-to-uri": "^12.0.0", "@multiformats/uri-to-multiaddr": "^10.0.0", "@noble/curves": "^1.9.7", "@tinycloud/sdk-services": "2.2.0-beta.12", "ms": "^2.1.3", "multiformats": "^13.4.1", "siwe": "^3.0.0", "viem": "^2.21.53", "zod": "^3.22.0", "zod-to-json-schema": "^3.22.0" } }, "sha512-h1voB0xWRAhfQyMLFZI5Gp/HKg2FKRP0pNXb1xWM0nXQOUunyV8G2vsI/C6QiHMTZurI/01ZKSIEDVLllWuL5Q=="],
+    "@tinycloud/sdk-core": ["@tinycloud/sdk-core@2.2.1-beta.0", "", { "dependencies": { "@multiformats/multiaddr": "^13.0.1", "@multiformats/multiaddr-to-uri": "^12.0.0", "@multiformats/uri-to-multiaddr": "^10.0.0", "@noble/curves": "^1.9.7", "@tinycloud/sdk-services": "2.2.1-beta.0", "ms": "^2.1.3", "multiformats": "^13.4.1", "siwe": "^3.0.0", "viem": "^2.21.53", "zod": "^3.22.0", "zod-to-json-schema": "^3.22.0" } }, "sha512-YzrTahLuQq2nvRnsbYBV4y/hk8TFX4q2rgO0FjmttfGqUoX1iri5OQTRKvOflQqMtP15dI4uLyak/kXVyQs12w=="],
 
-    "@tinycloud/sdk-services": ["@tinycloud/sdk-services@2.2.0-beta.12", "", { "dependencies": { "zod": "^3.23.0" } }, "sha512-xQgoX/LqO3vRVXaFgi5lgAUJmbuu8h57Fg9tyJec4nmDPFmAadNnhqg9j1uzXyUFrcpYs1pbLZHNigwG4d4ZpQ=="],
+    "@tinycloud/sdk-services": ["@tinycloud/sdk-services@2.2.1-beta.0", "", { "dependencies": { "zod": "^3.23.0" } }, "sha512-tuNebv2TZjKtCbhgxpNv+iWDzjDWWiGcC3uTBuYcp5VGLfmHSesDO/fiKcqPcjQEvAJVLlaDQ8f67DYTGQjeWQ=="],
 
-    "@tinycloud/web-sdk": ["@tinycloud/web-sdk@2.2.0-beta.12", "", { "dependencies": { "@metamask/detect-provider": "^1.2.0", "@multiformats/multiaddr": "^13.0.1", "@multiformats/multiaddr-to-uri": "^12.0.0", "@tinycloud/node-sdk": "2.2.0-beta.12", "@tinycloud/sdk-core": "2.2.0-beta.12", "@tinycloud/web-sdk-wasm": "1.7.3-beta.2", "axios": "^1.7.9", "ethers": "^5.7.2", "lodash.merge": "^4.6.2", "siwe": "^3.0.0", "viem": "^2.45.0", "zod": "^3.22.0" } }, "sha512-KQf58cbTmhuU7QnZBEAdsI5v7jb1PC9BqkB0IUdmUxAh6tLKMcCwjpHtSDB/5UCVAzP/2jO2B2YnNKhweMY3LQ=="],
+    "@tinycloud/web-sdk": ["@tinycloud/web-sdk@2.2.1-beta.0", "", { "dependencies": { "@metamask/detect-provider": "^1.2.0", "@multiformats/multiaddr": "^13.0.1", "@multiformats/multiaddr-to-uri": "^12.0.0", "@tinycloud/node-sdk": "2.2.1-beta.0", "@tinycloud/sdk-core": "2.2.1-beta.0", "@tinycloud/web-sdk-wasm": "1.7.4-beta.0", "axios": "^1.7.9", "ethers": "^5.7.2", "lodash.merge": "^4.6.2", "siwe": "^3.0.0", "viem": "^2.45.0", "zod": "^3.22.0" } }, "sha512-ZUWQcTfl5NDLzyrzhzZ8Jp8btzZEwTnf9zJ5SJc9P2NWzK8KmHVqU98ndlIw4kYIRrw+9MjDlRpydd2IWx5WqQ=="],
 
-    "@tinycloud/web-sdk-wasm": ["@tinycloud/web-sdk-wasm@1.7.3-beta.1", "", {}, "sha512-p3ihl9g4wfjwknrlutJO3MxPvOk3KAO6sM8RzyiZtbzU/5Hes/RLVPkcakrxRdOHEkkSw3KaJD4HmbmLk8hzlQ=="],
+    "@tinycloud/web-sdk-wasm": ["@tinycloud/web-sdk-wasm@1.7.4-beta.0", "", {}, "sha512-TKrfw40f550DukFYjDKMATOnmFGm8O086Rpso8YigvnuOhAq5BD61o4JtENb6i1R7igGrI+tqb3IH7eMytdUFw=="],
 
     "@turbo/darwin-64": ["@turbo/darwin-64@2.9.14", "", { "os": "darwin", "cpu": "x64" }, "sha512-t7QiPflaEyBE4oayeZtSmu4mEfjgIrcNlNNl1z1dmIVPqEdtA7+CfTf8d7KXsOGPh6aNgWjKxyvQg9uGfDQF+A=="],
 

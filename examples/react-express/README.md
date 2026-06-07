@@ -13,7 +13,7 @@ A full-stack demo showing OpenKey authentication, TinyCloud delegation, and CRUD
 
 - [Bun](https://bun.sh) v1.0+
 - An [OpenKey](https://openkey.so) account with a registered OAuth client
-- The OAuth client must have `http://localhost:5173` as an allowed redirect URI
+- The OAuth client must have `http://localhost:5173` as an allowed redirect URI, or `https://tinyboilerplate.localhost` when using Portless.
 
 ## Setup
 
@@ -63,6 +63,20 @@ bun run dev
 This starts both:
 - **Frontend**: `http://localhost:5173` (Vite dev server)
 - **Backend**: `http://localhost:3001` (Bun with --watch)
+
+For stable HTTPS local URLs through Portless:
+
+```bash
+# From repo root
+bun run dev:portless
+
+# Or from this directory (examples/react-express)
+bun run dev:portless
+```
+
+This starts both:
+- **Frontend**: `https://tinyboilerplate.localhost`
+- **Backend**: `https://api.tinyboilerplate.localhost`
 
 You can also run them separately:
 ```bash

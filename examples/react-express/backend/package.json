@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "dev:portless": "portless run --name api.tinyboilerplate bun --watch src/index.ts",
     "start": "bun src/index.ts",
     "test": "bun test"
   },

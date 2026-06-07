@@ -22,6 +22,7 @@
     "build": "turbo run build",
     "predev": "lsof -ti:3001,5173 | xargs kill -9 2>/dev/null; pkill -9 -f 'bun --watch src/index.ts' 2>/dev/null; true",
     "dev": "turbo run dev --filter=@tinyboilerplate/example-frontend --filter=@tinyboilerplate/example-backend",
+    "dev:portless": "cd examples/react-express && bun run dev:portless",
     "dev:conversation-sync": "turbo run dev --filter=conversation-sync-frontend --filter=conversation-sync-backend",
     "dev:conversation-sync:portless": "cd examples/conversation-sync && bun run dev:portless",
     "generate-key": "cd packages/server && bun run generate-key",

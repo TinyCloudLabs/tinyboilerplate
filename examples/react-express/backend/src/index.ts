@@ -61,6 +61,7 @@ async function main() {
 
   // 4. Set up Express
   const app = express();
+  app.set("trust proxy", "loopback");
   app.use(cors({ origin: FRONTEND_URL }));
   app.use(express.json());
   app.use(createCsrfMiddleware());

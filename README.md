@@ -56,6 +56,9 @@ bun run dev
 ```
 
 The frontend runs on `http://localhost:5173`, the backend on `http://localhost:3001`.
+For stable HTTPS local URLs with Portless, run `bun run dev:portless`; the
+frontend runs on `https://tinyboilerplate.localhost` and the backend on
+`https://api.tinyboilerplate.localhost`.
 For the Listen conversation-sync example, you can also run stable HTTPS local
 URLs with `bun run dev:conversation-sync:portless`.
 

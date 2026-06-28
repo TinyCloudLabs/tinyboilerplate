@@ -3,6 +3,7 @@
   "app_id": "xyz.tinycloud.app-starter",
   "name": "TinyCloud App Starter",
   "description": "Blank reusable TinyCloud app substrate with a delegated KV storage probe.",
+  "knowledge": true,
   "defaults": false,
   "permissions": [
     {

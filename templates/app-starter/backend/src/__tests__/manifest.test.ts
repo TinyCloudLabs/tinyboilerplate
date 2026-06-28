@@ -15,6 +15,7 @@ describe("TinyCloud App Starter manifest and backend policy", () => {
     expect(manifest.manifest_version).toBe(1);
     expect(manifest.app_id).toBe(APP_ID);
     expect(manifest.name).toBe("TinyCloud App Starter");
+    expect(manifest.knowledge).toBe(true);
     expect(manifest.defaults).toBe(false);
     expect("backend" in manifest).toBe(false);
     expect("delegations" in manifest).toBe(false);

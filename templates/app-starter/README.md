@@ -4,6 +4,9 @@ Reusable TinyCloud app substrate with OpenKey browser identity, backend SIWE
 session verification, manifest-backed backend delegation, stale-policy
 invalidation, and one delegated KV probe.
 
+This template demonstrates all three TinyCloud mini-app package parts:
+`manifest.json`, runnable app code, and `knowledge/` resource notes.
+
 Template defaults are:
 
 - App id: `xyz.tinycloud.app-starter`
@@ -79,6 +82,7 @@ override; the frontend derives `http` or `https` from the page protocol.
 Use build and backend tests as unauthenticated smoke checks:
 
 ```bash
+bun run check:app-packages
 bun run build
 bun test templates/app-starter/backend/src
 ```

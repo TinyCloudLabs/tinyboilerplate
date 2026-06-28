@@ -4,6 +4,25 @@ Full-stack starter substrate for [TinyCloud](https://tinycloud.xyz) +
 [OpenKey](https://openkey.so), plus product examples that show the substrate in
 use.
 
+## TinyCloud Mini Apps
+
+A TinyCloud mini app has three inspectable parts:
+
+- `manifest.json` declares the app identity and the TinyCloud capabilities it
+  needs.
+- App code implements the browser experience, backend routes, storage, and
+  delegation behavior.
+- `knowledge/` explains app resources so humans and agents can operate on them
+  safely.
+
+The browser owns user identity and consent. The backend touches user data only
+through delegated TinyCloud access. `/api/manifest` is the runtime app
+contract; `/api/server-info` is the backend delegation policy.
+
+Use this repo for runnable TinyCloud app scaffolds and examples. Use
+[`tinycloud-app-kit`](https://github.com/TinyCloudLabs/tinycloud-app-kit) as the
+contract reference for manifests, knowledge bundles, and app package review.
+
 ## What to Start From
 
 Use `docs/app-architecture.md` as the durable app-creation contract. It defines
@@ -19,6 +38,10 @@ Use `examples/notes` as the first real product example. It builds on the same
 delegation contract with an app-specific Notes domain, backend-owned operational
 state, and a user-data model worth copying when you need more than the blank
 probe.
+
+For public onboarding, prefer a real app path: start from Notes when you want to
+build product behavior, and inspect App Starter when you want to understand the
+minimal substrate.
 
 ## UI Style
 
@@ -112,6 +135,7 @@ Verify the in-repo starter with:
 
 ```bash
 bun install --frozen-lockfile
+bun run check:app-packages
 bun run format:check
 bun run build
 bun test templates/app-starter/backend/src
@@ -139,6 +163,25 @@ TinyCloud space creation, or browser-to-backend delegation works end to end.
 `bun run test:browser:app-shell` is also unauthenticated; it renders the starter
 and Notes frontend shells with mocked-away backend use and checks for browser
 console errors.
+
+## Validation Ladder
+
+Use these checks in order as confidence grows:
+
+```bash
+bun run check:app-packages
+bun run test
+bun run test:browser:app-shell
+bun run test:real-auth
+```
+
+- App-package validation checks `manifest.json`, `knowledge` pointers, knowledge
+  frontmatter, and common secret-safety mistakes.
+- Backend tests check OpenAPI, manifest/server-info behavior, delegation policy,
+  and route contracts.
+- Browser shell smoke tests check unauthenticated frontend rendering.
+- Real-auth checks are human-in-loop and prove OpenKey/WebAuthn/TinyCloud
+  delegation behavior against a running app.
 
 The real-auth command is the scripted path for exercising the actual
 OpenKey/WebAuthn/TinyCloud login and backend delegation flow with a human

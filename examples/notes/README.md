@@ -4,6 +4,9 @@ TinyCloud Notes is the first real TinyCloud example app in this repo. It uses
 OpenKey for identity, a backend session for API authentication, and delegated
 TinyCloud access for user-owned note data.
 
+Notes demonstrates the full TinyCloud mini-app package shape: `manifest.json`,
+runnable app code, and `knowledge/` resource notes for humans and agents.
+
 ## UI Style
 
 Notes demonstrates the preferred example-app surface: a compact header with
@@ -69,6 +72,7 @@ For backend startup you still need `BACKEND_PRIVATE_KEY` in
 Build and route tests are smoke checks:
 
 ```bash
+bun run check:app-packages
 bun run build
 bun test examples/notes/backend/src
 ```

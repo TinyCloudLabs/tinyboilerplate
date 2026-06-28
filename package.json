@@ -24,6 +24,8 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "check": "bun run check:app-packages && bun run format:check && bun run lint && bun run build && bun run test",
+    "check:app-packages": "node scripts/check-app-packages.mjs",
     "postinstall": "node packages/client/scripts/fix-web-wasm-init.mjs",
     "predev": "lsof -ti:3003,5175 | xargs kill -9 2>/dev/null; pkill -9 -f 'bun --watch src/index.ts' 2>/dev/null; true",
     "dev": "bun run dev:app-starter",

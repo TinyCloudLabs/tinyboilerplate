@@ -3,6 +3,7 @@
   "app_id": "xyz.tinycloud.notes",
   "name": "TinyCloud Notes",
   "description": "Create, edit, search, and delete user-owned notes stored in TinyCloud.",
+  "knowledge": true,
   "defaults": false,
   "permissions": [
     {

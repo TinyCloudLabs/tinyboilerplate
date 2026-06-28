@@ -15,6 +15,7 @@ describe("TinyCloud Notes manifest and backend policy", () => {
 
     expect(manifest.app_id).toBe("xyz.tinycloud.notes");
     expect(manifest.name).toBe("TinyCloud Notes");
+    expect(manifest.knowledge).toBe(true);
     expect(manifest.defaults).toBe(false);
     expect("backend" in manifest).toBe(false);
     expect("delegations" in manifest).toBe(false);

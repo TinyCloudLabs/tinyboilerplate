@@ -393,6 +393,18 @@ async function rewriteTextFiles(outDir: string, options: ScaffoldOptions): Promi
   await replaceInFile(join(outDir, "frontend/vite.config.ts"), [
     ["port: 5175", `port: ${options.frontendPort}`],
   ]);
+  await replaceInFile(join(outDir, "knowledge/index.md"), [
+    ...commonReplacements,
+    ["app: xyz.tinycloud.app-starter", `app: ${options.appId}`],
+    [
+      "browser sign-in, manifest-backed backend delegation, and one delegated KV probe.",
+      `browser sign-in, manifest-backed backend delegation, and one delegated KV probe for ${options.appName}.`,
+    ],
+  ]);
+  await replaceInFile(join(outDir, "knowledge/kv.md"), [
+    ["app: xyz.tinycloud.app-starter", `app: ${options.appId}`],
+    ...commonReplacements,
+  ]);
 
   const backendTestFiles = [
     "backend/src/__tests__/delegations.test.ts",

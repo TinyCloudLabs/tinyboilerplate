@@ -176,6 +176,7 @@ describe("scaffold-app CLI", () => {
     expect(await readJson(join(out, "manifest.json"))).toMatchObject({
       app_id: "xyz.tinycloud.scratch",
       name: "Scratch TinyCloud App",
+      knowledge: true,
     });
 
     await expectFileContains(join(out, "backend/src/manifest.ts"), [
@@ -241,6 +242,15 @@ describe("scaffold-app CLI", () => {
     expect(existsSync(join(out, "test/real-auth-command.ts"))).toBe(false);
     await expectFileContains(join(out, "frontend/index.html"), [
       "<title>Scratch TinyCloud App</title>",
+    ]);
+    await expectFileContains(join(out, "knowledge/index.md"), [
+      "title: Scratch TinyCloud App",
+      "app: xyz.tinycloud.scratch",
+      "browser sign-in, manifest-backed backend delegation",
+    ]);
+    await expectFileContains(join(out, "knowledge/kv.md"), [
+      "app: xyz.tinycloud.scratch",
+      "delegated TinyCloud KV access",
     ]);
     await expectFileContains(join(out, "backend/openapi.yaml"), [
       'title: "Scratch TinyCloud App API"',

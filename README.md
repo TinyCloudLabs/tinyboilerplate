@@ -21,7 +21,9 @@ contract; `/api/server-info` is the backend delegation policy.
 
 Use this repo for runnable TinyCloud app scaffolds and examples. Use
 [`tinycloud-app-kit`](https://github.com/TinyCloudLabs/tinycloud-app-kit) as the
-contract reference for manifests, knowledge bundles, and app package review.
+contract reference for manifests, knowledge bundles, and app package review, and
+[protocol.tinycloud.xyz](https://protocol.tinycloud.xyz) for the concepts behind
+how TinyCloud apps work.
 
 ## What to Start From
 
@@ -346,6 +348,19 @@ backend storage before any delegated data route.
 The delegation chain is the same regardless of your data model: connect
 identity, sign into TinyCloud, delegate the backend policy, then operate on
 TinyCloud via `DelegatedAccess`.
+
+## Deploying
+
+The blessed production shape is: frontend on Cloudflare Pages, backend in a
+Phala Cloud TEE, OpenKey via the canonical `https://openkey.so`, and the
+canonical hosted TinyCloud node. See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the
+full build, containerization, DNS, env-var, and operational-notes walkthrough,
+including backend key-rotation caveats and SQL schema initialization.
+
+For the architecture behind these choices, see
+[protocol.tinycloud.xyz](https://protocol.tinycloud.xyz) (concepts) and
+[`tinycloud-app-kit`](https://github.com/TinyCloudLabs/tinycloud-app-kit)
+(manifest and package contract reference).
 
 ## Environment Variables
 

@@ -209,6 +209,7 @@ async function writeRootPackageJson(outDir: string, options: ScaffoldOptions): P
         "bun run --cwd packages/core test && bun run --cwd packages/client test && bun run --cwd packages/server test",
       build: "bun run build:packages && bun run build:backend && bun run build:frontend",
       test: "bun run test:backend && bun run test:packages",
+      "deploy:frontend": "bun run build && bunx wrangler pages deploy",
       "test:real-auth": "bun run --cwd test real-auth",
       lint: "eslint .",
       "lint:fix": "eslint . --fix",
@@ -314,6 +315,23 @@ async function rewriteTextFiles(outDir: string, options: ScaffoldOptions): Promi
     ["localhost:5175", `localhost:${options.frontendPort}`],
     ["localhost:3003", `localhost:${options.backendPort}`],
   ]);
+
+  const appSlug = packageNameFromAppId(options.appId);
+  await replaceInFile(join(outDir, "backend/Dockerfile"), [
+    ["EXPOSE 3003", `EXPOSE ${options.backendPort}`],
+  ]);
+  await replaceInFile(join(outDir, "docker-compose.phala.yml"), [
+    ["tinycloud-app-backend", `${appSlug}-backend`],
+    ['"3003:3003"', `"${options.backendPort}:${options.backendPort}"`],
+    ['PORT: "3003"', `PORT: "${options.backendPort}"`],
+    ["http://localhost:3003/health", `http://localhost:${options.backendPort}/health`],
+    ["http://app-backend:3003", `http://app-backend:${options.backendPort}`],
+  ]);
+  await replaceInFile(join(outDir, "phala.toml"), [
+    ["tinycloud-app-backend", `${appSlug}-backend`],
+    ["gateway_port = 3003", `gateway_port = ${options.backendPort}`],
+  ]);
+  await replaceInFile(join(outDir, "wrangler.toml"), [["tinycloud-app", appSlug]]);
 
   await replaceInFile(join(outDir, "backend/openapi.yaml"), [
     ["title: TinyCloud App Starter API", `title: ${yamlScalar(`${options.appName} API`)}`],

@@ -1,0 +1,7 @@
+name = "tinycloud-app-backend"
+profile = "your-phala-profile"
+compose_file = "docker-compose.phala.yml"
+gateway_domain = "api.my-app.example.com"
+gateway_port = 3003
+public_logs = false
+public_sysinfo = true

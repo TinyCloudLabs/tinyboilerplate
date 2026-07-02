@@ -16,9 +16,11 @@ the concept docs at <https://protocol.tinycloud.xyz>.
 The commands below are grounded in a real deployed TinyCloud app. Where a step
 requires an account, dashboard action, or DNS record you must create yourself,
 it is marked **(account/dashboard step)**. Nothing in this guide fabricates a
-turnkey command that does not exist; the app-starter ships with local dev and
-CI, not with a wired-up production pipeline, so you build the small amount of
-deploy plumbing described here.
+turnkey command that does not exist. The app-starter ships the deploy files
+referenced below (`backend/Dockerfile`, `.dockerignore`, `docker-compose.phala.yml`,
+`phala.toml`, `wrangler.toml`), pre-substituted for your app id and ports by the
+scaffold; what remains is the account/dashboard setup and running the deploy
+commands.
 
 ---
 
@@ -42,8 +44,8 @@ cd frontend && bun run build
 | Root directory | repo root (a standalone scaffold) |
 
 A `wrangler.toml` at the repo root records the Pages project name, the output
-directory, and the frontend environment variables. Example, adapted from a real
-TinyCloud app:
+directory, and the frontend environment variables. The app-starter ships one;
+the scaffold fills in the project name from your app id. It looks like:
 
 ```toml
 name = "my-tinycloud-app"
@@ -54,6 +56,9 @@ compatibility_date = "2026-05-12"
 VITE_OPENKEY_HOST = "https://openkey.so"
 VITE_BACKEND_URL = "https://api.my-app.example.com"
 ```
+
+Set `VITE_BACKEND_URL` to your deployed backend URL before building for
+production.
 
 ### Deploy
 
@@ -111,25 +116,25 @@ host.
 ### Containerizing the Bun/Express backend
 
 The app-starter backend is an Express server run by Bun (`bun src/index.ts`).
-There is no backend `Dockerfile` in this repo yet — you add one. The pattern
-below is adapted from a real deployed TinyCloud app and builds the shared
-workspace packages plus the backend into a single image.
-
-Create `backend/Dockerfile`:
+The app-starter ships `backend/Dockerfile` — the scaffold copies it into your
+generated app and sets `EXPOSE` to your backend port. It builds the shared
+workspace packages plus the backend into a single image against the flattened
+standalone layout the scaffold produces:
 
 ```dockerfile
 # syntax=docker/dockerfile:1.7
-FROM oven/bun:1.3 AS app
+FROM oven/bun:1.3.9 AS app
 WORKDIR /app
 
 # husky's prepare script must be neutralized in CI/Docker.
 ENV HUSKY=0
 
-# Copy the workspace root + only the packages the backend needs.
 COPY package.json tsconfig.base.json turbo.json ./
+COPY manifest.json ./
 COPY packages ./packages
-COPY templates/app-starter/backend ./backend
-COPY templates/app-starter/frontend/package.json ./frontend/package.json
+COPY backend ./backend
+COPY frontend/package.json ./frontend/package.json
+COPY test/package.json ./test/package.json
 
 RUN bun install
 RUN cd packages/core && bun run build
@@ -144,16 +149,20 @@ CMD ["bun", "run", "start"]
 Notes:
 
 - Build for `linux/amd64` — Phala CVMs run amd64:
-  `docker buildx build --platform linux/amd64 ...`.
-- For a scaffolded standalone app, the paths are simpler (`COPY backend ./backend`,
-  `COPY frontend/package.json ...`) because the scaffold flattens the layout.
+  `docker buildx build --platform linux/amd64 -f backend/Dockerfile ...`.
+- The Dockerfile assumes the scaffolded standalone layout (backend, frontend,
+  packages, and `manifest.json` at the repo root). Build it from a scaffolded
+  app, not from `templates/app-starter` inside this monorepo, where the
+  workspace root lives one level up.
+- `manifest.json` is copied because the backend reads it at runtime; keep it in
+  the build context.
 - `@tinycloud/node-sdk-wasm` ships CJS wrappers that must be patched for ESM;
-  the `@tinyboilerplate/server` postinstall handles this during `bun install`,
-  so keep the package's `scripts/` present in the build context if you trim the
-  workspace.
+  the generated app's `postinstall` (`fix-web-wasm-init.mjs` +
+  `fix-wasm-esm.mjs`) handles this during `bun install`, so keep the package
+  `scripts/` present in the build context if you trim the workspace.
 
-Add a `.dockerignore` at the repo root so secrets and build junk never enter the
-image:
+The app-starter also ships a `.dockerignore` (copied to the generated app root)
+so secrets and build junk never enter the image:
 
 ```gitignore
 .git
@@ -187,8 +196,10 @@ The GHCR package must be readable by Phala **(account/dashboard step)**.
 
 Phala deploys a Docker Compose stack. A production backend needs two services:
 the backend itself, and a TLS ingress that terminates HTTPS at your custom
-domain and forwards to the backend. This shape is taken from a real deployed
-TinyCloud app:
+domain and forwards to the backend. The app-starter ships
+`docker-compose.phala.yml` with exactly this shape; the scaffold sets the image
+name and ports for your app. All secrets and per-deploy values are passed as
+environment (Phala secrets), never baked into the file:
 
 ```yaml
 services:
@@ -203,6 +214,12 @@ services:
       BACKEND_PRIVATE_KEY: ${BACKEND_PRIVATE_KEY}
       TINYCLOUD_HOST: ${TINYCLOUD_HOST:-https://tee.node.tinycloud.xyz}
       FRONTEND_URL: ${FRONTEND_URL:-https://my-app.example.com}
+    healthcheck:
+      test: ["CMD", "bun", "-e", "await fetch('http://localhost:3003/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
   dstack-ingress:
@@ -234,7 +251,9 @@ Cloudflare DNS API and the CVM's dstack socket. Reference this image from
 `infra/phala-ingress/Dockerfile` (the real app pins a specific `dstack-ingress`
 digest and overrides its entrypoint).
 
-Add a `phala.toml` describing the CVM:
+The app-starter ships a `phala.toml` describing the CVM (the scaffold fills in
+the app name and gateway port); set `profile` and `gateway_domain` for your
+deployment:
 
 ```toml
 name = "<app>-backend"
@@ -408,17 +427,19 @@ mind when testing against a staging domain that lacks a valid cert.
 
 Frontend:
 
-- [ ] `wrangler.toml` with `pages_build_output_dir = "frontend/dist"` and
-      `[vars]` for `VITE_OPENKEY_HOST` / `VITE_BACKEND_URL`
+- [ ] `wrangler.toml` (shipped) with `pages_build_output_dir = "frontend/dist"`
+      and `[vars]` for `VITE_OPENKEY_HOST` / `VITE_BACKEND_URL` — set
+      `VITE_BACKEND_URL` to your backend URL
 - [ ] Cloudflare Pages project created and custom domain mapped
       **(account/dashboard step)**
 - [ ] `bun run build && wrangler pages deploy`
 
 Backend:
 
-- [ ] `backend/Dockerfile` + root `.dockerignore`
+- [ ] `backend/Dockerfile` + root `.dockerignore` (both shipped)
 - [ ] amd64 image pushed to a Phala-readable registry
-- [ ] `docker-compose.phala.yml` (backend + ingress) and `phala.toml`
+- [ ] `docker-compose.phala.yml` (backend + ingress) and `phala.toml` (both
+      shipped; set `profile`, `gateway_domain`, and image name)
 - [ ] CVM created; CVM ID and gateway CNAME obtained
       **(account/dashboard step)**
 - [ ] Backend DNS: `CNAME` to gateway + `TXT _dstack-app-address...:443`

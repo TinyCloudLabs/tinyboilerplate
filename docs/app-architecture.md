@@ -24,6 +24,25 @@ Every backend-mediated app should keep these jobs separate:
   It should be represented as another delegatee with its own DID and permission
   policy, not as an implicit extension of the backend.
 
+A full TinyCloud app has up to three components, and **each has its own DID**:
+the frontend, the backend, and the agent. TinyCloud is both the datastore and
+the communication substrate — the components store data in TinyCloud and
+communicate through shared TinyCloud spaces rather than bespoke channels.
+Simpler apps are subsets of this shape: frontend-only, or frontend plus backend.
+
+The frontend owns consent for the whole app. It asks the user, in one signature,
+for every permission the app needs — its own, plus the subset the backend
+requests and the subset the agent requests. It then delegates the
+backend-requested subset to the backend's DID and the agent-requested subset to
+the agent's DID. This single-consent fan-out is why the backend and agent each
+need a stable DID: a delegation is bound to the specific delegatee identity.
+
+In the blessed deployment, the backend runs inside a TEE (Phala Cloud CVM) so it
+is verifiable — attestation proves the backend runs the software it claims to,
+which is what lets a user trust a component that holds delegated access to their
+data. The agent runs on the TinyCloud agent service. See `DEPLOYMENT.md` for how
+these targets are configured.
+
 Do not let backend data routes rely on wallet credentials, raw private keys, or
 frontend-local state. The backend operates on user data only through a portable
 delegation the user signs.

@@ -71,7 +71,12 @@ describe("scaffold-app CLI", () => {
       "backend/package.json",
       "backend/.env.example",
       "backend/openapi.yaml",
+      "backend/Dockerfile",
       "backend/src/manifest.ts",
+      "docker-compose.phala.yml",
+      "phala.toml",
+      "wrangler.toml",
+      ".dockerignore",
       "packages/core/package.json",
       "packages/client/package.json",
       "packages/server/package.json",
@@ -133,8 +138,8 @@ describe("scaffold-app CLI", () => {
       },
     });
     expect(rootPackage.overrides).toMatchObject({
-      "@tinycloud/web-sdk": "2.4.0-beta.17",
-      "@tinycloud/node-sdk": "2.4.0-beta.17",
+      "@tinycloud/web-sdk": "2.4.0",
+      "@tinycloud/node-sdk": "2.4.0",
     });
 
     expect(await readJson(join(out, "frontend/package.json"))).toMatchObject({
@@ -296,6 +301,24 @@ describe("scaffold-app CLI", () => {
       "playwright-report/",
       "blob-report/",
       ".playwright/",
+    ]);
+    await expectFileContains(join(out, "backend/Dockerfile"), ["EXPOSE 3013"]);
+    await expectFileContains(join(out, "docker-compose.phala.yml"), [
+      "ghcr.io/your-org/xyz-tinycloud-scratch-backend:latest",
+      "ghcr.io/your-org/xyz-tinycloud-scratch-backend:ingress-latest",
+      '"3013:3013"',
+      'PORT: "3013"',
+      "http://localhost:3013/health",
+      "http://app-backend:3013",
+    ]);
+    await expectFileContains(join(out, "phala.toml"), [
+      'name = "xyz-tinycloud-scratch-backend"',
+      "gateway_port = 3013",
+    ]);
+    await expectFileContains(join(out, "wrangler.toml"), [
+      'name = "xyz-tinycloud-scratch"',
+      'pages_build_output_dir = "frontend/dist"',
+      'VITE_OPENKEY_HOST = "https://openkey.so"',
     ]);
 
     const generateKey = await runBun(["run", "generate-key"], out);

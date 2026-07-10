@@ -20,6 +20,13 @@ delegation contract with an app-specific Notes domain, backend-owned operational
 state, and a user-data model worth copying when you need more than the blank
 probe.
 
+Use `examples/tasks` when your app writes storage **directly from the browser**
+(`tcw.sql`) instead of through a delegating backend. It is a small SQL task list
+that consumes the reusable browser-direct guardrails in `@tinyboilerplate/client`
+(`createSchemaEnsurer`, `createMutationGuard`, `createDidKeyedCache`) and its
+manifest grants `tinycloud.sql` the `schema` action because it issues its own DDL.
+See `docs/app-architecture.md` for when to pick delegated-backend vs browser-direct.
+
 ## UI Style
 
 TinyCloud starter and example apps should feel like clean operational tools.
@@ -76,6 +83,16 @@ bun run dev:notes
 Notes uses `http://localhost:5174` for the frontend and `http://localhost:3002`
 for the backend, with HTTPS on those same ports when trusted local certs are
 present.
+
+To run the browser-direct Tasks example instead:
+
+```bash
+cp examples/tasks/frontend/.env.example examples/tasks/frontend/.env
+bun run dev:tasks
+```
+
+Tasks is frontend-only (it writes to `tcw.sql` directly from the browser, so it
+has no backend) and runs on `http://localhost:5176`.
 
 ## Scaffold a Standalone App
 
@@ -298,7 +315,9 @@ backend storage before any delegated data route.
 1. Scaffold from `templates/app-starter` using `bun run scaffold:app -- ...`.
 2. Replace the probe route and UI with your app's model.
 3. Use `examples/notes` as the reference for a real app-level data model,
-   OpenAPI contract, and policy-staleness flow.
+   OpenAPI contract, and policy-staleness flow (delegated-backend pattern).
+4. Use `examples/tasks` as the reference when you write storage directly from the
+   browser (`tcw.sql`), reusing the `@tinyboilerplate/client` guardrails.
 
 The delegation chain is the same regardless of your data model: connect
 identity, sign into TinyCloud, delegate the backend policy, then operate on
@@ -332,6 +351,7 @@ TinyCloud via `DelegatedAccess`.
   with that same browser session.
 - **Wallet-mode session cap**: TinyCloud wallet-mode sessions expire after 1 hour. The `DelegationCache` uses a 50-minute TTL to stay under this cap.
 - **WASM ESM fix**: `@tinycloud/node-sdk-wasm` ships CJS wrappers that break in ESM. The package postinstall patch keeps local builds working.
+- **SDK version pins**: The root `overrides` pin the `@tinycloud` SDK to `2.5.1`, except `@tinycloud/sdk-services`, which is pinned to `2.4.2` — that is the latest published release on the `sdk-services` line (there is no `2.5.1`). These overrides are copied verbatim into every scaffolded app.
 - **Delegation expiry**: App-starter delegations default to 7 days. After expiry or policy drift, the user must grant a new delegation from the frontend.
 - **Backend identity**: The backend has its own TinyCloud space. Delegations are stored in backend-owned KV, not in the user's app data.
 

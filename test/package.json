@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "bun test",
     "app-shell-smoke": "bun app-shell-smoke.ts",
     "install:browsers": "playwright install chromium",
     "install:browsers:ci": "playwright install --with-deps chromium",

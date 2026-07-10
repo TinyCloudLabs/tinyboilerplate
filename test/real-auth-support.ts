@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
+import type { Locator, Page } from "playwright";
 
 export const DEFAULT_FRONTEND_URL = "http://localhost:5175";
 export const DEFAULT_BACKEND_URL = "http://localhost:3003";
@@ -257,4 +258,123 @@ function detectMkcertRootCa(env: Record<string, string | undefined>): string | n
 function stringField(record: Record<string, unknown>, key: string): string | null {
   const value = record[key];
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+// ── delegation-authorization decoder (network-capture helper) ────────────────────
+// Ported (mechanism, not app shape) from TinyChat's test/agent-flow-manual.ts:35-97.
+// When you capture the Authorization a client sends with a delegated invoke, it is
+// either a *signed UCAN* (a compact JWS: three base64url segments, header starts
+// "eyJ", payload carries an `att` capability map) or a *bare CID / opaque token*
+// (a reference the node must resolve server-side — NOT self-describing, no `att`).
+// Telling the two apart is the generic, app-agnostic assertion any real-auth rig
+// wants: "did the client actually send a signed capability, or just a CID?"
+
+export type DelegationAuthorizationKind = "signed-ucan-jwt" | "bare-cid" | "missing";
+
+export interface DelegationAuthorizationInfo {
+  kind: DelegationAuthorizationKind;
+  /** Sorted resource keys of the JWT `att` capability map (empty unless signed). */
+  attResources: string[];
+  /** The `exp` claim (seconds since epoch) when decodable, else null. */
+  expiresAt: number | null;
+  /** The token with any `Bearer ` prefix stripped, or null when absent. */
+  token: string | null;
+}
+
+/** Decode a base64url string to UTF-8 (padding-tolerant). Pure. */
+export function b64urlDecode(input: string): string {
+  let b64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = b64.length % 4;
+  if (pad) b64 += "=".repeat(4 - pad);
+  return Buffer.from(b64, "base64").toString("utf8");
+}
+
+/**
+ * Classify a delegation Authorization value: a signed UCAN JWT vs a bare CID vs
+ * missing. Pure — no browser needed, so it is directly unit-testable. A JWT is
+ * recognised by three `.`-separated segments whose header segment begins "eyJ"
+ * (`{"...` base64url-encoded) AND whose payload decodes to an object carrying an
+ * `att` map; anything else is treated as a bare CID / opaque token.
+ */
+export function classifyDelegationAuthorization(
+  auth: string | null | undefined,
+): DelegationAuthorizationInfo {
+  if (!auth || !auth.trim()) {
+    return { kind: "missing", attResources: [], expiresAt: null, token: null };
+  }
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  if (!token) {
+    return { kind: "missing", attResources: [], expiresAt: null, token: null };
+  }
+
+  const parts = token.split(".");
+  if (parts.length >= 3 && parts[0].startsWith("eyJ")) {
+    try {
+      const payload = JSON.parse(b64urlDecode(parts[1])) as {
+        att?: Record<string, unknown>;
+        exp?: unknown;
+      };
+      const attResources =
+        payload && typeof payload.att === "object" && payload.att !== null
+          ? Object.keys(payload.att).sort()
+          : [];
+      const expiresAt = typeof payload?.exp === "number" ? payload.exp : null;
+      // A UCAN carries an `att` map; a JWS that decodes but has no att is still
+      // JWT-shaped, but it is not a delegation — classify by the att presence.
+      if (attResources.length > 0) {
+        return { kind: "signed-ucan-jwt", attResources, expiresAt, token };
+      }
+      return { kind: "bare-cid", attResources: [], expiresAt, token };
+    } catch {
+      // JWT-like (3 segments, eyJ header) but payload undecodable → not a usable
+      // signed delegation; fall through to bare-cid.
+      return { kind: "bare-cid", attResources: [], expiresAt: null, token };
+    }
+  }
+
+  return { kind: "bare-cid", attResources: [], expiresAt: null, token };
+}
+
+// ── marker → reload → rehydrate persistence proof ────────────────────────────────
+// Ported (mechanism, not app shape) from TinyChat's test/real-auth-manual.ts:19,
+// 201-216. The generic idea: write a UNIQUE marker into the app, reload the page so
+// nothing survives in memory, then prove the marker is restored from the user's
+// TinyCloud space (not just an in-memory cache). The app-specific "where does the
+// marker appear" is injected via a `locate` callback so this stays generic.
+
+let persistenceMarkerCounter = 0;
+
+/**
+ * A unique marker safe to embed in app data and later assert after a reload.
+ * Combines a base36 timestamp with a monotonic counter so two calls in the same
+ * millisecond still differ. Pure (the only impurity is the clock/counter).
+ */
+export function createPersistenceMarker(prefix = "e2e"): string {
+  persistenceMarkerCounter += 1;
+  return `${prefix}-${Date.now().toString(36)}-${persistenceMarkerCounter.toString(36)}`;
+}
+
+export interface PersistenceProofOptions {
+  page: Page;
+  marker: string;
+  /** Given the reloaded page and the marker, return the locator that must appear. */
+  locate: (page: Page, marker: string) => Locator;
+  reloadWaitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+  timeoutMs?: number;
+}
+
+/**
+ * Reload the page, then wait for the marker to reappear via the caller's locator —
+ * proving the marked data was persisted to (and rehydrated from) storage. Returns
+ * nothing; throws (via Playwright's waitFor) if the marker does not reappear.
+ */
+export async function verifyPersistedMarker({
+  page,
+  marker,
+  locate,
+  reloadWaitUntil = "domcontentloaded",
+  timeoutMs = 30_000,
+}: PersistenceProofOptions): Promise<void> {
+  await page.reload({ waitUntil: reloadWaitUntil });
+  await locate(page, marker).waitFor({ state: "visible", timeout: timeoutMs });
 }

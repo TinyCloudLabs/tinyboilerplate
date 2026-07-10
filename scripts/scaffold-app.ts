@@ -213,8 +213,7 @@ async function writeRootPackageJson(outDir: string, options: ScaffoldOptions): P
       lint: "eslint .",
       "lint:fix": "eslint . --fix",
       "generate-key": "bun run packages/server/scripts/generate-key.ts backend/.env",
-      postinstall:
-        "node packages/client/scripts/fix-web-wasm-init.mjs && node packages/server/scripts/fix-wasm-esm.mjs",
+      postinstall: "node packages/server/scripts/fix-wasm-esm.mjs",
     },
     devDependencies: sourcePackage.devDependencies ?? {},
   };

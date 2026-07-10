@@ -1,5 +1,5 @@
 {
-  "name": "@tinyboilerplate/notes-frontend",
+  "name": "@tinyboilerplate/tasks-frontend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,6 @@
   "dependencies": {
     "@openkey/sdk": "^0.8.4",
     "@tinyboilerplate/client": "workspace:*",
-    "@tinyboilerplate/core": "workspace:*",
     "@tinycloud/web-sdk": "2.5.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

@@ -1,5 +1,10 @@
 # TinyBoilerplate Example Apps Handoff
 
+> **HISTORICAL — superseded by the modernization milestone.** This handoff
+> describes a pre-modernization repository state, including obsolete SDK pins and
+> example inventory; retain it only for context and do not treat it as current
+> implementation guidance.
+
 This handoff is for the next agent working on TinyBoilerplate examples. The
 goal is to grow the repo into a reliable foundation for new TinyCloud apps by
 adding small, focused examples one at a time.

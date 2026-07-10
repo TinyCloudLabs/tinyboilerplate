@@ -1,0 +1,15 @@
+{
+  "manifest_version": 1,
+  "app_id": "xyz.tinycloud.tasks",
+  "name": "TinyCloud Tasks",
+  "description": "A browser-direct SQL task list. The signed-in session writes straight to tinycloud.sql — there is no delegating backend.",
+  "defaults": false,
+  "permissions": [
+    {
+      "service": "tinycloud.sql",
+      "path": "tasks",
+      "actions": ["read", "write", "schema"],
+      "description": "Store the user's tasks (id, title, done, timestamps) plus an index over updated_at. DDL (CREATE TABLE / CREATE INDEX) requires the 'schema' ability."
+    }
+  ]
+}

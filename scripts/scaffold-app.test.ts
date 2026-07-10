@@ -128,14 +128,15 @@ describe("scaffold-app CLI", () => {
         lint: "eslint .",
         "lint:fix": "eslint . --fix",
         "generate-key": "bun run packages/server/scripts/generate-key.ts backend/.env",
-        postinstall:
-          "node packages/client/scripts/fix-web-wasm-init.mjs && node packages/server/scripts/fix-wasm-esm.mjs",
+        postinstall: "node packages/server/scripts/fix-wasm-esm.mjs",
       },
     });
-    expect(rootPackage.overrides).toMatchObject({
-      "@tinycloud/web-sdk": "2.2.0-beta.12",
-      "@tinycloud/node-sdk": "2.2.0-beta.12",
-    });
+    // Invariant, not literals: the scaffold must propagate the source repo's
+    // `overrides` verbatim. Asserting exact equality against the live source
+    // package.json means a future SDK bump can't break this test, while a
+    // scaffold that drops or mangles any override still fails it.
+    const sourcePackage = await readJson(join(repoRoot, "package.json"));
+    expect(rootPackage.overrides).toEqual(sourcePackage.overrides);
 
     expect(await readJson(join(out, "frontend/package.json"))).toMatchObject({
       name: "@scratch/tinycloud-frontend",

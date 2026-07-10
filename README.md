@@ -392,7 +392,6 @@ For the architecture behind these choices, see
 - **WASM ESM fix**: `@tinycloud/node-sdk-wasm` ships CJS wrappers that break in ESM. The package postinstall patch keeps local builds working.
 - **Delegation expiry**: App-starter delegations default to 7 days. After expiry or policy drift, the user must grant a new delegation from the frontend.
 - **Backend identity**: The backend has its own TinyCloud space. Delegations are stored in backend-owned KV, not in the user's app data.
-- **Fresh-key first-boot failure**: With a brand-new `BACKEND_PRIVATE_KEY`, the backend's first `signIn()` crashes during account bootstrap (`Failed to create account index schema: SQL operation requires multiple permissions (tinycloud.sql/schema, tinycloud.sql/write) but this SDK runtime does not support multi-resource invocations`, node-sdk 2.4.0). The failed attempt still provisions the account, so the second boot succeeds. Under `bun run dev:app-starter`, turbo reports "run failed" while `bun --watch` restarts and recovers. Workaround: re-run once, or let the watch restart finish. See [js-sdk#300](https://github.com/TinyCloudLabs/js-sdk/issues/300).
 
 ## License
 

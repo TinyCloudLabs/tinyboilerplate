@@ -344,3 +344,56 @@ function isDelegationBundle(value: unknown): value is DelegationBundle {
     entry.delegations.every((delegation) => typeof delegation === "string")
   );
 }
+
+// ── Node availability classification ─────────────────────────────────
+
+const DEFAULT_ACTIVATION_TIMEOUT_MS = 45_000;
+
+/** Activation failed because the TinyCloud node never answered, not because the delegation was rejected. */
+export class NodeUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NodeUnavailableError";
+  }
+}
+
+// Gateway timeouts (Cloudflare 52x/50x pages), socket-level failures, and our
+// own activation deadline. A node that REJECTS a delegation answers with a
+// structured authz error and never matches this pattern.
+const NODE_UNAVAILABLE_PATTERN =
+  /\b52[0-9]\b|\b50[234]\b|timed?\s?out|timeout|cloudflare|fetch failed|network\s+(error|request)|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket/i;
+
+export function isNodeUnavailableError(error: unknown): boolean {
+  if (error instanceof NodeUnavailableError) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return NODE_UNAVAILABLE_PATTERN.test(message);
+}
+
+/**
+ * Bound a node round-trip so a silent upstream fails fast as
+ * NodeUnavailableError instead of riding to the gateway's ~100s kill.
+ */
+export async function withActivationTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs = DEFAULT_ACTIVATION_TIMEOUT_MS,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new NodeUnavailableError(
+                `TinyCloud node did not respond within ${timeoutMs}ms during delegation activation`,
+              ),
+            ),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}

@@ -235,4 +235,81 @@ describe("delegation routes", () => {
     expect(await store.load(TEST_ADDRESS)).toBeNull();
     expect(cache.get(TEST_ADDRESS)).toBeNull();
   });
+
+  it("returns 503 node_unavailable when activation dies at the gateway", async () => {
+    const { app, store, cache } = createApp({
+      activateDelegation: async () => {
+        throw new Error("error code: 524 <html>cloudflare: A timeout occurred</html>");
+      },
+    });
+    const serialized = JSON.stringify({
+      expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      ownerAddress: TEST_ADDRESS,
+      chainId: 1,
+      delegateDID: TEST_DID,
+      resources: backendDelegationResolvedPermissions(TEST_DID),
+    });
+
+    const response = await request(app, "/api/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serialized }),
+    });
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body.error).toBe("node_unavailable");
+    expect(body.retryable).toBe(true);
+    expect(await store.load(TEST_ADDRESS)).toBeNull();
+    expect(cache.get(TEST_ADDRESS)).toBeNull();
+  });
+
+  it("returns 503 node_unavailable when activation exceeds the deadline", async () => {
+    const { app, store } = createApp({
+      activateDelegation: () => new Promise(() => {}),
+      activationTimeoutMs: 50,
+    });
+    const serialized = JSON.stringify({
+      expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      ownerAddress: TEST_ADDRESS,
+      chainId: 1,
+      delegateDID: TEST_DID,
+      resources: backendDelegationResolvedPermissions(TEST_DID),
+    });
+
+    const response = await request(app, "/api/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serialized }),
+    });
+
+    expect(response.status).toBe(503);
+    expect((await response.json()).error).toBe("node_unavailable");
+    expect(await store.load(TEST_ADDRESS)).toBeNull();
+  });
+
+  it("still rejects genuinely refused delegations as 400 invalid_delegation", async () => {
+    const { app, store } = createApp({
+      activateDelegation: async () => {
+        throw new Error("Unauthorized Action: es256:... / tinycloud.sql/write");
+      },
+    });
+    const serialized = JSON.stringify({
+      expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      ownerAddress: TEST_ADDRESS,
+      chainId: 1,
+      delegateDID: TEST_DID,
+      resources: backendDelegationResolvedPermissions(TEST_DID),
+    });
+
+    const response = await request(app, "/api/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serialized }),
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe("invalid_delegation");
+    expect(await store.load(TEST_ADDRESS)).toBeNull();
+  });
 });

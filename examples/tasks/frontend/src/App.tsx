@@ -436,7 +436,18 @@ function short(value: string, head: number, tail: number): string {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null) {
+    const { message, error: code } = error as { message?: unknown; error?: unknown };
+    if (typeof message === "string" && message) return message;
+    if (typeof code === "string" && code) return code;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
 }
 
 function safeGet(key: string): string | null {

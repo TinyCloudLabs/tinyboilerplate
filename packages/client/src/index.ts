@@ -41,3 +41,23 @@ export { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./req
 export { SessionStore, type StoredSession } from "./tokens.js";
 
 export { createApiClient, type ApiClient, type ApiClientConfig } from "./api.js";
+
+// ── Browser-direct storage guardrails (see ./storage) ────────────────────────
+export {
+  createSchemaEnsurer,
+  createMutationGuard,
+  createDidKeyedCache,
+  accountId,
+  isDdlStatement,
+  assertDdlActionsGranted,
+  resolveSqlDbHandle,
+  assertFullPathDbHandle,
+  SQL_SCHEMA_ACTION,
+  type SchemaEnsurer,
+  type SchemaEnsurerOptions,
+  type MutationGuard,
+  type DidKeyedCache,
+  type DidKeyedCacheOptions,
+  type DidKeyedSession,
+  type KeyValueStorage,
+} from "./storage/index.js";

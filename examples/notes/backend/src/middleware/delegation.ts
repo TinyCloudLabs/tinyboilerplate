@@ -5,7 +5,9 @@ import { backendDelegationPolicyHash } from "../manifest.js";
 import {
   activatePortableDelegation,
   deserializePortableDelegationSet,
+  isNodeUnavailableError,
   normalizeDid,
+  withActivationTimeout,
 } from "../portable-delegation.js";
 
 interface DelegationMiddlewareConfig {
@@ -57,11 +59,21 @@ export function createDelegationMiddleware(config: DelegationMiddlewareConfig) {
       }
 
       const delegation = deserializePortableDelegationSet(stored.serialized);
-      const access = await activatePortableDelegation(node, delegation);
+      const access = await withActivationTimeout(activatePortableDelegation(node, delegation));
       cache.set(address, access);
       req.delegatedAccess = access;
       next();
     } catch (error) {
+      if (isNodeUnavailableError(error)) {
+        console.error("[delegation] node unavailable during activation:", error);
+        res.status(503).json({
+          error: "node_unavailable",
+          message:
+            "The TinyCloud storage node is not responding. Your access is intact — try again in a few minutes.",
+          retryable: true,
+        });
+        return;
+      }
       console.error("[delegation] activation failed:", error);
       res
         .status(500)

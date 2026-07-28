@@ -1,8 +1,9 @@
 # TinyBoilerplate AI Project Guide
 
 This repository is the TinyCloud app-creation substrate. It contains shared
-packages, a reusable blank starter, a real Notes example, and a scaffold CLI
-that materializes standalone TinyCloud apps.
+packages, a reusable blank starter, a delegated-backend Notes example, a
+browser-direct Tasks example, and a scaffold CLI that materializes standalone
+TinyCloud apps.
 
 ## Canonical Sources
 
@@ -11,7 +12,9 @@ Use these files first when creating or evaluating a new app:
 - `README.md` - human-facing setup, scaffold, verification, and runtime notes
 - `docs/app-architecture.md` - durable architecture contract for app creation
 - `templates/app-starter` - canonical blank starter source
-- `examples/notes` - first real product example
+- `examples/notes` - first real product example (delegated-backend pattern)
+- `examples/tasks` - browser-direct (`tcw.sql`) example consuming the
+  `@tinyboilerplate/client` storage guardrails
 
 ## Current App-Creation Flow
 
@@ -51,7 +54,9 @@ packages/server            backend identity, session refresh, delegation store,
                            and delegation cache helpers
 packages/agent-runtime     agent/container runtime support
 templates/app-starter      canonical blank reusable starter
-examples/notes             canonical first real app example
+examples/notes             canonical first real app example (delegated-backend)
+examples/tasks             browser-direct tcw.sql example (frontend-only) that
+                           consumes packages/client storage guardrails
 ```
 
 Root commands:
@@ -61,6 +66,7 @@ bun install
 bun run build
 bun run dev:app-starter
 bun run dev:notes
+bun run dev:tasks
 bun run scaffold:app -- --help
 bun test scripts/scaffold-app.test.ts
 bun run test:scaffold:integration
@@ -110,6 +116,8 @@ bun run test:browser:app-shell
 - manifest/backend policy composition
 - backend delegation creation, send, status, and revoke calls
 - bearer-token API requests
+- browser-direct `tcw.sql` storage guardrails (`createSchemaEnsurer`,
+  `createMutationGuard`, `createDidKeyedCache`) — see `examples/tasks`
 
 `@tinyboilerplate/server` owns backend-side helpers for:
 

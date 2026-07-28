@@ -24,3 +24,5 @@ export {
 } from "./auth.js";
 
 export { createCsrfMiddleware, type CsrfConfig } from "./csrf.js";
+
+export { applyRateLimiter, GLOBAL_LIMIT } from "./rate-limits.js";

@@ -12,8 +12,6 @@ COPY packages/core packages/core
 COPY packages/agent-runtime packages/agent-runtime
 # Needed for @tinyboilerplate/server's postinstall (fix-wasm-esm.mjs lives here).
 COPY packages/server/scripts packages/server/scripts
-# Needed for @tinyboilerplate/client's postinstall (fix-web-wasm-init.mjs lives here).
-COPY packages/client/scripts packages/client/scripts
 # Minimal server/client package.json stubs so bun install's workspace scan doesn't error.
 COPY packages/server/package.json packages/server/package.json
 COPY packages/client/package.json packages/client/package.json

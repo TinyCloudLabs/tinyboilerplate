@@ -6,12 +6,12 @@ import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import express from "express";
-import rateLimit from "express-rate-limit";
 import { apiReference } from "@scalar/express-api-reference";
 import { load as loadYaml } from "js-yaml";
 import {
   DelegationCache,
   DelegationStore,
+  applyRateLimiter,
   createCsrfMiddleware,
   createNonceStore,
 } from "@tinyboilerplate/server";
@@ -70,14 +70,7 @@ async function main() {
   app.use(cors({ origin: FRONTEND_URL }));
   app.use(express.json({ limit: "64kb" }));
   app.use(createCsrfMiddleware());
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      limit: 120,
-      standardHeaders: "draft-7",
-      legacyHeaders: false,
-    }),
-  );
+  applyRateLimiter(app);
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true, app: "xyz.tinycloud.notes" });

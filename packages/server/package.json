@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@tinyboilerplate/core": "workspace:*",
-    "@tinycloud/node-sdk": "2.2.0-beta.12",
+    "@tinycloud/node-sdk": "2.5.1",
+    "express-rate-limit": "^7.0.0",
     "jose": "^5.0.0",
     "siwe": "^2.3.2"
   },

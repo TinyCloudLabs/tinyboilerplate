@@ -4,9 +4,87 @@ Use this as the dependency-agnostic blueprint for building a new TinyCloud app.
 It intentionally avoids references to existing scaffolds, named applications,
 UI frameworks, source integrations, or repository-local file paths.
 
-The durable contract is the architecture: the browser owns user consent, the
-backend works only through delegated capability, and TinyCloud remains the data
-and permission boundary.
+The durable contract is the architecture: the browser owns user consent, and
+TinyCloud remains the data and permission boundary. There are two ways an app can
+put data through that boundary — pick one deliberately per data surface.
+
+## 0. Two Storage Patterns
+
+TinyCloud apps store user-owned data in one of two shapes. They are not
+mutually exclusive — a single app can use both for different surfaces — but each
+data surface should commit to one.
+
+### A. Delegated-backend (the default)
+
+The browser signs in and hands the backend a **portable delegation**. All app
+data flows through backend routes (`/api/...`) that act on the user's storage
+only through that delegation. The browser holds a session token and never touches
+TinyCloud storage directly for these surfaces.
+
+- **Pick this when** the app has server-side work: background jobs, imports,
+  syncs, webhooks, scheduled tasks, secret handling, third-party callbacks, or
+  any logic that must run while the user is offline. The delegation lets the
+  backend keep working on the user's data without the wallet present.
+- **Cost:** a backend to deploy and operate, plus the delegation lifecycle
+  (issue, activate, policy-hash staleness, revoke).
+
+### B. Browser-direct
+
+The signed-in session already holds a TinyCloud capability on its own space, so
+the browser reads and writes TinyCloud SQL or KV storage **directly**, with no
+delegating backend in the path. There may be no backend at all.
+
+- **Pick this when** everything the app does is user-initiated and happens while
+  the user is present: a personal list, notes, settings, a local-first tool. No
+  server-side jobs, no offline work, no shared secrets.
+- **Benefit:** far less to build and operate — no delegation lifecycle, no
+  backend deploy. **Cost:** no offline/background work, and the browser pays each
+  signed round-trip directly, so it needs concurrency guardrails (below).
+
+**Browser-direct guardrails (do not skip these):**
+
+- **Serialize schema setup.** The node degrades under parallel invokes. Run
+  schema creation at most once per account via a shared in-flight promise rather
+  than letting every boot query issue its own.
+- **Guard reads against mutations.** A slow read issued before a delete/rename
+  can resolve after it and resurrect stale rows. Use a generation counter to
+  drop a read that lost the race.
+- **Key any local cache on the primary DID, never `spaceId`.** `spaceId` is
+  `undefined` on a restored session, which silently disables the cache exactly on
+  reload.
+- **DDL requires the `tinycloud.sql/schema` ability.** Every DDL statement —
+  including `CREATE INDEX` — is requested under `tinycloud.sql/schema`. A
+  `read+write` grant is denied (`401 AUTH_UNAUTHORIZED`). Declare
+  `["read","write","schema"]` in the manifest when the app issues any DDL.
+- **The SQL db handle must be the full path `${app_id}/<db>`.** The SQL service
+  authorizes against the full granted resource string; a bare database name 401s.
+
+**KV concurrency.** TinyCloud KV and SQL can degrade when an app starts
+multiple invokes in parallel. Fetch sequentially, completing one request before
+starting the next, especially while loading an interactive surface. `list()` is
+eventually consistent, so a just-written or deleted record might not appear in a
+following list response immediately. Treat each list result as a potentially
+lagging snapshot rather than proof of the latest write.
+
+**Restored browser-direct sessions.** A browser-direct session restored from
+storage can become stranded when an app changes its manifest capability set.
+The persisted session authorizes the old set, so a newly introduced DDL operation
+or other ability can fail even though the user still appears signed in. The
+symptom is an authorization error for the new capability. Clearing the persisted
+session and signing in again obtains the new capability set and recovers.
+
+**SDK upgrades.** Treat every SDK bump as an upgrade that can introduce new
+capability surfaces, not merely as a version-pin change. For example, the
+DDL-to-`tinycloud.sql/schema` requirement arrived with the `sdk-services` 2.4.x
+line. Re-audit manifests and requested abilities on every SDK bump. Update the
+relevant capability and authorization tests before relying on the upgraded SDK.
+
+**SWR cold loads.** An empty cache is a cold load for stale-while-revalidate helpers: the first paint has no cached data, and the background refresh fills it.
+
+The rest of this document details the **delegated-backend** pattern. For a
+browser-direct app, keep sections 1 (roles), 6 (storage boundaries), and 8–10
+(state model, verification), and skip the delegation and backend-policy sections
+that do not apply.
 
 ## 1. Roles
 

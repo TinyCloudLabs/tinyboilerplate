@@ -46,6 +46,16 @@ export function createTinyCloudWeb(
   web3Provider: EIP1193Provider,
   config?: TinyCloudWebConfig,
 ): TinyCloudWeb {
+  // In the shipped flow, two structural guards already prevent account bootstrap:
+  // callers pass a manifest, while `shouldUseBootstrapSignInRequest` requires
+  // `manifest === undefined`; and an EIP-1193 provider makes `isInteractiveSigner()`
+  // true, skipping `bootstrapAccountIfNeeded`. OpenKey auto-sign is not covered by
+  // `isInteractiveSigner()`, though, so a caller that switches to it and stops
+  // passing a manifest—or calls this optional `config` factory bare—would re-arm
+  // bootstrap. Keep this flag as intentionally redundant defense in depth: neither
+  // structural guard was measurement-proven on the shipped path (audit path-forward
+  // finding 1 / P-7). Bootstrap is also broken on SDK 2.5.1, so the flag is the only
+  // guard that survives once the SDK fixes that defect.
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
   const tcwConfig: TinyCloudWebSdkConfig = {
     provider: web3Provider,
@@ -61,7 +71,10 @@ export function createTinyCloudWeb(
     includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
   };
 
-  return new TinyCloudWeb(tcwConfig);
+  return new TinyCloudWeb({
+    ...tcwConfig,
+    ...({ autoBootstrapAccount: false } as Partial<TinyCloudWebSdkConfig>),
+  });
 }
 
 /**

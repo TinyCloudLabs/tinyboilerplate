@@ -14,9 +14,11 @@ import {
   deserializePortableDelegationSet,
   extractPortableDelegationIdentity,
   extractPortableResources,
+  isNodeUnavailableError,
   normalizeAddress,
   normalizeDid,
   portableDelegationExpiry,
+  withActivationTimeout,
   type PortableDelegationSet,
 } from "../portable-delegation.js";
 
@@ -30,6 +32,7 @@ interface DelegationRoutesConfig {
   activateDelegation?: (delegation: PortableDelegationSet) => Promise<DelegatedAccess>;
   extractResources?: (delegation: PortableDelegationSet) => ServerInfoPermission[];
   extractExpiry?: (delegation: PortableDelegationSet) => Date | null;
+  activationTimeoutMs?: number;
 }
 
 export function createDelegationRouter(config: DelegationRoutesConfig) {
@@ -125,7 +128,10 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
           if (!config.node) throw new Error("TinyCloud node is required to activate delegations");
           return activatePortableDelegation(config.node, input);
         });
-      const access = await activate(delegation);
+      const access = await withActivationTimeout(
+        Promise.resolve(activate(delegation)),
+        config.activationTimeoutMs,
+      );
       const expiry =
         (config.extractExpiry ?? portableDelegationExpiry)(delegation) ??
         new Date(Date.now() + DEFAULT_DELEGATION_EXPIRY_MS);
@@ -142,6 +148,16 @@ export function createDelegationRouter(config: DelegationRoutesConfig) {
       config.cache.set(user.address, access);
       res.json({ status: "active", expiresAt });
     } catch (error) {
+      if (isNodeUnavailableError(error)) {
+        console.error("[delegations] node unavailable during activation:", error);
+        res.status(503).json({
+          error: "node_unavailable",
+          message:
+            "The delegation is valid, but the TinyCloud storage node is not responding. Try again in a few minutes.",
+          retryable: true,
+        });
+        return;
+      }
       console.error("[delegations] failed to accept delegation:", error);
       res
         .status(400)

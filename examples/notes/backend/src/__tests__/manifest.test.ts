@@ -22,7 +22,7 @@ describe("TinyCloud Notes manifest and backend policy", () => {
       {
         service: "tinycloud.sql",
         path: "notes_index",
-        actions: ["read", "write"],
+        actions: ["read", "write", "schema"],
         description: "Store note metadata including title, URL, tags, and body pointer.",
       },
       {

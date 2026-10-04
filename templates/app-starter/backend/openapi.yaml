@@ -232,8 +232,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/StorageFull"
         "403":
           $ref: "#/components/responses/DelegationRequired"
+        "413":
+          $ref: "#/components/responses/StorageWriteTooLarge"
         "500":
           $ref: "#/components/responses/StoreError"
     delete:
@@ -268,6 +272,20 @@ components:
           type: string
         message:
           type: string
+
+    StorageFullError:
+      type: object
+      required: [error, message, manageUrl]
+      properties:
+        error:
+          type: string
+          enum: [STORAGE_QUOTA_EXCEEDED, STORAGE_LIMIT_REACHED]
+        message:
+          type: string
+          description: User-facing sentence saying the change was not saved.
+        manageUrl:
+          type: string
+          format: uri
 
     Manifest:
       type: object
@@ -399,3 +417,19 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiError"
+    StorageFull:
+      description: >-
+        The owner's TinyCloud storage is full, so the write was refused. Reads
+        keep working. Do not retry until the owner frees up space or upgrades.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/StorageFullError"
+    StorageWriteTooLarge:
+      description: >-
+        The write is larger than the TinyCloud storage the owner has left, so it
+        was refused. Reads keep working. Do not retry.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/StorageFullError"

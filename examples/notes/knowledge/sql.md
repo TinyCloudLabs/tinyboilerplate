@@ -36,3 +36,10 @@ Agent notes:
 
 - SQL metadata is part of the app's user data model.
 - A failed split write must be handled explicitly by app code and tests.
+- Reads never write. List and get run their `SELECT` directly; a missing
+  table or database means no notes yet. Only saves create the schema, after a
+  read shows it is missing.
+- When the owner's TinyCloud storage is full, writes fail with
+  `STORAGE_QUOTA_EXCEEDED` (HTTP 402) or `STORAGE_LIMIT_REACHED` (HTTP 413)
+  while reads keep working. Tell the owner nothing was saved and reading still
+  works; do not retry, and stop bulk work at the first rejection.

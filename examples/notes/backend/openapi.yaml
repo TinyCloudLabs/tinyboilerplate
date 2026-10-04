@@ -195,6 +195,9 @@ paths:
     get:
       operationId: listNotes
       summary: List and search notes
+      description: >-
+        Read-only: never writes, so it keeps working when the owner's TinyCloud
+        storage is full. Returns an empty list before the first note is saved.
       security:
         - bearerAuth: []
       parameters:
@@ -238,8 +241,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/StorageFull"
         "403":
           $ref: "#/components/responses/DelegationRequired"
+        "413":
+          $ref: "#/components/responses/StorageWriteTooLarge"
         "500":
           $ref: "#/components/responses/StoreError"
 
@@ -249,6 +256,7 @@ paths:
     get:
       operationId: getNote
       summary: Get a note with body
+      description: Read-only; keeps working when the owner's TinyCloud storage is full.
       security:
         - bearerAuth: []
       responses:
@@ -288,10 +296,14 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/StorageFull"
         "403":
           $ref: "#/components/responses/DelegationRequired"
         "404":
           $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/StorageWriteTooLarge"
         "500":
           $ref: "#/components/responses/StoreError"
     delete:
@@ -304,6 +316,8 @@ paths:
           description: Note deleted
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "402":
+          $ref: "#/components/responses/StorageFull"
         "403":
           $ref: "#/components/responses/DelegationRequired"
         "404":
@@ -358,6 +372,22 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiError"
+    StorageFull:
+      description: >-
+        The owner's TinyCloud storage is full, so the write was refused. Reads
+        keep working. Do not retry until the owner frees up space or upgrades.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/StorageFullError"
+    StorageWriteTooLarge:
+      description: >-
+        The write is larger than the TinyCloud storage the owner has left, so it
+        was refused. Reads keep working. Do not retry.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/StorageFullError"
 
   schemas:
     ApiError:
@@ -368,6 +398,23 @@ components:
           type: string
         message:
           type: string
+
+    StorageFullError:
+      type: object
+      required: [error, message, manageUrl]
+      properties:
+        error:
+          type: string
+          enum: [STORAGE_QUOTA_EXCEEDED, STORAGE_LIMIT_REACHED]
+        message:
+          type: string
+          description: User-facing sentence saying what was and was not saved.
+        manageUrl:
+          type: string
+          format: uri
+        partial:
+          type: boolean
+          description: True when part of the change was stored; `message` says which part.
 
     DelegationResponse:
       type: object

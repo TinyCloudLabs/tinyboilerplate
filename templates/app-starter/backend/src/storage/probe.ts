@@ -35,14 +35,21 @@ export async function putProbe(access: DelegatedAccess, input: unknown): Promise
     updatedAt: new Date().toISOString(),
   };
   const result = await access.kv.put(PROBE_KEY, JSON.stringify(probe));
-  if (!result.ok) throw new Error(`Failed to write probe value: ${result.error.message}`);
+  if (!result.ok) {
+    // Keep the SDK error as `cause` so routes can still read its code.
+    throw new Error(`Failed to write probe value: ${result.error.message}`, {
+      cause: result.error,
+    });
+  }
   return probe;
 }
 
 export async function deleteProbe(access: DelegatedAccess): Promise<void> {
   const result = await access.kv.delete(PROBE_KEY);
   if (!result.ok && !isSuccessfulDeleteParseError(result.error.message)) {
-    throw new Error(`Failed to delete probe value: ${result.error.message}`);
+    throw new Error(`Failed to delete probe value: ${result.error.message}`, {
+      cause: result.error,
+    });
   }
 }
 

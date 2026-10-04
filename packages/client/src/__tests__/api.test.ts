@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { createApiClient } from "../api.js";
+import { storageFullCode } from "@tinyboilerplate/core";
+import { ApiRequestError, createApiClient } from "../api.js";
 import type { SessionStore } from "../tokens.js";
 
 // ── Mock SessionStore ──────────────────────────────────────────────────
@@ -176,6 +177,27 @@ describe("createApiClient", () => {
     const client = createApiClient(backendUrl, { sessionStore });
 
     await expect(client.get("/users/999")).rejects.toThrow("API error (404): User not found");
+  });
+
+  test("keeps a backend storage-full code so the UI can enter read-only mode", async () => {
+    const body = {
+      error: "STORAGE_QUOTA_EXCEEDED",
+      message: "Your TinyCloud storage is full, so this change was not saved.",
+      manageUrl: "https://account.tinycloud.xyz/billing",
+    };
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify(body), {
+        status: 402,
+        headers: { "Content-Type": "application/json" },
+      })) as typeof fetch;
+
+    const client = createApiClient(backendUrl, { sessionStore: createMockSessionStore() });
+    const caught = await client.put("/notes/1", {}).catch((error: unknown) => error);
+
+    expect(caught).toBeInstanceOf(ApiRequestError);
+    expect((caught as ApiRequestError).status).toBe(402);
+    expect((caught as ApiRequestError).body).toEqual(body);
+    expect(storageFullCode(caught)).toBe("STORAGE_QUOTA_EXCEEDED");
   });
 
   // ── 401 clears session ─────────────────────────────────────────────

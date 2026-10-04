@@ -110,6 +110,7 @@ For scaffold-only changes, `bun test scripts/scaffold-app.test.ts` is the scaffo
 - JSON document reads from TinyCloud KV can come back as strings or already-parsed objects; decode both and test the parsed-object read path.
 - OpenAPI must describe real behavior: auth schemes, request bodies, response bodies, errors, and delegation status enums.
 - SQL/KV split writes need explicit partial-failure semantics and tests.
+- Reads never depend on writes: check the schema with a read and write it only when missing, and never run schema DDL in list/get paths. On a storage-full rejection (`STORAGE_QUOTA_EXCEEDED`/`STORAGE_LIMIT_REACHED`) show the read-only banner, keep reads working, word failed saves with the canonical storage copy, and stop bulk loops. See `references/architecture-guardrails.md` "Storage Full".
 
 ## Verification Limits
 

@@ -245,6 +245,14 @@ volumes:
   cert-data:
 ```
 
+`PHALA_GATEWAY_CNAME` is the CNAME target the ingress writes for
+`PHALA_INGRESS_DOMAIN` through the Cloudflare API every time its container is
+created. Set it to the CVM's `gateway.cname` from `phala cvms get <cvm-id> --json`
+(`gateway.<base>`, e.g. `gateway.dstack-pha-prod5.phala.network`). Never use
+`_.<base>`: Android's resolver rejects a CNAME target whose first label is `_`,
+so your API would not resolve on Android, and the ingress would rewrite any
+hand-fixed record back to `_.` on the next deploy.
+
 The ingress image is a thin wrapper over `dstacktee/dstack-ingress`; it obtains
 and renews a Let's Encrypt certificate for your custom domain using the
 Cloudflare DNS API and the CVM's dstack socket. Reference this image from
@@ -309,7 +317,7 @@ curl -fsS https://api.my-app.example.com/api/server-info
 Point your backend domain at the Phala gateway **(account/dashboard step)**.
 Two records are required, using values from `phala cvms get <cvm-id>`:
 
-- `CNAME api.my-app.example.com` → the CVM's `gateway.cname`
+- `CNAME api.my-app.example.com` → the CVM's `gateway.cname` (`gateway.<base>`, e.g. `gateway.dstack-pha-prod5.phala.network`; never `_.<base>`, which Android cannot resolve). Use the same value for `PHALA_GATEWAY_CNAME`.
 - `TXT _dstack-app-address.api.my-app.example.com` → `<app_id>:443`
 
 The `TXT` record is how the dstack gateway routes your custom domain to the

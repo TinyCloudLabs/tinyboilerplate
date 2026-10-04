@@ -34,6 +34,9 @@ services:
       DOMAIN: ${PHALA_INGRESS_DOMAIN:-api.my-app.example.com}
       TARGET_ENDPOINT: http://app-backend:3003
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      # CNAME target the ingress publishes for DOMAIN: the CVM's gateway.cname
+      # from `phala cvms get` (gateway.<base>). Never `_.<base>`: Android's
+      # resolver rejects a CNAME target whose first label is `_`.
       GATEWAY_DOMAIN: ${PHALA_GATEWAY_CNAME}
       CERTBOT_EMAIL: ${CERTBOT_EMAIL}
       SET_CAA: "true"

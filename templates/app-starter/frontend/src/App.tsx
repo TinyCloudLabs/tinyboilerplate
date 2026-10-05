@@ -70,8 +70,12 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   // Storage-full is a read-only state, not an error state: reads stay enabled,
   // writes fail with the canonical save message, and the next successful
-  // write clears it.
-  const [storageFull, setStorageFull] = useState(false);
+  // write clears it. It belongs to the account that hit it, so signing in as
+  // another account never inherits the banner.
+  const [storageFullAccount, setStorageFullAccount] = useState<string | null>(null);
+  const storageFull = storageFullAccount !== null && storageFullAccount === address;
+  // The save message describes the value that failed; reloading the stored
+  // value into the editor clears it.
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const busy = isBusyState(state);
@@ -92,6 +96,7 @@ export function App() {
       if (!client) return;
       const result = await client.get<{ probe: ProbeValue | null }>("/api/probe");
       setProbe(result.probe);
+      setSaveError(null);
       if (result.probe) setProbeInput(result.probe.value);
     },
     [api],
@@ -154,6 +159,7 @@ export function App() {
 
   const signIn = useCallback(async () => {
     setError(null);
+    setSaveError(null);
     try {
       setState("connectingIdentity");
       const { address: connectedAddress, web3Provider } = await connectWallet({
@@ -223,7 +229,7 @@ export function App() {
     setProbe(null);
     setProviderLive(false);
     setDelegationStatus("none");
-    setStorageFull(false);
+    setStorageFullAccount(null);
     setSaveError(null);
     setState("unauthenticated");
   }, [address, tcw]);
@@ -237,7 +243,7 @@ export function App() {
       setState("recoverableError");
       return;
     }
-    setStorageFull(true);
+    setStorageFullAccount(address);
     setSaveError(
       caught instanceof ApiRequestError ? caught.body.message : storageSaveMessage(storageCode),
     );
@@ -251,7 +257,7 @@ export function App() {
     setState("saving");
     try {
       const result = await api.put<{ probe: ProbeValue }>("/api/probe", { value: probeInput });
-      setStorageFull(false);
+      setStorageFullAccount(null);
       setProbe(result.probe);
       setState("ready");
     } catch (caught) {
@@ -266,7 +272,7 @@ export function App() {
     setState("saving");
     try {
       await api.del("/api/probe");
-      setStorageFull(false);
+      setStorageFullAccount(null);
       setProbe(null);
       setProbeInput("");
       setState("ready");

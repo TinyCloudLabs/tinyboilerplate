@@ -148,34 +148,42 @@ const STORAGE_FULL_TEXT =
   /storage quota exceeded|write exceeds remaining storage|storage is full|storage you have left/i;
 const STORAGE_TOO_LARGE_TEXT = /write exceeds remaining storage|storage you have left/i;
 
+type ErrorLink = { code?: unknown; error?: unknown; message?: unknown; cause?: unknown };
+
 /**
- * Classify an error as a storage-full rejection. Checks typed codes first
- * (`code` from the SDK, `error` from an API body), then the node's text for
- * older SDKs that wrap a SQL 402 as a network error, following `cause` links.
+ * Classify an error as a storage-full rejection. A typed code anywhere in the
+ * chain (`code` from the SDK, `error` from an API body, following `cause` and
+ * nested `error` objects) wins over text, because wrappers copy the node's
+ * generic "Storage quota exceeded" sentence even for `STORAGE_LIMIT_REACHED`.
+ * Only when no link carries a code does the node's text decide, for older SDKs
+ * that report a SQL 402 as a network error.
  */
 export function storageFullCode(error: unknown): StorageFullCode | null {
+  const chain: Array<ErrorLink | string> = [];
   let current: unknown = error;
-  for (let depth = 0; depth < 8 && current != null; depth++) {
-    if (typeof current === "string") return storageCodeFromText(current);
-    if (typeof current !== "object") return null;
-    const candidate = current as {
-      code?: unknown;
-      error?: unknown;
-      message?: unknown;
-      cause?: unknown;
-    };
-    for (const value of [candidate.code, candidate.error]) {
+  while (
+    chain.length < 8 &&
+    (typeof current === "string" || (current && typeof current === "object"))
+  ) {
+    const link = current as ErrorLink | string;
+    chain.push(link);
+    if (typeof link === "string") break;
+    current = link.cause ?? (link.error && typeof link.error === "object" ? link.error : undefined);
+  }
+
+  for (const link of chain) {
+    if (typeof link === "string") continue;
+    for (const value of [link.code, link.error]) {
       if (typeof value !== "string") continue;
       const upper = value.toUpperCase();
       if (upper === "STORAGE_QUOTA_EXCEEDED" || upper === "STORAGE_LIMIT_REACHED") return upper;
     }
-    if (typeof candidate.message === "string") {
-      const fromText = storageCodeFromText(candidate.message);
-      if (fromText) return fromText;
-    }
-    current =
-      candidate.cause ??
-      (candidate.error && typeof candidate.error === "object" ? candidate.error : undefined);
+  }
+  for (const link of chain) {
+    const text = typeof link === "string" ? link : link.message;
+    if (typeof text !== "string") continue;
+    if (STORAGE_TOO_LARGE_TEXT.test(text)) return "STORAGE_LIMIT_REACHED";
+    if (STORAGE_FULL_TEXT.test(text)) return "STORAGE_QUOTA_EXCEEDED";
   }
   return null;
 }
@@ -189,11 +197,6 @@ export function storageSaveMessage(code: StorageFullCode): string {
   return code === "STORAGE_LIMIT_REACHED"
     ? STORAGE_FULL_COPY.saveTooLarge
     : STORAGE_FULL_COPY.saveRejected;
-}
-
-function storageCodeFromText(text: string): StorageFullCode | null {
-  if (STORAGE_TOO_LARGE_TEXT.test(text)) return "STORAGE_LIMIT_REACHED";
-  return STORAGE_FULL_TEXT.test(text) ? "STORAGE_QUOTA_EXCEEDED" : null;
 }
 
 // ── Utilities ───────────────────────────────────────────────────────

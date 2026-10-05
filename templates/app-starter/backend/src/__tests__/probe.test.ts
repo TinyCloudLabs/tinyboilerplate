@@ -193,4 +193,29 @@ describe("probe routes", () => {
       manageUrl: MANAGE_STORAGE_URL,
     });
   });
+
+  it("keeps a typed STORAGE_LIMIT_REACHED even when the node text says quota exceeded", async () => {
+    kv.put = async (key: string, value: unknown) => {
+      kv._calls.push({ method: "put", key, value });
+      return {
+        ok: false,
+        error: {
+          code: "STORAGE_LIMIT_REACHED",
+          message: "Storage quota exceeded. Used: 155744 bytes, Limit: 160000 bytes",
+        },
+      };
+    };
+
+    const put = await fetch(`${url}/api/probe`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "larger than what is left" }),
+    });
+    expect(put.status).toBe(413);
+    expect(await put.json()).toEqual({
+      error: "STORAGE_LIMIT_REACHED",
+      message: STORAGE_FULL_COPY.saveTooLarge,
+      manageUrl: MANAGE_STORAGE_URL,
+    });
+  });
 });

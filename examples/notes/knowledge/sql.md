@@ -41,5 +41,8 @@ Agent notes:
   read shows it is missing.
 - When the owner's TinyCloud storage is full, writes fail with
   `STORAGE_QUOTA_EXCEEDED` (HTTP 402) or `STORAGE_LIMIT_REACHED` (HTTP 413)
-  while reads keep working. Tell the owner nothing was saved and reading still
+  while reads keep working. Relay the response `message`, which says what
+  happened: usually that the change was not saved, but when the response has
+  `partial: true` part of the change was stored (for example the note text but
+  not its title, URL, and tags), so say which part. Tell the owner reading still
   works; do not retry, and stop bulk work at the first rejection.

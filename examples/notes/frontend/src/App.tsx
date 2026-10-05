@@ -93,8 +93,12 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   // Storage-full is a read-only state, not an error state: reads stay enabled,
   // writes fail with the canonical save message, and the next successful
-  // write clears it.
-  const [storageFull, setStorageFull] = useState(false);
+  // write clears it. It belongs to the account that hit it, so signing in as
+  // another account never inherits the banner.
+  const [storageFullAccount, setStorageFullAccount] = useState<string | null>(null);
+  const storageFull = storageFullAccount !== null && storageFullAccount === address;
+  // The save message describes the draft that failed; anything that replaces
+  // the editor contents clears it.
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const selected = useMemo(
@@ -115,6 +119,7 @@ export function App() {
       const suffix = query.trim() ? `?search=${encodeURIComponent(query.trim())}` : "";
       const result = await client.get<{ notes: Note[] }>(`/api/notes${suffix}`);
       setNotes(result.notes);
+      setSaveError(null);
       const nextSelected =
         (preferredId && result.notes.find((note) => note.id === preferredId)) ??
         result.notes[0] ??
@@ -187,6 +192,7 @@ export function App() {
 
   const signIn = useCallback(async () => {
     setError(null);
+    setSaveError(null);
     try {
       setState("connectingIdentity");
       const { address: connectedAddress, web3Provider } = await connectWallet({
@@ -260,7 +266,7 @@ export function App() {
     setSelectedId(null);
     setDraft(emptyDraft);
     setProviderLive(false);
-    setStorageFull(false);
+    setStorageFullAccount(null);
     setSaveError(null);
     setState("unauthenticated");
   }, [address, tcw]);
@@ -268,6 +274,7 @@ export function App() {
   const selectNote = async (note: Note) => {
     if (!api || state !== "ready") return;
     setError(null);
+    setSaveError(null);
     setSelectedId(note.id);
     setDraft(noteToDraft(note));
     setState("loadingNote");
@@ -284,6 +291,7 @@ export function App() {
   const newNote = () => {
     if (state !== "ready") return;
     setSelectedId(null);
+    setSaveError(null);
     setDraft(emptyDraft);
   };
 
@@ -296,7 +304,7 @@ export function App() {
       setState("recoverableError");
       return;
     }
-    setStorageFull(true);
+    setStorageFullAccount(address);
     setSaveError(
       caught instanceof ApiRequestError ? caught.body.message : storageSaveMessage(storageCode),
     );
@@ -316,7 +324,7 @@ export function App() {
         const created = await api.post<{ note: Note }>("/api/notes", inputPayload(draft));
         preferredId = created.note.id;
       }
-      setStorageFull(false);
+      setStorageFullAccount(null);
       await loadNotes(api, search, preferredId);
       setState("ready");
     } catch (caught) {
@@ -331,7 +339,7 @@ export function App() {
     setState("deleting");
     try {
       await api.del(`/api/notes/${selectedId}`);
-      setStorageFull(false);
+      setStorageFullAccount(null);
       setSelectedId(null);
       setDraft(emptyDraft);
       await loadNotes(api, search, null);

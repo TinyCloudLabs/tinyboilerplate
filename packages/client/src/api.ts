@@ -16,6 +16,25 @@ export interface ApiClient {
   del<T>(path: string): Promise<T>;
 }
 
+/**
+ * Non-2xx backend response. `message` keeps the `API error (<status>): …`
+ * shape; `code` is the body's `error` so callers can branch on typed errors
+ * such as `STORAGE_QUOTA_EXCEEDED`, and `body` keeps the full response body.
+ */
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly body: ApiError & Record<string, unknown>;
+
+  constructor(status: number, body: ApiError & Record<string, unknown>) {
+    super(`API error (${status}): ${body.message}`);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = body.error;
+    this.body = body;
+  }
+}
+
 // ── API Client ───────────────────────────────────────────────────────
 
 /**
@@ -52,11 +71,11 @@ export function createApiClient(backendUrl: string, config: ApiClientConfig): Ap
     }
 
     if (!res.ok) {
-      const err: ApiError = await res.json().catch(() => ({
+      const err: ApiError & Record<string, unknown> = await res.json().catch(() => ({
         error: `HTTP ${res.status}`,
         message: res.statusText,
       }));
-      throw new Error(`API error (${res.status}): ${err.message}`);
+      throw new ApiRequestError(res.status, err);
     }
 
     if (res.status === 204) {

@@ -400,14 +400,17 @@ key, and **user delegations are bound to that DID**. Consequences:
 ### SQL schema initialization
 
 TinyCloud SQL databases are created lazily by the app, not by a migration step
-run at deploy time. An app that uses SQL should ensure its tables exist before
-its first query. The Notes example does this with an idempotent
-`CREATE TABLE IF NOT EXISTS` guarded by a per-access cache — see
-`ensureNotesSchema` in `examples/notes/backend/src/storage/notes.ts`, which every
-read/write path calls first. Follow that pattern: there is no separate
-"run migrations" deploy phase, so schema setup must be safe to call on every
-request and must resolve the database identifier from the manifest/policy layer
-so two apps never collide on a database name.
+run at deploy time, so there is no separate "run migrations" deploy phase.
+Schema setup must be **read-first**: opening the app and listing data must
+never write, because the node refuses writes once the owner's storage is full
+while reads keep working. The Notes example shows the pattern in
+`examples/notes/backend/src/storage/notes.ts`: `listNotes`/`getNote` run their
+`SELECT` directly and treat a missing table or database as "no notes yet", and
+only write paths call `ensureNotesSchema`, which reads `sqlite_master` and runs
+`CREATE TABLE IF NOT EXISTS` only when the table is missing. Resolve the
+database identifier from the manifest/policy layer so two apps never collide
+on a database name. See "Storage full: reads keep working" in
+`docs/app-architecture.md` for the full storage-full pattern and copy.
 
 ### TLS and CORS
 

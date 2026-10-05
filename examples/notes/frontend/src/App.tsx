@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
-import type { DelegatingServerInfo } from "@tinyboilerplate/core";
 import {
+  MANAGE_STORAGE_URL,
+  STORAGE_FULL_COPY,
+  storageFullCode,
+  storageSaveMessage,
+  type DelegatingServerInfo,
+} from "@tinyboilerplate/core";
+import {
+  ApiRequestError,
   SessionStore,
   checkDelegationStatus,
   clearPersistedSession,
@@ -84,6 +91,15 @@ export function App() {
   const [draft, setDraft] = useState<NoteInput>(emptyDraft);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Storage-full is a read-only state, not an error state: reads stay enabled,
+  // writes fail with the canonical save message, and the next successful
+  // write clears it. It belongs to the account that hit it, so signing in as
+  // another account never inherits the banner.
+  const [storageFullAccount, setStorageFullAccount] = useState<string | null>(null);
+  const storageFull = storageFullAccount !== null && storageFullAccount === address;
+  // The save message describes the draft that failed; anything that replaces
+  // the editor contents clears it.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const selected = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
@@ -103,6 +119,7 @@ export function App() {
       const suffix = query.trim() ? `?search=${encodeURIComponent(query.trim())}` : "";
       const result = await client.get<{ notes: Note[] }>(`/api/notes${suffix}`);
       setNotes(result.notes);
+      setSaveError(null);
       const nextSelected =
         (preferredId && result.notes.find((note) => note.id === preferredId)) ??
         result.notes[0] ??
@@ -175,6 +192,7 @@ export function App() {
 
   const signIn = useCallback(async () => {
     setError(null);
+    setSaveError(null);
     try {
       setState("connectingIdentity");
       const { address: connectedAddress, web3Provider } = await connectWallet({
@@ -248,12 +266,15 @@ export function App() {
     setSelectedId(null);
     setDraft(emptyDraft);
     setProviderLive(false);
+    setStorageFullAccount(null);
+    setSaveError(null);
     setState("unauthenticated");
   }, [address, tcw]);
 
   const selectNote = async (note: Note) => {
     if (!api || state !== "ready") return;
     setError(null);
+    setSaveError(null);
     setSelectedId(note.id);
     setDraft(noteToDraft(note));
     setState("loadingNote");
@@ -270,12 +291,30 @@ export function App() {
   const newNote = () => {
     if (state !== "ready") return;
     setSelectedId(null);
+    setSaveError(null);
     setDraft(emptyDraft);
+  };
+
+  // A storage rejection enters the read-only state and keeps the library
+  // usable; any other failure stays a recoverable error.
+  const handleWriteFailure = (caught: unknown) => {
+    const storageCode = storageFullCode(caught);
+    if (!storageCode) {
+      setError(errorMessage(caught));
+      setState("recoverableError");
+      return;
+    }
+    setStorageFullAccount(address);
+    setSaveError(
+      caught instanceof ApiRequestError ? caught.body.message : storageSaveMessage(storageCode),
+    );
+    setState("ready");
   };
 
   const saveNote = async () => {
     if (!api || state !== "ready") return;
     setError(null);
+    setSaveError(null);
     setState("saving");
     try {
       let preferredId = selectedId;
@@ -285,27 +324,28 @@ export function App() {
         const created = await api.post<{ note: Note }>("/api/notes", inputPayload(draft));
         preferredId = created.note.id;
       }
+      setStorageFullAccount(null);
       await loadNotes(api, search, preferredId);
       setState("ready");
     } catch (caught) {
-      setError(errorMessage(caught));
-      setState("recoverableError");
+      handleWriteFailure(caught);
     }
   };
 
   const deleteSelected = async () => {
     if (!api || state !== "ready" || !selectedId) return;
     setError(null);
+    setSaveError(null);
     setState("deleting");
     try {
       await api.del(`/api/notes/${selectedId}`);
+      setStorageFullAccount(null);
       setSelectedId(null);
       setDraft(emptyDraft);
       await loadNotes(api, search, null);
       setState("ready");
     } catch (caught) {
-      setError(errorMessage(caught));
-      setState("recoverableError");
+      handleWriteFailure(caught);
     }
   };
 
@@ -357,6 +397,17 @@ export function App() {
       </header>
 
       <section className="dashboard-content">
+        {storageFull && (
+          <div className="storage-banner" role="status">
+            <div>
+              <strong>{STORAGE_FULL_COPY.bannerTitle}</strong>{" "}
+              <span>{STORAGE_FULL_COPY.bannerBody}</span>
+            </div>
+            <a href={MANAGE_STORAGE_URL} target="_blank" rel="noreferrer">
+              {STORAGE_FULL_COPY.manageLabel}
+            </a>
+          </div>
+        )}
         <div className="notes-grid">
           <section className="panel list-panel">
             <div className="panel-header">
@@ -437,6 +488,7 @@ export function App() {
               <EditorReadiness {...editorStatus} busy={busy} />
             ) : (
               <>
+                {saveError && <SurfaceStatus title="Storage full" body={saveError} tone="error" />}
                 <label>
                   <span>Title</span>
                   <input

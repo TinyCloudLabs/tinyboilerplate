@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import type { Server } from "http";
+import { MANAGE_STORAGE_URL, STORAGE_FULL_COPY } from "@tinyboilerplate/core";
 import { PROBE_KV_PREFIX } from "../manifest.js";
 import { createProbeRouter } from "../routes/probe.js";
 import { probeKey } from "../storage/probe.js";
@@ -158,5 +159,63 @@ describe("probe routes", () => {
     expect(response.status).toBe(400);
     expect((await response.json()).error).toBe("value_too_long");
     expect(kv._calls).toEqual([]);
+  });
+
+  it("keeps reads working and refuses writes with the storage code when storage is full", async () => {
+    kv._values.set(
+      probeKey(),
+      JSON.stringify({ value: "kept", updatedAt: "2026-10-04T00:00:00Z" }),
+    );
+    kv.put = async (key: string, value: unknown) => {
+      kv._calls.push({ method: "put", key, value });
+      return {
+        ok: false,
+        error: {
+          code: "STORAGE_QUOTA_EXCEEDED",
+          message: "Storage quota exceeded. Used: 155744 bytes, Limit: 0 bytes",
+        },
+      };
+    };
+
+    const get = await fetch(`${url}/api/probe`);
+    expect(get.status).toBe(200);
+    expect((await get.json()).probe.value).toBe("kept");
+
+    const put = await fetch(`${url}/api/probe`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "will not fit" }),
+    });
+    expect(put.status).toBe(402);
+    expect(await put.json()).toEqual({
+      error: "STORAGE_QUOTA_EXCEEDED",
+      message: STORAGE_FULL_COPY.saveRejected,
+      manageUrl: MANAGE_STORAGE_URL,
+    });
+  });
+
+  it("keeps a typed STORAGE_LIMIT_REACHED even when the node text says quota exceeded", async () => {
+    kv.put = async (key: string, value: unknown) => {
+      kv._calls.push({ method: "put", key, value });
+      return {
+        ok: false,
+        error: {
+          code: "STORAGE_LIMIT_REACHED",
+          message: "Storage quota exceeded. Used: 155744 bytes, Limit: 160000 bytes",
+        },
+      };
+    };
+
+    const put = await fetch(`${url}/api/probe`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "larger than what is left" }),
+    });
+    expect(put.status).toBe(413);
+    expect(await put.json()).toEqual({
+      error: "STORAGE_LIMIT_REACHED",
+      message: STORAGE_FULL_COPY.saveTooLarge,
+      manageUrl: MANAGE_STORAGE_URL,
+    });
   });
 });

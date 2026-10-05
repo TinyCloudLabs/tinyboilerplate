@@ -28,6 +28,17 @@ Use this reference when modifying more than the generated names, ports, docs, or
 - For named SQL or DuckDB databases, use explicit helpers with resolved database identifiers. Do not rely on default database shortcuts.
 - For SQL metadata plus KV body models, write and compensate deliberately. Cover KV-before-SQL create, update failure, delete failure, and orphan hydration behavior in tests.
 
+## Storage Full
+
+Storage is one budget across the owner's account. When it is full the node refuses writes that would grow storage (`402`, uploads `413`); reads and deletes keep working. Follow `docs/app-architecture.md` "Storage full: reads keep working":
+
+1. Never put a write in front of a read. Opening, listing, and viewing must not write. Check the schema with a read and create it only when missing; treat a missing table or database on a read path as "no data yet". Never run `CREATE TABLE IF NOT EXISTS` inside list/get helpers.
+2. On the first storage rejection, enter a read-only state: one persistent "Storage full: read-only." banner with a "Manage storage" link to `https://account.tinycloud.xyz/billing`, reads stay enabled, writes fail with the canonical save message, and the next successful write clears it.
+3. Say exactly which half of a split SQL/KV write was stored when only one half was.
+4. Stop bulk loops at the first storage rejection; never retry it.
+
+Detect by code (`STORAGE_QUOTA_EXCEEDED`, `STORAGE_LIMIT_REACHED`) with the text fallback in `@tinyboilerplate/core` `storageFullCode`. Backend routes answer `402`/`413` with `{ error, message, manageUrl }`, not `500`. Say "storage", never "quota", "Limit: 0", "network error", or "try again". Prove it with a fake client whose writes return the node's 402 while reads succeed.
+
 ## Multi-Resource Delegations
 
 A portable delegation can grant multiple services or resources. Activate each resource as needed and route only the handle for the service being activated. Do not blindly copy all handles from one access object over another, because a handle scoped to one resource can replace a correctly scoped handle for a different service.

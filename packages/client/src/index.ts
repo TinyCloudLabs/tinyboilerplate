@@ -40,4 +40,4 @@ export { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./req
 
 export { SessionStore, type StoredSession } from "./tokens.js";
 
-export { createApiClient, type ApiClient, type ApiClientConfig } from "./api.js";
+export { ApiRequestError, createApiClient, type ApiClient, type ApiClientConfig } from "./api.js";

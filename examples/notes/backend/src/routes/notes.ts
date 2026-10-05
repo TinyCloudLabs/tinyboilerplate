@@ -1,7 +1,14 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import {
+  MANAGE_STORAGE_URL,
+  storageFullCode,
+  storageSaveMessage,
+  type StorageFullApiError,
+} from "@tinyboilerplate/core";
+import {
   InputError,
+  PartialSaveError,
   createNote,
   deleteNote,
   getNote,
@@ -108,6 +115,21 @@ function requireDelegation(req: Request, res: Response) {
 function handleRouteError(res: Response, error: unknown, operation: string): void {
   if (error instanceof InputError) {
     res.status(400).json({ error: error.code, message: error.message });
+    return;
+  }
+  // Storage full is an account state, not a server fault: keep the code,
+  // word it with the canonical copy, and never invite a retry.
+  const storageCode = storageFullCode(error);
+  if (storageCode) {
+    const partial = error instanceof PartialSaveError;
+    const body: StorageFullApiError = {
+      error: storageCode,
+      message: partial ? error.message : storageSaveMessage(storageCode),
+      manageUrl: MANAGE_STORAGE_URL,
+      ...(partial ? { partial } : {}),
+    };
+    console.warn(`[notes] ${operation} refused: storage full (${storageCode})`);
+    res.status(storageCode === "STORAGE_LIMIT_REACHED" ? 413 : 402).json(body);
     return;
   }
   console.error(`[notes] failed to ${operation}:`, error);

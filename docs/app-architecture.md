@@ -334,6 +334,51 @@ otherwise reconcile the prior body. On delete, avoid deleting metadata before
 the body delete succeeds, or record deterministic cleanup work. Tests should
 cover partial failures so SQL rows and KV bodies do not silently drift.
 
+### Storage full: reads keep working
+
+TinyCloud storage is one budget shared by every app on the owner's account.
+When it is full, the node refuses writes that would grow storage (KV/SQL
+`402`, uploads `413`) and keeps serving reads. Deletes free space and must keep
+working. Every app follows four rules:
+
+1. **Never put a write in front of a read.** Opening the app and listing or
+   viewing data must not write. Check the schema with a read and write only
+   when something is missing: the Notes example's `listNotes`/`getNote` run
+   their `SELECT` directly and treat "no such table" / "database not found" as
+   no data, and `ensureNotesSchema` (called only by writes) reads
+   `sqlite_master` before running `CREATE TABLE IF NOT EXISTS`. With
+   `@tinycloud/*` SDKs that include the TC-619 fix, `sql.migrations.apply`
+   reads first the same way. If the schema cannot be written because storage
+   is full, keep showing whatever can be read.
+2. **On the first storage rejection, enter a read-only state.** Show one
+   persistent banner with a "Manage storage" link, keep read actions enabled,
+   let write actions fail with the save message instead of raw node text, and
+   clear the state after the next successful write.
+3. **Be honest about partial saves.** If one half of a split SQL/KV write was
+   stored and the other was not, say exactly which half.
+4. **Stop bulk loops at the first storage rejection.** It stays true until the
+   owner frees space or upgrades, so never retry it.
+
+Detect the rejection by code, not by status text alone: `STORAGE_QUOTA_EXCEEDED`
+(storage full) and `STORAGE_LIMIT_REACHED` (write larger than what is left),
+with a text fallback for older SDKs that report a SQL `402` as a network error.
+`@tinyboilerplate/core` exports `storageFullCode`, `isStorageFullError`,
+`storageSaveMessage`, `STORAGE_FULL_COPY`, and `MANAGE_STORAGE_URL`. Backend
+routes keep the code and answer `402`/`413` with a `StorageFullApiError`
+body (`error`, `message`, `manageUrl`, optional `partial`); the client's
+`ApiRequestError` exposes `code` and `body` so the frontend can branch on it.
+
+Use this copy. Say "storage", never "quota", and never show `Limit: 0 bytes`,
+"network error", "permission", "try again", or a space name as the thing that
+is full:
+
+| Situation | Text |
+| --- | --- |
+| Write rejected, storage full | Your TinyCloud storage is full, so this change was not saved. Reading still works. Free up space or upgrade your plan to save again. |
+| Write too large for what's left | This change is larger than the TinyCloud storage you have left, so it was not saved. Reading still works. Free up space or upgrade your plan to save it. |
+| Read-only banner | **Storage full: read-only.** Your TinyCloud storage, shared by all your TinyCloud apps, is full. You can still view and copy your data. Saving changes is paused until you free up space or upgrade your plan. [Manage storage](https://account.tinycloud.xyz/billing) |
+| Partial save | Name the stored part, for example: The note text was saved, but its title, URL, and tags were not, because your TinyCloud storage is full. |
+
 When an external account connection completes through a backend callback, keep
 the same ownership boundary. The callback may exchange a one-time code and use
 the user's stored delegation to write provider tokens or connection config into

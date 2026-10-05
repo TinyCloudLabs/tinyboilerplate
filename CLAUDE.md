@@ -87,6 +87,11 @@ bun run test:browser:app-shell
 - OpenAPI must describe implemented behavior, including `server-info`,
   delegation status, and app data routes.
 - SQL/KV split writes need explicit partial-failure or compensation behavior.
+- Reads never depend on writes: list/get paths must not write schema; check
+  with a read and create only when missing. Storage-full rejections
+  (`STORAGE_QUOTA_EXCEEDED`/`STORAGE_LIMIT_REACHED`) put the app in a
+  read-only state with the canonical storage copy; see
+  `docs/app-architecture.md` "Storage full: reads keep working".
 - Local WebAuthn/OpenKey verification needs HTTP localhost or trusted HTTPS.
   HTTPS with a browser certificate warning can fail with:
   `WebAuthn is not supported on sites with TLS certificate errors`.

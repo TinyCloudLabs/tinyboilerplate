@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
-import type { DelegatingServerInfo } from "@tinyboilerplate/core";
 import {
+  MANAGE_STORAGE_URL,
+  STORAGE_FULL_COPY,
+  storageFullCode,
+  storageSaveMessage,
+  type DelegatingServerInfo,
+} from "@tinyboilerplate/core";
+import {
+  ApiRequestError,
   SessionStore,
   checkDelegationStatus,
   clearPersistedSession,
@@ -61,6 +68,15 @@ export function App() {
   const [probe, setProbe] = useState<ProbeValue | null>(null);
   const [probeInput, setProbeInput] = useState("TinyCloud delegated KV is online.");
   const [error, setError] = useState<string | null>(null);
+  // Storage-full is a read-only state, not an error state: reads stay enabled,
+  // writes fail with the canonical save message, and the next successful
+  // write clears it. It belongs to the account that hit it, so signing in as
+  // another account never inherits the banner.
+  const [storageFullAccount, setStorageFullAccount] = useState<string | null>(null);
+  const storageFull = storageFullAccount !== null && storageFullAccount === address;
+  // The save message describes the value that failed; reloading the stored
+  // value into the editor clears it.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const busy = isBusyState(state);
   const canUseProbe = api !== null && (state === "ready" || state === "saving");
@@ -80,6 +96,7 @@ export function App() {
       if (!client) return;
       const result = await client.get<{ probe: ProbeValue | null }>("/api/probe");
       setProbe(result.probe);
+      setSaveError(null);
       if (result.probe) setProbeInput(result.probe.value);
     },
     [api],
@@ -142,6 +159,7 @@ export function App() {
 
   const signIn = useCallback(async () => {
     setError(null);
+    setSaveError(null);
     try {
       setState("connectingIdentity");
       const { address: connectedAddress, web3Provider } = await connectWallet({
@@ -211,35 +229,55 @@ export function App() {
     setProbe(null);
     setProviderLive(false);
     setDelegationStatus("none");
+    setStorageFullAccount(null);
+    setSaveError(null);
     setState("unauthenticated");
   }, [address, tcw]);
+
+  // A storage rejection enters the read-only state and keeps reads usable;
+  // any other failure stays a recoverable error.
+  const handleWriteFailure = (caught: unknown) => {
+    const storageCode = storageFullCode(caught);
+    if (!storageCode) {
+      setError(errorMessage(caught));
+      setState("recoverableError");
+      return;
+    }
+    setStorageFullAccount(address);
+    setSaveError(
+      caught instanceof ApiRequestError ? caught.body.message : storageSaveMessage(storageCode),
+    );
+    setState("ready");
+  };
 
   const saveProbe = async () => {
     if (!api) return;
     setError(null);
+    setSaveError(null);
     setState("saving");
     try {
       const result = await api.put<{ probe: ProbeValue }>("/api/probe", { value: probeInput });
+      setStorageFullAccount(null);
       setProbe(result.probe);
       setState("ready");
     } catch (caught) {
-      setError(errorMessage(caught));
-      setState("recoverableError");
+      handleWriteFailure(caught);
     }
   };
 
   const deleteProbeValue = async () => {
     if (!api) return;
     setError(null);
+    setSaveError(null);
     setState("saving");
     try {
       await api.del("/api/probe");
+      setStorageFullAccount(null);
       setProbe(null);
       setProbeInput("");
       setState("ready");
     } catch (caught) {
-      setError(errorMessage(caught));
-      setState("recoverableError");
+      handleWriteFailure(caught);
     }
   };
 
@@ -274,6 +312,17 @@ export function App() {
       </header>
 
       <section className="dashboard-content">
+        {storageFull && (
+          <div className="storage-banner" role="status">
+            <div>
+              <strong>{STORAGE_FULL_COPY.bannerTitle}</strong>{" "}
+              <span>{STORAGE_FULL_COPY.bannerBody}</span>
+            </div>
+            <a href={MANAGE_STORAGE_URL} target="_blank" rel="noreferrer">
+              {STORAGE_FULL_COPY.manageLabel}
+            </a>
+          </div>
+        )}
         <section className="panel work-panel">
           <div className="panel-header">
             <div>
@@ -286,6 +335,7 @@ export function App() {
           </div>
 
           {surfaceStatus && <SurfaceStatus {...surfaceStatus} />}
+          {saveError && <SurfaceStatus title="Storage full" body={saveError} tone="error" />}
 
           <label className="field-label probe-field">
             <span>Value</span>

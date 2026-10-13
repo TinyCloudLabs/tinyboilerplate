@@ -2,8 +2,9 @@ services:
   app-backend:
     image: ${BACKEND_IMAGE:-ghcr.io/your-org/tinycloud-app-backend:latest}
     platform: linux/amd64
-    ports:
-      - "3003:3003"
+    # TC-1012: no published port. A published port is served by the Phala
+    # gateway at <app_id>-<port>.<gateway>, bypassing dstack-ingress. The
+    # ingress reaches the backend over the compose network (TARGET_ENDPOINT).
     environment:
       NODE_ENV: production
       PORT: "3003"

@@ -322,7 +322,6 @@ async function rewriteTextFiles(outDir: string, options: ScaffoldOptions): Promi
   ]);
   await replaceInFile(join(outDir, "docker-compose.phala.yml"), [
     ["tinycloud-app-backend", `${appSlug}-backend`],
-    ['"3003:3003"', `"${options.backendPort}:${options.backendPort}"`],
     ['PORT: "3003"', `PORT: "${options.backendPort}"`],
     ["http://localhost:3003/health", `http://localhost:${options.backendPort}/health`],
     ["http://app-backend:3003", `http://app-backend:${options.backendPort}`],

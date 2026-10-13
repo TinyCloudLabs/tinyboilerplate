@@ -306,7 +306,6 @@ describe("scaffold-app CLI", () => {
     await expectFileContains(join(out, "docker-compose.phala.yml"), [
       "ghcr.io/your-org/xyz-tinycloud-scratch-backend:latest",
       "ghcr.io/your-org/xyz-tinycloud-scratch-backend:ingress-latest",
-      '"3013:3013"',
       'PORT: "3013"',
       "http://localhost:3013/health",
       "http://app-backend:3013",

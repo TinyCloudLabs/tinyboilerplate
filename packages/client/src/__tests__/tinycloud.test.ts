@@ -117,10 +117,12 @@ describe("createAndSignIn", () => {
     lastSignInOptions = undefined;
 
     const provider = { request: async () => null } as any;
+    const openkey = { client: {} } as unknown as Parameters<typeof createAndSignIn>[1]["openkey"];
     const result = await createAndSignIn(provider, {
       address: "0xAbC",
       nonce: "fresh-backend-nonce",
       siweConfig: { statement: "Sign in to this app" },
+      openkey,
     });
 
     expect(result.session).toBe(signInSession);
@@ -130,7 +132,8 @@ describe("createAndSignIn", () => {
       nonce: "fresh-backend-nonce",
     });
     expect(lastClearPersistedSessionAddress).toBe("0xAbC");
-    expect(lastSignInOptions).toEqual({ nonce: "fresh-backend-nonce" });
+    expect(lastTinyCloudConfig.openkey).toBe(openkey);
+    expect(lastSignInOptions).toBeUndefined();
   });
 });
 

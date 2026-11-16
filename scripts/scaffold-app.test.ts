@@ -137,10 +137,8 @@ describe("scaffold-app CLI", () => {
           "node packages/client/scripts/fix-web-wasm-init.mjs && node packages/server/scripts/fix-wasm-esm.mjs",
       },
     });
-    expect(rootPackage.overrides).toMatchObject({
-      "@tinycloud/web-sdk": "2.6.3",
-      "@tinycloud/node-sdk": "2.6.3",
-    });
+    const templateRootPackage = await readJson(join(repoRoot, "package.json"));
+    expect(rootPackage.overrides).toEqual(templateRootPackage.overrides);
 
     expect(await readJson(join(out, "frontend/package.json"))).toMatchObject({
       name: "@scratch/tinycloud-frontend",

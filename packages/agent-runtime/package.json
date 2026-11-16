@@ -8,7 +8,7 @@
     "postinstall": "node ../server/scripts/fix-wasm-esm.mjs"
   },
   "dependencies": {
-    "@tinycloud/node-sdk": "2.6.3"
+    "@tinycloud/node-sdk": "3.11.2"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

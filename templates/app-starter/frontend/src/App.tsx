@@ -162,7 +162,11 @@ export function App() {
     setSaveError(null);
     try {
       setState("connectingIdentity");
-      const { address: connectedAddress, web3Provider } = await connectWallet({
+      const {
+        address: connectedAddress,
+        web3Provider,
+        openkey,
+      } = await connectWallet({
         appName: APP_NAME,
         host: OPENKEY_HOST,
       });
@@ -184,6 +188,9 @@ export function App() {
         nonce,
         autoCreateSpace: true,
         capabilityRequest: composed,
+        // The owner reviews the session's permissions in OpenKey. "iframe" keeps the approval
+        // in the page, like the passkey step before it, so no popup can be blocked.
+        openkey: { client: openkey, mode: "iframe" },
       });
       setTcw(signedTcw);
       setDid(signedTcw.did ?? null);

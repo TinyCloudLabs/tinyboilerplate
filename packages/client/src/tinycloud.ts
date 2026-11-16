@@ -7,7 +7,7 @@ import type {
   SessionRestoreResult,
   SiweConfig,
 } from "@tinycloud/web-sdk";
-import type { EIP1193Provider } from "./openkey.js";
+import type { EIP1193Provider } from "@openkey/sdk";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -30,6 +30,13 @@ export interface TinyCloudWebConfig {
   nonce?: string;
 }
 
+/**
+ * OpenKey client for sign-in: `{ client: openkey }` with the `openkey` returned by
+ * `connectWallet`. TinyCloud sign-in is OpenKey's versioned approval, where the
+ * owner reviews the permissions the session will hold.
+ */
+export type OpenKeySignInConfig = NonNullable<TinyCloudWebSdkConfig["openkey"]>;
+
 export interface RestoreTinyCloudWebSessionResult {
   tcw: TinyCloudWeb | null;
   status: SessionRestoreResult["status"];
@@ -44,11 +51,12 @@ export interface RestoreTinyCloudWebSessionResult {
  */
 export function createTinyCloudWeb(
   web3Provider: EIP1193Provider,
-  config?: TinyCloudWebConfig,
+  config?: TinyCloudWebConfig & { openkey?: OpenKeySignInConfig },
 ): TinyCloudWeb {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
   const tcwConfig: TinyCloudWebSdkConfig = {
     provider: web3Provider,
+    openkey: config?.openkey,
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
     tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
@@ -65,7 +73,7 @@ export function createTinyCloudWeb(
 }
 
 /**
- * Create a TinyCloudWeb instance and sign in.
+ * Create a TinyCloudWeb instance and sign in through OpenKey's approval.
  *
  * Accepts an optional `nonce` to pass through to the SDK's SIWE message
  * construction, and optional manifest/capability request inputs that drive
@@ -74,16 +82,17 @@ export function createTinyCloudWeb(
  */
 export async function createAndSignIn(
   web3Provider: EIP1193Provider,
-  config?: TinyCloudWebConfig & { address?: string },
+  config: TinyCloudWebConfig & { openkey: OpenKeySignInConfig; address?: string },
 ): Promise<{ tcw: TinyCloudWeb; session: ClientSession }> {
-  const siweConfig = config?.nonce
-    ? { ...config?.siweConfig, nonce: config.nonce }
-    : config?.siweConfig;
+  const siweConfig = config.nonce
+    ? { ...config.siweConfig, nonce: config.nonce }
+    : config.siweConfig;
   const tcw = createTinyCloudWeb(web3Provider, { ...config, siweConfig });
-  if (config?.nonce) {
+  if (config.nonce) {
     await tcw.clearPersistedSession(config.address);
   }
-  const session = await tcw.signIn(config?.nonce ? { nonce: config.nonce } : undefined);
+  // The nonce travels in the config above: the OpenKey path refuses per-call SIWE overrides.
+  const session = await tcw.signIn();
   return { tcw, session };
 }
 

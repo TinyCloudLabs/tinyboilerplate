@@ -21,6 +21,13 @@ mock.module("@openkey/sdk", () => ({
       };
     }
   },
+
+  OpenKeyProvider: class MockOpenKeyProvider {
+    constructor(
+      public openkey: unknown,
+      public authResult: unknown,
+    ) {}
+  },
 }));
 
 const { connectWallet } = await import("../openkey.js");

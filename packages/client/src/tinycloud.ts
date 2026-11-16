@@ -7,6 +7,7 @@ import type {
   SessionRestoreResult,
   SiweConfig,
 } from "@tinycloud/web-sdk";
+import { composeManifestRequest } from "@tinycloud/sdk-core";
 import type { EIP1193Provider } from "@openkey/sdk";
 
 // ── Configuration ────────────────────────────────────────────────────
@@ -93,7 +94,53 @@ export async function createAndSignIn(
   }
   // The nonce travels in the config above: the OpenKey path refuses per-call SIWE overrides.
   const session = await tcw.signIn();
+
+  // The owner can untick permissions in OpenKey and the SDK accepts the narrower session.
+  // The app cannot work without what it asked for, so refuse it and leave no session.
+  const required = requestedResources(config);
+  if (required.length > 0 && !tcw.hasPermissions(required)) {
+    // Best effort: the refusal below is the result, whether or not cleanup succeeds.
+    await tcw.signOut().catch(() => {});
+    throw new Error(narrowedApprovalMessage(requestedManifests(config)));
+  }
   return { tcw, session };
+}
+
+function requestedManifests(config: TinyCloudWebConfig): Manifest[] {
+  const manifests = config.manifest ?? config.capabilityRequest?.manifests ?? [];
+  return Array.isArray(manifests) ? manifests : [manifests];
+}
+
+/** The permissions the sign-in asked OpenKey to approve. */
+function requestedResources(config: TinyCloudWebConfig) {
+  if (config.capabilityRequest) return config.capabilityRequest.resources;
+  const manifests = requestedManifests(config);
+  if (manifests.length === 0) return [];
+  return composeManifestRequest(manifests, {
+    includeAccountRegistryPermissions: config.includeAccountRegistryPermissions,
+  }).resources;
+}
+
+/**
+ * Plain words for an owner who narrowed the approval: which permissions the app
+ * needs (the manifest's own descriptions) and what to do. Draft copy, Monica words it.
+ */
+export function narrowedApprovalMessage(manifests: readonly Manifest[]): string {
+  const name = manifests[0]?.name ?? "This app";
+  const reasons = [
+    ...new Set(
+      manifests.flatMap((manifest) =>
+        (manifest.permissions ?? []).flatMap((permission) =>
+          permission.description ? [permission.description] : [],
+        ),
+      ),
+    ),
+  ];
+  const needs =
+    reasons.length > 0
+      ? `${name} needs these permissions to work: ${reasons.join(" ")}`
+      : `${name} needs every permission it asked for to work.`;
+  return `${needs} Sign in again and keep all permissions.`;
 }
 
 /**

@@ -2,6 +2,7 @@
 
 export {
   createBackendIdentity,
+  backendIdentityManifest,
   withSessionRefresh,
   type BackendIdentityConfig,
   type BackendIdentity,

@@ -1,6 +1,6 @@
 import type { TinyCloudNode } from "@tinycloud/node-sdk";
 import type { StoredDelegation } from "@tinyboilerplate/core";
-import { withSessionRefresh } from "./identity.js";
+import { DELEGATION_KEY_PREFIX, withSessionRefresh } from "./identity.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -113,6 +113,6 @@ export class DelegationStore {
     ) {
       throw new Error("Invalid delegation identifier");
     }
-    return `delegations/${identifier}`;
+    return `${DELEGATION_KEY_PREFIX}${identifier}`;
   }
 }

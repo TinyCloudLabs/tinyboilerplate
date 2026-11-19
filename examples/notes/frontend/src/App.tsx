@@ -30,6 +30,8 @@ const OPENKEY_HOST = import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
 const APP_NAME = "TinyCloud Notes";
 const BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL || `${globalThis.location?.protocol ?? "http:"}//localhost:3002`;
+// 7 days, the pinned SDK's default, set explicitly so an SDK upgrade cannot change it silently.
+const SESSION_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 type AppState =
   | "booting"
@@ -217,6 +219,7 @@ export function App() {
         nonce,
         autoCreateSpace: true,
         capabilityRequest: composed,
+        sessionExpirationMs: SESSION_EXPIRATION_MS,
       });
       setTcw(signedTcw);
       setDid(signedTcw.did ?? null);

@@ -269,8 +269,8 @@ Framework-agnostic browser helpers.
 |--------|-------------|
 | `createOpenKey(config?)` | Create an OpenKey instance |
 | `connectWallet(openkey)` | Connect wallet, return EIP-1193 provider |
-| `createTinyCloudWeb(provider, config?)` | Create TinyCloudWeb instance |
-| `signIn(tcw)` | Sign into TinyCloud, sets `tcw.did` and `tcw.spaceId` |
+| `createTinyCloudWeb(provider, config?)` | Create TinyCloudWeb instance; pass `manifest` or `capabilityRequest` in `config` to declare the app's permissions |
+| `createAndSignIn(provider, config?)` | Create and sign in; same `config`, plus optional `nonce` and `sessionExpirationMs` |
 | `loadAppManifest(url)` | Load and validate a manifest |
 | `composeManifestWithBackend(manifest, serverInfo)` | Compose the app manifest with backend-requested delegation permissions |
 | `createManifestDelegation(tcw, backendDID, capabilityRequest)` | Materialize a manifest-declared delegation to backend |
@@ -286,7 +286,7 @@ Framework-agnostic Node.js/Bun helpers.
 
 | Export | Description |
 |--------|-------------|
-| `createBackendIdentity(config)` | Initialize TinyCloudNode, sign in, return `{ node, did }` |
+| `createBackendIdentity(config)` | Initialize TinyCloudNode with the backend's manifest, sign in, return `{ node, did }` |
 | `withSessionRefresh(node, fn)` | Retry on session expiry |
 | `DelegationStore` | Persist delegations in backend-owned TinyCloud KV |
 | `DelegationCache` | In-memory cache for `DelegatedAccess` |
@@ -306,11 +306,17 @@ The EIP-1193 provider enables TinyCloud signing and backend session proof.
 ### 2. Frontend Signs Into TinyCloud
 
 ```typescript
-const tcw = createTinyCloudWeb(wallet.provider);
-await signIn(tcw);
+const manifest = await loadAppManifest(`${BACKEND_URL}/api/manifest`);
+const capabilityRequest = composeManifestWithBackend(manifest, serverInfo);
+const { tcw, session } = await createAndSignIn(wallet.provider, {
+  capabilityRequest,
+  sessionExpirationMs: 7 * 24 * 60 * 60 * 1000,
+});
 // tcw.did -> user's primary DID (did:pkh:eip155:...)
 // tcw.spaceId -> user's space ID
 ```
+
+Sign-in declares the permissions this app uses: pass `manifest` or `capabilityRequest`.
 
 ### 3. Frontend Delegates Access To Backend
 

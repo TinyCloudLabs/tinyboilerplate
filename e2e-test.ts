@@ -15,6 +15,7 @@
  * Or:     source templates/app-starter/backend/.env && bun run e2e-test.ts
  */
 import { TinyCloudNode, serializeDelegation, deserializeDelegation } from "@tinycloud/node-sdk";
+import { createBackendIdentity } from "./packages/server/src/index.ts";
 import { randomBytes } from "crypto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
@@ -73,6 +74,22 @@ async function main() {
     host: TINYCLOUD_HOST,
     prefix: "e2e-test",
     autoCreateSpace: true,
+    // Declare exactly what this user delegates to the backend below.
+    manifest: {
+      app_id: "xyz.tinycloud.app-starter.e2e",
+      name: "App-starter delegation smoke",
+      space: "e2e-test",
+      prefix: "",
+      defaults: false,
+      includePublicSpace: false,
+      permissions: [
+        { service: "tinycloud.kv", path: "", actions: ["get", "put", "del", "list"] },
+        { service: "tinycloud.sql", path: "", actions: ["read", "write"] },
+      ],
+    },
+    // The smoke user never uses account, secrets, or registry state.
+    autoBootstrapAccount: false,
+    includeAccountRegistryPermissions: false,
   });
   await user.signIn();
   const address = user.address!;
@@ -113,13 +130,12 @@ async function main() {
 
   // 5. Backend activates the delegation (simulates what the middleware does)
   console.log("\n5. Activating delegation as backend...");
-  const backendNode = new TinyCloudNode({
+  // Same identity, manifest, and session options the app-starter backend uses.
+  const { node: backendNode } = await createBackendIdentity({
     privateKey: BACKEND_PRIVATE_KEY,
     host: TINYCLOUD_HOST,
     prefix: "xyz.tinycloud.app-starter-backend",
-    autoCreateSpace: true,
   });
-  await backendNode.signIn();
   const access = await backendNode.useDelegation(delegation);
   console.log("   Delegation activated successfully");
 

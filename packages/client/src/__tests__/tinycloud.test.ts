@@ -134,6 +134,19 @@ describe("createAndSignIn", () => {
   });
 });
 
+describe("createTinyCloudWeb session lifetime", () => {
+  test("passes sessionExpirationMs to the SDK", () => {
+    // Mock wallet: this test never reaches a signature.
+    const provider = { request: async () => null } as unknown as Parameters<
+      typeof createTinyCloudWeb
+    >[0];
+
+    createTinyCloudWeb(provider, { sessionExpirationMs: 7 * 24 * 60 * 60 * 1000 });
+
+    expect(lastTinyCloudConfig.sessionExpirationMs).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+});
+
 describe("restoreTinyCloudWebSession", () => {
   test("restores a session-only TinyCloudWeb without a provider", async () => {
     restoreResult = { status: "restored", session: { address: "0xabc" } };

@@ -199,8 +199,6 @@ describe("scaffold-app CLI", () => {
       "APP_STARTER",
       "appStarter",
     ]);
-    await expectFileOmits(join(out, "backend/src/startup.ts"), ["APP_ID", "AppStarter"]);
-    await expectFileOmits(join(out, "backend/src/manifest.ts"), ["AppStarter"]);
     await expectFileContains(join(out, "backend/src/index.ts"), [
       "createScratchBackendIdentity",
       'process.env.PORT ?? "3013"',

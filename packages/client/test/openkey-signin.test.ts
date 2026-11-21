@@ -231,7 +231,7 @@ describe("createAndSignIn through OpenKey", () => {
         signInConfig(async (request) => approve(withoutSql(request.siwe))),
       ),
     ).rejects.toThrow(
-      "Example Notes needs these permissions to work: Store note body content by note id. Store note metadata. Sign in again and keep all permissions.",
+      "Example Notes needs all the permissions it asks for: Store note body content by note id. Store note metadata. Sign in again and allow each one.",
     );
 
     expect(loadPersistedSession(address)).toBeNull();

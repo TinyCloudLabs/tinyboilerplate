@@ -144,9 +144,9 @@ export function narrowedApprovalMessage(manifests: readonly Manifest[]): string 
   ];
   const needs =
     reasons.length > 0
-      ? `${name} needs these permissions to work: ${reasons.join(" ")}`
-      : `${name} needs every permission it asked for to work.`;
-  return `${needs} Sign in again and keep all permissions.`;
+      ? `${name} needs all the permissions it asks for: ${reasons.join(" ")}`
+      : `${name} needs all the permissions it asks for.`;
+  return `${needs} Sign in again and allow each one.`;
 }
 
 /**

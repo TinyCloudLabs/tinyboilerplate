@@ -128,7 +128,7 @@ function requestedResources(config: TinyCloudWebConfig) {
 
 /**
  * Plain words for an owner who narrowed the approval: which permissions the app
- * needs (the manifest's own descriptions) and what to do. Draft copy, Monica words it.
+ * needs (the manifest's own descriptions) and what to do. Draft copy, the copy owner words it.
  */
 export function narrowedApprovalMessage(manifests: readonly Manifest[]): string {
   const name = manifests[0]?.name ?? "This app";

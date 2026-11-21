@@ -25,6 +25,7 @@ import {
   loadAppManifest,
   loadRenewalReceipt,
   openKeyRenewalClient,
+  openKeySignOutNotice,
   renewalRestoreFor,
   renewalVerifyProof,
   requestNonce,
@@ -81,6 +82,8 @@ export function App() {
   // When the session's renewal lease ends. Set only for a lease that checked out and that the node admitted.
   const [renewsUntil, setRenewsUntil] = useState<string | null>(null);
   const openkeyRef = useRef<OpenKey | null>(null);
+  // Draft copy, the copy owner words it: shown after sign-out when OpenKey could not confirm that it ended the renewal.
+  const [signOutNotice, setSignOutNotice] = useState<string | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
   const [probe, setProbe] = useState<ProbeValue | null>(null);
   const [probeInput, setProbeInput] = useState("TinyCloud delegated KV is online.");
@@ -232,6 +235,7 @@ export function App() {
 
   const signIn = useCallback(async () => {
     setError(null);
+    setSignOutNotice(null);
     setSaveError(null);
     try {
       setState("connectingIdentity");
@@ -328,12 +332,16 @@ export function App() {
     if (token) revokeDelegation(BACKEND_URL, token).catch(() => {});
     // A kept lease keeps renewing at the node until OpenKey stops it, and OpenKey stops it when its session signs
     // out. Do this first: it can open OpenKey's window, which needs the click that started the sign-out.
+    // The tab that signed in has the client in memory; a tab restored through the lease builds one, but only when a
+    // lease receipt says there is something to stop.
     const leased = address !== null && loadRenewalReceipt(address) !== null;
-    if (leased) {
-      await signOutOpenKey(
+    let notice: string | null = null;
+    if (leased || openkeyRef.current) {
+      const revoked = await signOutOpenKey(
         openkeyRef.current,
         () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
       );
+      notice = leased ? openKeySignOutNotice(revoked) : null;
     }
     openkeyRef.current = null;
     if (tcw) await tcw.signOut?.();
@@ -351,6 +359,8 @@ export function App() {
     setDelegationStatus("none");
     setStorageFullAccount(null);
     setSaveError(null);
+    setError(null);
+    setSignOutNotice(notice);
     setState("unauthenticated");
   }, [address, tcw]);
 
@@ -456,6 +466,9 @@ export function App() {
           </div>
 
           {surfaceStatus && <SurfaceStatus {...surfaceStatus} />}
+          {signOutNotice && state === "unauthenticated" && (
+            <SurfaceStatus title="Renewal may still be on" body={signOutNotice} />
+          )}
           {saveError && <SurfaceStatus title="Storage full" body={saveError} tone="error" />}
 
           <label className="field-label probe-field">
@@ -517,7 +530,7 @@ function ConnectionDetails(props: {
         <StatusRow label="Address" value={props.address ?? "none"} mono />
         <StatusRow label="DID" value={props.did ?? "none"} mono />
         <StatusRow label="Policy" value={props.policyHash ?? "not fetched"} mono />
-        {/* Draft copy, Monica words it. */}
+        {/* Draft copy, the copy owner words it. */}
         <StatusRow
           label="Renewal"
           value={props.renewsUntil ? `Renews until ${formatDate(props.renewsUntil)}` : "Off"}

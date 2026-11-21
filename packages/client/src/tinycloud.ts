@@ -15,7 +15,8 @@ import type { EIP1193Provider } from "@openkey/sdk";
 export interface TinyCloudWebConfig {
   tinycloudHosts?: string[];
   tinycloudRegistryUrl?: string | null;
-  tinycloudFallbackHosts?: string[] | null;
+  /** Host hint for owners absent from both registries. Default https://node.tinycloud.xyz; null disables onboarding. */
+  newUserHost?: string | null;
   autoCreateSpace?: boolean;
   siweConfig?: SiweConfig;
   /**
@@ -62,7 +63,7 @@ export function createTinyCloudWeb(
     openkey: config?.openkey,
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
-    tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
+    newUserHost: config?.newUserHost,
     autoCreateSpace: config?.autoCreateSpace ?? true,
     sessionStorage: new BrowserSessionStorage(),
     nonce: config?.nonce,
@@ -161,7 +162,7 @@ export async function restoreTinyCloudWebSession(
   const tcwConfig: TinyCloudWebSdkConfig = {
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
-    tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
+    newUserHost: config?.newUserHost,
     autoCreateSpace: config?.autoCreateSpace ?? false,
     sessionStorage: new BrowserSessionStorage(),
     nonce: config?.nonce,

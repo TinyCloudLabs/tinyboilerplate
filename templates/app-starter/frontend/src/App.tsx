@@ -33,7 +33,7 @@ import {
   restoreTinyCloudWebSession,
   revokeDelegation,
   sendDelegation,
-  signOutOpenKey,
+  signOutLocalFirst,
   verifyRenewedSession,
   verifySession,
   type ApiClient,
@@ -343,33 +343,36 @@ export function App() {
     const token = sessionStoreRef.current.getToken();
     if (token) revokeDelegation(BACKEND_URL, token).catch(() => {});
     // A kept lease keeps renewing at the node until OpenKey stops it, and OpenKey stops it when its session signs
-    // out. Do this first: it can open OpenKey's window, which needs the click that started the sign-out.
-    // The tab that signed in has the client in memory; a tab restored through the lease builds one. OpenKey is always
-    // asked, so a lost receipt cannot leave a lease behind.
-    const revoked = await signOutOpenKey(
-      openkeyRef.current,
-      () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
-    );
-    const notice = openKeySignOutNotice(revoked, "App Starter");
+    // out. The app signs out locally first and shows the signed-out screen at once; OpenKey's sign-out window waits
+    // for a press, so its answer only decides the notice. The tab that signed in has the client in memory; a tab
+    // restored through the lease builds one. OpenKey is always asked, so a lost receipt cannot leave a lease behind.
+    const openkey = openkeyRef.current;
     openkeyRef.current = null;
-    if (tcw) await tcw.signOut?.();
-    else if (address) clearPersistedSession(address);
-    // `clearPersistedSession` drops the receipt; a signed-out SDK session leaves it, so clear it here too.
-    if (address) clearRenewalReceipt(address);
-    sessionStoreRef.current.clear();
-    setRenewsUntil(null);
-    setAddress(null);
-    setDid(null);
-    setTcw(null);
-    setApi(null);
-    setProbe(null);
-    setProviderLive(false);
-    setDelegationStatus("none");
-    setStorageFullAccount(null);
-    setSaveError(null);
-    setError(null);
-    setSignOutNotice(notice);
-    setState("unauthenticated");
+    const revoked = await signOutLocalFirst({
+      clearLocal: async () => {
+        if (tcw) await tcw.signOut?.();
+        else if (address) clearPersistedSession(address);
+        // `clearPersistedSession` drops the receipt; a signed-out SDK session leaves it, so clear it here too.
+        if (address) clearRenewalReceipt(address);
+        sessionStoreRef.current.clear();
+        setRenewsUntil(null);
+        setAddress(null);
+        setDid(null);
+        setTcw(null);
+        setApi(null);
+        setProbe(null);
+        setProviderLive(false);
+        setDelegationStatus("none");
+        setStorageFullAccount(null);
+        setSaveError(null);
+        setError(null);
+        setSignOutNotice(null);
+        setState("unauthenticated");
+      },
+      current: openkey,
+      fallback: () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
+    });
+    setSignOutNotice(openKeySignOutNotice(revoked, "App Starter"));
   }, [address, tcw]);
 
   // A storage rejection enters the read-only state and keeps reads usable;

@@ -74,8 +74,11 @@ export function openKeySignOutNotice(revoked: boolean, appName: string): string 
     : `You're signed out of ${appName} in this browser, but OpenKey may still be renewing its access. To stop that, choose Stop renewal under Renewing permissions in OpenKey settings.`;
 }
 
-/** How long the app waits for OpenKey to confirm a sign-out before it goes on. */
-const OPENKEY_SIGN_OUT_TIMEOUT_MS = 5_000;
+/**
+ * How long the app waits for OpenKey to confirm a sign-out. OpenKey's sign-out window waits for the person to press
+ * Sign out, so the wait is long; the app has signed out locally by then (see `signOutLocalFirst`).
+ */
+export const OPENKEY_SIGN_OUT_TIMEOUT_MS = 120_000;
 
 /**
  * Ends the OpenKey session, which also stops the renewal lease that sign-in recorded for it. Prefers the client that
@@ -103,6 +106,20 @@ export async function signOutOpenKey(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * Signs out locally, then asks OpenKey. `clearLocal` runs first and never waits for OpenKey, so the signed-out screen
+ * shows at once; the answer only decides the notice (`openKeySignOutNotice`).
+ */
+export async function signOutLocalFirst(options: {
+  clearLocal: () => void | Promise<void>;
+  current: Pick<OpenKey, "signOut"> | null;
+  fallback: () => Pick<OpenKey, "signOut">;
+  timeoutMs?: number;
+}): Promise<boolean> {
+  await options.clearLocal();
+  return signOutOpenKey(options.current, options.fallback, options.timeoutMs);
 }
 
 // ── Connect Wallet ──────────────────────────────────────────────────

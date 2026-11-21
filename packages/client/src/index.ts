@@ -4,6 +4,7 @@ export {
   connectWallet,
   openKeyRenewalClient,
   openKeySignOutNotice,
+  signOutLocalFirst,
   signOutOpenKey,
   type ConnectWalletConfig,
   type ConnectWalletResult,

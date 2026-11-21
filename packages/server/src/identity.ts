@@ -1,4 +1,4 @@
-import { TinyCloudNode } from "@tinycloud/node-sdk";
+import { TinyCloudNode, type Manifest } from "@tinycloud/node-sdk";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -34,12 +34,41 @@ export function validateBackendPrefix(prefix: string | undefined): string {
   return prefix;
 }
 
+/** KV prefix in the backend's own space where {@link DelegationStore} keeps user delegations. */
+export const DELEGATION_KEY_PREFIX = "delegations/";
+
+/**
+ * Backend session lifetime: 7 days, the pinned SDK's default, set explicitly
+ * so an SDK upgrade cannot change it silently.
+ */
+export const BACKEND_SESSION_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * What the backend's own session may do in its own space: read, write and
+ * delete stored user delegations. Activating a user's delegation needs no
+ * grant here; it is rooted in the user's signature.
+ */
+export function backendIdentityManifest(prefix: string): Manifest {
+  return {
+    app_id: prefix,
+    name: "Backend identity",
+    space: prefix,
+    prefix: "",
+    defaults: false,
+    includePublicSpace: false,
+    permissions: [
+      { service: "tinycloud.kv", path: DELEGATION_KEY_PREFIX, actions: ["get", "put", "del"] },
+    ],
+  };
+}
+
 /**
  * Initialize a TinyCloudNode instance with the given private key,
  * sign in, and return the node + its DID.
  *
  * This is the backend's own identity — used to store delegations
- * and access user data via delegated capabilities.
+ * and access user data via delegated capabilities. Its session holds
+ * only {@link backendIdentityManifest}.
  */
 export async function createBackendIdentity(
   config: BackendIdentityConfig,
@@ -50,6 +79,12 @@ export async function createBackendIdentity(
     host: config.host ?? "https://node.tinycloud.xyz",
     prefix,
     autoCreateSpace: config.autoCreateSpace ?? true,
+    manifest: backendIdentityManifest(prefix),
+    sessionExpirationMs: BACKEND_SESSION_EXPIRATION_MS,
+    // The backend never uses account, secrets, or registry state; skip
+    // first-account bootstrap and the registry grants it would need.
+    autoBootstrapAccount: false,
+    includeAccountRegistryPermissions: false,
   });
 
   await node.signIn();

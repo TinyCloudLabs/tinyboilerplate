@@ -170,11 +170,30 @@ async function bootstrap(): Promise<SidecarState> {
 
   if (generated) console.log(`[sidecar] generated new agent key at ${AGENT_KEY_PATH}`);
 
+  // The agent's own session exists only to activate delegations
+  // (useDelegation), which are rooted in the delegator's signature. Declare
+  // the narrowest grant on its own space and skip account bootstrap and
+  // registry grants, which it never uses.
+  const agentSpace = process.env.TC_AGENT_PREFIX ?? "tc-agent";
   const node = new TinyCloudNode({
     privateKey: key.privateKey,
     host: HOST,
-    prefix: process.env.TC_AGENT_PREFIX ?? "tc-agent",
+    prefix: agentSpace,
     autoCreateSpace: false,
+    // 7 days, the pinned SDK's default, set explicitly so an SDK upgrade
+    // cannot change it silently.
+    sessionExpirationMs: 7 * 24 * 60 * 60 * 1000,
+    autoBootstrapAccount: false,
+    includeAccountRegistryPermissions: false,
+    manifest: {
+      app_id: "xyz.tinycloud.agent-runtime",
+      name: AGENT_NAME,
+      space: agentSpace,
+      prefix: "",
+      defaults: false,
+      includePublicSpace: false,
+      permissions: [{ service: "tinycloud.capabilities", path: "", actions: ["read"] }],
+    },
   });
   await node.signIn();
 

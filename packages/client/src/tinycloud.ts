@@ -29,6 +29,8 @@ export interface TinyCloudWebConfig {
   includeAccountRegistryPermissions?: boolean;
   /** SIWE nonce override. If set, `siweConfig.nonce` still wins inside the SDK. */
   nonce?: string;
+  /** Lifetime of the signed-in session in milliseconds. Defaults to the SDK default. */
+  sessionExpirationMs?: number;
 }
 
 /**
@@ -68,6 +70,7 @@ export function createTinyCloudWeb(
     manifest,
     capabilityRequest: config?.capabilityRequest,
     includeAccountRegistryPermissions: config?.includeAccountRegistryPermissions,
+    sessionExpirationMs: config?.sessionExpirationMs,
   };
 
   return new TinyCloudWeb(tcwConfig);
@@ -77,9 +80,10 @@ export function createTinyCloudWeb(
  * Create a TinyCloudWeb instance and sign in through OpenKey's approval.
  *
  * Accepts an optional `nonce` to pass through to the SDK's SIWE message
- * construction, and optional manifest/capability request inputs that drive
- * the session's granted capabilities. The SDK's `signIn()` returns a `ClientSession`
- * containing the signed SIWE message and signature.
+ * construction, optional manifest/capability request inputs that drive
+ * the session's granted capabilities, and an optional `sessionExpirationMs`.
+ * The SDK's `signIn()` returns a `ClientSession` containing the signed SIWE
+ * message and signature.
  */
 export async function createAndSignIn(
   web3Provider: EIP1193Provider,

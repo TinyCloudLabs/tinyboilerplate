@@ -338,7 +338,7 @@ export function App() {
       openkeyRef.current,
       () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
     );
-    const notice = openKeySignOutNotice(revoked);
+    const notice = openKeySignOutNotice(revoked, "App Starter");
     openkeyRef.current = null;
     if (tcw) await tcw.signOut?.();
     else if (address) clearPersistedSession(address);

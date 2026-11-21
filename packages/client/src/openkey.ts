@@ -68,10 +68,10 @@ export function openKeyRenewalClient(
  * What to tell the owner when OpenKey could not confirm that it ended their session. Draft copy, the copy owner words it.
  * Null when OpenKey confirmed (`revoked === true`), the only outcome that counts as ended.
  */
-export function openKeySignOutNotice(revoked: boolean): string | null {
+export function openKeySignOutNotice(revoked: boolean, appName: string): string | null {
   return revoked
     ? null
-    : "You are signed out here, but renewal may still be on. Stop it under Renewing permissions in your OpenKey settings.";
+    : `You're signed out of ${appName} in this browser, but OpenKey may still be renewing its access. To stop that, choose Stop renewal under Renewing permissions in OpenKey settings.`;
 }
 
 /** How long the app waits for OpenKey to confirm a sign-out before it goes on. */

@@ -48,12 +48,12 @@ describe("signOutOpenKey", () => {
 
 describe("openKeySignOutNotice", () => {
   test("a confirmed revocation shows no notice", () => {
-    expect(openKeySignOutNotice(true)).toBeNull();
+    expect(openKeySignOutNotice(true, "App Starter")).toBeNull();
   });
 
-  test("an unconfirmed one says renewal may still be on and where to stop it", () => {
-    const notice = openKeySignOutNotice(false);
-    expect(notice).toContain("renewal may still be on");
-    expect(notice).toContain("Renewing permissions");
+  test("an unconfirmed one gives the standing text with the app's name", () => {
+    expect(openKeySignOutNotice(false, "App Starter")).toBe(
+      "You're signed out of App Starter in this browser, but OpenKey may still be renewing its access. To stop that, choose Stop renewal under Renewing permissions in OpenKey settings.",
+    );
   });
 });

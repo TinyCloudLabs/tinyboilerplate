@@ -1,10 +1,17 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { issueSessionToken, verifySIWE, type NonceStore } from "@tinyboilerplate/server";
+import {
+  isExpectedSiweOrigin,
+  issueSessionToken,
+  verifySIWE,
+  type NonceStore,
+} from "@tinyboilerplate/server";
 
 interface AuthRoutesConfig {
   nonceStore: NonceStore;
   privateKey: string;
+  /** The frontend URL: a grant is accepted only when its SIWE domain is this host. */
+  frontendUrl: string;
 }
 
 export function createAuthRouter(config: AuthRoutesConfig) {
@@ -29,7 +36,14 @@ export function createAuthRouter(config: AuthRoutesConfig) {
     }
 
     try {
-      const { address, nonce } = await verifySIWE(message, signature);
+      const { address, nonce, domain, uri } = await verifySIWE(message, signature);
+      if (!isExpectedSiweOrigin(domain, uri, config.frontendUrl)) {
+        res.status(400).json({
+          error: "invalid_origin",
+          message: "SIWE domain or URI does not match this application",
+        });
+        return;
+      }
       if (!config.nonceStore.validate(address, nonce)) {
         res
           .status(401)

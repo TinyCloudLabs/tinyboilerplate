@@ -15,19 +15,23 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "postinstall": "node scripts/fix-web-wasm-init.mjs",
-    "test": "bun test src/__tests__"
+    "test": "bun test src/__tests__ && bun test ./test"
   },
   "dependencies": {
     "@tinyboilerplate/core": "workspace:*",
-    "@tinycloud/sdk-core": "2.6.3"
+    "@tinycloud/sdk-core": "3.13.0",
+    "@tinycloud/share-envelope": "1.6.0",
+    "buffer": "^6.0.3"
   },
   "peerDependencies": {
-    "@openkey/sdk": ">=0.8.0",
-    "@tinycloud/web-sdk": ">=2.6.3"
+    "@openkey/sdk": ">=0.12.2",
+    "@tinycloud/web-sdk": ">=3.13.0"
   },
   "devDependencies": {
-    "@openkey/sdk": "^0.8.4",
-    "@tinycloud/web-sdk": "2.6.3",
-    "typescript": "^5.7.0"
+    "@openkey/sdk": "0.13.0-beta.3",
+    "@tinycloud/node-sdk": "3.13.0",
+    "@tinycloud/web-sdk": "3.13.0",
+    "typescript": "^5.7.0",
+    "viem": "^2.52.0"
   }
 }

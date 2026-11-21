@@ -17,11 +17,24 @@ export type { DelegatedAccess } from "@tinycloud/node-sdk";
 export {
   createNonceStore,
   verifySIWE,
+  isExpectedSiweOrigin,
+  verifySiweSession,
   issueSessionToken,
   verifySessionToken,
   type NonceStore,
   type NonceEntry,
   type SessionTokenPayload,
+  type VerifiedSiweSession,
 } from "./auth.js";
+
+export {
+  renewalHolderProofMessage,
+  renewalVerifyConfigFromEnv,
+  verifyRenewal,
+  type RenewalVerifyConfig,
+  type RenewalVerifyDependencies,
+  type RenewalVerifyInput,
+  type RenewalVerifyResult,
+} from "./renewal-verify.js";
 
 export { createCsrfMiddleware, type CsrfConfig } from "./csrf.js";

@@ -13,6 +13,39 @@ export interface PersistedTinyCloudSession {
 
 /** localStorage key prefix used by BrowserSessionStorage. */
 const TC_SESSION_KEY_PREFIX = "tinycloud:session:";
+/** The OpenKey renewal receipt for the saved session. Outside the SDK's own prefix, which it scans. */
+const RENEWAL_RECEIPT_KEY_PREFIX = "tinyboilerplate:renewal-receipt:";
+
+/** Keep the renewal receipt OpenKey returned at sign-in. Unverified here: check it before every use. */
+export function saveRenewalReceipt(address: string, receipt: unknown): void {
+  try {
+    localStorage.setItem(
+      RENEWAL_RECEIPT_KEY_PREFIX + address.toLowerCase(),
+      JSON.stringify(receipt),
+    );
+  } catch {
+    // localStorage unavailable or full: the session then lasts until its signed end.
+  }
+}
+
+/** The stored renewal receipt, parsed but unverified; null when there is none or it is unreadable. */
+export function loadRenewalReceipt(address: string): unknown {
+  try {
+    const raw = localStorage.getItem(RENEWAL_RECEIPT_KEY_PREFIX + address.toLowerCase());
+    return raw === null ? null : JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** Forget the renewal receipt, so the saved session can no longer be restored past its signed end. */
+export function clearRenewalReceipt(address: string): void {
+  try {
+    localStorage.removeItem(RENEWAL_RECEIPT_KEY_PREFIX + address.toLowerCase());
+  } catch {
+    // localStorage unavailable
+  }
+}
 
 /**
  * Check if a TinyCloud session is persisted in BrowserSessionStorage.
@@ -57,6 +90,7 @@ export function loadPersistedSession(address: string): PersistedTinyCloudSession
 export function clearPersistedSession(address: string): void {
   try {
     localStorage.removeItem(TC_SESSION_KEY_PREFIX + address.toLowerCase());
+    localStorage.removeItem(RENEWAL_RECEIPT_KEY_PREFIX + address.toLowerCase());
   } catch {
     // localStorage unavailable
   }

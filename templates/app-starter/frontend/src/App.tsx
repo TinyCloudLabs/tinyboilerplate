@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import OpenKey from "@openkey/sdk";
 import type { TinyCloudWeb } from "@tinycloud/web-sdk";
 import {
   MANAGE_STORAGE_URL,
@@ -9,21 +10,35 @@ import {
 } from "@tinyboilerplate/core";
 import {
   ApiRequestError,
+  SIGN_IN_RENEWAL_ASK,
   SessionStore,
+  admitSignInRenewal,
   checkDelegationStatus,
   clearPersistedSession,
+  clearRenewalReceipt,
   composeManifestWithBackend,
   connectWallet,
   createAndSignIn,
   createApiClient,
   createManifestDelegation,
+  keptLeaseEnd,
   loadAppManifest,
+  openKeyRenewalClient,
+  openKeySignOutNotice,
+  renewalRestoreFor,
+  renewalReissueVerdict,
+  settleFailedRestore,
+  renewalVerifyProof,
   requestNonce,
   restoreTinyCloudWebSession,
   revokeDelegation,
   sendDelegation,
+  createSignOutGuard,
+  signOutLocalFirst,
+  verifyRenewedSession,
   verifySession,
   type ApiClient,
+  type OpenKeyRenewalOutcome,
 } from "@tinyboilerplate/client";
 
 const OPENKEY_HOST = import.meta.env.VITE_OPENKEY_HOST || "https://openkey.so";
@@ -66,6 +81,15 @@ export function App() {
   const [policy, setPolicy] = useState<DelegatingServerInfo | null>(null);
   const [delegationStatus, setDelegationStatus] = useState<DelegationStatus>("none");
   const [tcw, setTcw] = useState<TinyCloudWeb | null>(null);
+  // When the session's renewal lease ends. Set only for a lease that checked out and that the node admitted.
+  const [renewsUntil, setRenewsUntil] = useState<string | null>(null);
+  const openkeyRef = useRef<OpenKey | null>(null);
+  // Counts sign-ins and sign-outs, so an OpenKey answer that arrives after a newer one is dropped.
+  const authGenerationRef = useRef(0);
+  // A sign-in or restore still awaiting OpenKey when the person signs out must leave nothing behind.
+  const signOutGuardRef = useRef(createSignOutGuard());
+  // Draft copy, the copy owner words it: shown after sign-out, saying whether OpenKey ended the renewal.
+  const [signOutNotice, setSignOutNotice] = useState<string | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
   const [probe, setProbe] = useState<ProbeValue | null>(null);
   const [probeInput, setProbeInput] = useState("TinyCloud delegated KV is online.");
@@ -109,21 +133,103 @@ export function App() {
     restoredRef.current = true;
     const sessionStore = sessionStoreRef.current;
 
-    if (!sessionStore.hasSession() || sessionStore.isExpired()) {
-      setState("unauthenticated");
-      return;
-    }
-
-    const storedAddress = sessionStore.getAddress();
-    const token = sessionStore.getToken();
-    if (!storedAddress || !token) {
+    const lapsed = !sessionStore.hasSession() || sessionStore.isExpired();
+    const bearerAddress = lapsed ? null : sessionStore.getAddress();
+    if (!lapsed && (!bearerAddress || !sessionStore.getToken())) {
       sessionStore.clear();
       setState("unauthenticated");
       return;
     }
 
+    // A sign-out while this restore awaits the node or the backend must not be undone by its later completion: after
+    // every await the restore checks, and on a change it signs the client it built out, clears the saved session and
+    // receipt and shows nothing.
+    const restoreAddress = sessionStore.getAddress();
+    let restoring: TinyCloudWeb | null = null;
+    const abandoned = signOutGuardRef.current.capture(() => {
+      restoring?.cleanup();
+      if (restoreAddress) {
+        clearPersistedSession(restoreAddress);
+        clearRenewalReceipt(restoreAddress);
+      }
+      sessionStore.clear();
+    });
+
     (async () => {
       try {
+        let storedAddress = bearerAddress;
+        let leasedTcw: TinyCloudWeb | null = null;
+        if (lapsed) {
+          // The backend bearer has lapsed or is gone. A kept renewal lease that checks out carries the TinyCloud
+          // session on, and the backend reissues the bearer from it.
+          const renewal = await renewalRestoreFor(sessionStore.getAddress());
+          if (await abandoned()) return;
+          if (!renewal) {
+            setState("unauthenticated");
+            return;
+          }
+          setState("backendSessionRestored");
+          const leased = await restoreTinyCloudWebSession(renewal.address, {
+            autoCreateSpace: false,
+            ...(renewal.pastSignedEnd
+              ? { renewalLeaseAuthorization: renewal.leaseAuthorization }
+              : {}),
+          });
+          restoring = leased.tcw ?? null;
+          if (await abandoned()) return;
+          if (leased.status !== "restored" || !leased.tcw) {
+            // An answer that the saved session is gone or expired ends it. Anything else (offline, node down,
+            // storage that cannot be read) keeps the session and its lease receipt for the next attempt.
+            settleFailedRestore(renewal.address, leased.status, leased.error);
+            sessionStore.clear();
+            setState("unauthenticated");
+            return;
+          }
+          try {
+            // A nonce another backend instance never saw (or one used twice) answers `invalid_nonce`: ask for a fresh
+            // one and try once more before leaving the receipt for the next load.
+            for (let attempt = 0; ; attempt++) {
+              try {
+                const nonce = await requestNonce(BACKEND_URL, renewal.address);
+                const proof = await renewalVerifyProof({
+                  tcw: leased.tcw,
+                  record: renewal.record,
+                  backendOrigin: new URL(BACKEND_URL).origin,
+                  nonce,
+                });
+                const verified = await verifyRenewedSession(BACKEND_URL, {
+                  ...proof,
+                  address: renewal.address,
+                  nonce,
+                  leaseAuthorization: renewal.leaseAuthorization,
+                });
+                if (await abandoned()) return;
+                sessionStore.setSession(verified.token, verified.expiresIn, renewal.address);
+                break;
+              } catch (caught) {
+                if (attempt === 0 && renewalReissueVerdict(caught) === "retry-nonce") continue;
+                throw caught;
+              }
+            }
+          } catch (caught) {
+            if (await abandoned()) return;
+            leased.tcw.cleanup();
+            // The grant, the lease or the renewal was refused: the saved session and receipt end. Anything else
+            // (a generic 401, a rate limit, the backend or the network down) keeps them for the next load.
+            if (renewalReissueVerdict(caught) === "drop") {
+              clearPersistedSession(renewal.address);
+              sessionStore.clear();
+              setState("unauthenticated");
+              return;
+            }
+            throw caught;
+          }
+          storedAddress = renewal.address;
+          leasedTcw = leased.tcw;
+        }
+        const token = sessionStore.getToken();
+        if (!storedAddress || !token) throw new Error("Backend session token was not stored.");
+
         setState("backendSessionRestored");
         const client = createApiClient(BACKEND_URL, { sessionStore });
         setApi(client);
@@ -133,24 +239,37 @@ export function App() {
 
         setState("fetchingPolicy");
         const info = await fetchPolicy();
+        if (await abandoned()) return;
         setPolicy(info);
 
         setState("checkingDelegation");
         const delegation = await checkDelegationStatus(BACKEND_URL, token);
+        if (await abandoned()) return;
         setDelegationStatus(delegation.status);
         if (delegation.status === "active") {
-          const restored = await restoreTinyCloudWebSession(storedAddress, {
-            autoCreateSpace: false,
-          });
-          if (restored.status === "restored") setTcw(restored.tcw);
+          const restoredTcw =
+            leasedTcw ??
+            (await restoreTinyCloudWebSession(storedAddress, { autoCreateSpace: false })).tcw;
+          restoring = restoredTcw ?? null;
+          if (await abandoned()) return;
+          if (restoredTcw) setTcw(restoredTcw);
+          const leaseEnd = await keptLeaseEnd(storedAddress);
+          if (await abandoned()) return;
+          setRenewsUntil(leaseEnd);
           setState("ready");
           await loadProbe(client);
           return;
         }
+        // Without an active backend delegation the app signs in again, so the lease-restored session is not kept.
+        leasedTcw?.cleanup();
+        const leftoverEnd = await keptLeaseEnd(storedAddress);
+        if (await abandoned()) return;
+        setRenewsUntil(leftoverEnd);
         if (delegation.status === "expired") setState("delegationExpired");
         else if (delegation.status === "stale") setState("delegationStale");
         else setState("needsDelegation");
       } catch (caught) {
+        if (await abandoned()) return;
         sessionStore.clear();
         setApi(null);
         setError(errorMessage(caught));
@@ -160,14 +279,37 @@ export function App() {
   }, [fetchPolicy, loadProbe]);
 
   const signIn = useCallback(async () => {
+    authGenerationRef.current++;
+    let started: { tcw: TinyCloudWeb; address: string } | null = null;
+    // After every await: a sign-out meanwhile means this sign-in must not persist or show anything. The client it
+    // built is signed out and its saved session and receipt are cleared; no earlier client is brought back.
+    const superseded = signOutGuardRef.current.capture(async () => {
+      if (started) {
+        try {
+          await started.tcw.signOut?.();
+        } catch {
+          // Already gone.
+        }
+        clearPersistedSession(started.address);
+        clearRenewalReceipt(started.address);
+        sessionStoreRef.current.clear();
+      }
+      openkeyRef.current = null;
+    });
     setError(null);
+    setSignOutNotice(null);
     setSaveError(null);
     try {
       setState("connectingIdentity");
-      const { address: connectedAddress, web3Provider } = await connectWallet({
+      const {
+        address: connectedAddress,
+        web3Provider,
+        openkey,
+      } = await connectWallet({
         appName: APP_NAME,
         host: OPENKEY_HOST,
       });
+      if (await superseded()) return;
       setAddress(connectedAddress);
       setProviderLive(true);
 
@@ -177,23 +319,59 @@ export function App() {
         fetchPolicy(),
         loadAppManifest(`${BACKEND_URL}/api/manifest`),
       ]);
+      if (await superseded()) return;
       setPolicy(info);
       const composed = composeManifestWithBackend(manifest, info);
 
       setState("signingTinyCloudSession");
+      // The owner can leave renewal on in OpenKey's approval. OpenKey signs the lease and records it; the
+      // outcome is read here, before the SDK builds the session from the signed result.
+      let renewalOutcome: OpenKeyRenewalOutcome = {};
+      // When the lease arrived, on this device's monotonic clock: it is sent to the node only within a minute of it.
+      let renewalArrivedAt: number | undefined;
       const { tcw: signedTcw, session } = await createAndSignIn(web3Provider, {
         address: connectedAddress,
         nonce,
         autoCreateSpace: true,
         capabilityRequest: composed,
+        // The owner reviews the session's permissions in OpenKey. "iframe" keeps the approval
+        // in the page, like the passkey step before it, so no popup can be blocked.
+        openkey: {
+          client: openKeyRenewalClient(openkey, SIGN_IN_RENEWAL_ASK, (outcome) => {
+            renewalOutcome = outcome;
+            renewalArrivedAt = performance.now();
+          }),
+          mode: "iframe",
+          expiryChangeable: true,
+          maxExpiresAt: () => Date.now() + SESSION_EXPIRATION_MS,
+        },
         sessionExpirationMs: SESSION_EXPIRATION_MS,
       });
+      started = { tcw: signedTcw, address: connectedAddress };
+      if (await superseded()) return;
       setTcw(signedTcw);
       setDid(signedTcw.did ?? null);
 
       setState("verifyingBackendSession");
       const verified = await verifySession(BACKEND_URL, session.siwe, session.signature);
+      if (await superseded()) return;
       sessionStoreRef.current.setSession(verified.token, verified.expiresIn, connectedAddress);
+      // OpenKey signed and recorded the lease but does not send it to the node: the session's node admits it here,
+      // within a minute of its arrival. Without a lease, or if the check or the admission fails, the session
+      // runs to its signed end.
+      openkeyRef.current = openkey;
+      const renews = await admitSignInRenewal({
+        tcw: signedTcw,
+        address: connectedAddress,
+        renewal: renewalOutcome.renewal,
+        arrivedAt: renewalArrivedAt,
+      });
+      if (await superseded()) return;
+      // A finite sign-in leaves no receipt behind from an earlier lease.
+      if (!renews) clearRenewalReceipt(connectedAddress);
+      const renewsUntilValue = renews ? await keptLeaseEnd(connectedAddress) : null;
+      if (await superseded()) return;
+      setRenewsUntil(renewsUntilValue);
       const client = createApiClient(BACKEND_URL, { sessionStore: sessionStoreRef.current });
       setApi(client);
 
@@ -204,16 +382,19 @@ export function App() {
         status: "none" as const,
         expiresAt: null,
       }));
+      if (await superseded()) return;
       setDelegationStatus(status.status);
       if (status.status !== "active") {
         const { serialized } = await createManifestDelegation(signedTcw, info.did, composed);
         await sendDelegation(BACKEND_URL, serialized, token);
+        if (await superseded()) return;
         setDelegationStatus("active");
       }
 
       setState("ready");
       await loadProbe(client);
     } catch (caught) {
+      if (await superseded()) return;
       setError(errorMessage(caught));
       setState("recoverableError");
     }
@@ -222,19 +403,44 @@ export function App() {
   const signOut = useCallback(async () => {
     const token = sessionStoreRef.current.getToken();
     if (token) revokeDelegation(BACKEND_URL, token).catch(() => {});
-    if (tcw) await tcw.signOut?.();
-    else if (address) clearPersistedSession(address);
-    sessionStoreRef.current.clear();
-    setAddress(null);
-    setDid(null);
-    setTcw(null);
-    setApi(null);
-    setProbe(null);
-    setProviderLive(false);
-    setDelegationStatus("none");
-    setStorageFullAccount(null);
-    setSaveError(null);
-    setState("unauthenticated");
+    // A kept lease keeps renewing at the node until OpenKey stops it, and OpenKey stops it when its session signs
+    // out. The app signs out locally first and shows the signed-out screen at once; OpenKey's sign-out window waits
+    // for a press, so its answer only decides the notice. The tab that signed in has the client in memory; a tab
+    // restored through the lease builds one. OpenKey is always asked, so a lost receipt cannot leave a lease behind.
+    const openkey = openkeyRef.current;
+    openkeyRef.current = null;
+    // A sign-in or another sign-out that starts while OpenKey's window is open makes this answer stale.
+    const generation = ++authGenerationRef.current;
+    signOutGuardRef.current.signedOut();
+    const revoked = await signOutLocalFirst({
+      clearLocal: async () => {
+        if (tcw) await tcw.signOut?.();
+        else if (address) clearPersistedSession(address);
+        // `clearPersistedSession` drops the receipt; a signed-out SDK session leaves it, so clear it here too.
+        if (address) clearRenewalReceipt(address);
+        sessionStoreRef.current.clear();
+      },
+      showSignedOut: () => {
+        setRenewsUntil(null);
+        setAddress(null);
+        setDid(null);
+        setTcw(null);
+        setApi(null);
+        setProbe(null);
+        setProviderLive(false);
+        setDelegationStatus("none");
+        setStorageFullAccount(null);
+        setSaveError(null);
+        setError(null);
+        setSignOutNotice(null);
+        setState("unauthenticated");
+      },
+      current: openkey,
+      fallback: () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
+    });
+    if (generation === authGenerationRef.current) {
+      setSignOutNotice(openKeySignOutNotice(revoked, "App Starter"));
+    }
   }, [address, tcw]);
 
   // A storage rejection enters the read-only state and keeps reads usable;
@@ -299,6 +505,7 @@ export function App() {
             error={error}
             policyHash={policy?.policyHash ?? null}
             providerLive={providerLive}
+            renewsUntil={renewsUntil}
             state={state}
           />
           {shouldShowSignIn && (
@@ -338,6 +545,9 @@ export function App() {
           </div>
 
           {surfaceStatus && <SurfaceStatus {...surfaceStatus} />}
+          {signOutNotice && state === "unauthenticated" && (
+            <SurfaceStatus title="Signed out" body={signOutNotice} />
+          )}
           {saveError && <SurfaceStatus title="Storage full" body={saveError} tone="error" />}
 
           <label className="field-label probe-field">
@@ -384,6 +594,7 @@ function ConnectionDetails(props: {
   error: string | null;
   policyHash: string | null;
   providerLive: boolean;
+  renewsUntil: string | null;
   state: AppState;
 }) {
   return (
@@ -398,6 +609,11 @@ function ConnectionDetails(props: {
         <StatusRow label="Address" value={props.address ?? "none"} mono />
         <StatusRow label="DID" value={props.did ?? "none"} mono />
         <StatusRow label="Policy" value={props.policyHash ?? "not fetched"} mono />
+        {/* Draft copy, the copy owner words it. */}
+        <StatusRow
+          label="Renewal"
+          value={props.renewsUntil ? `Renews until ${formatDate(props.renewsUntil)}` : "Off"}
+        />
         {props.error && <p className="error-text">{props.error}</p>}
       </div>
     </details>

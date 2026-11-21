@@ -197,7 +197,11 @@ export function App() {
     setSaveError(null);
     try {
       setState("connectingIdentity");
-      const { address: connectedAddress, web3Provider } = await connectWallet({
+      const {
+        address: connectedAddress,
+        web3Provider,
+        openkey,
+      } = await connectWallet({
         appName: APP_NAME,
         host: OPENKEY_HOST,
       });
@@ -219,6 +223,10 @@ export function App() {
         nonce,
         autoCreateSpace: true,
         capabilityRequest: composed,
+        // The owner reviews the session's permissions in OpenKey. "iframe" keeps the approval
+        // in the page, like the passkey step before it, so no popup can be blocked.
+        // This example doesn't renew its sign-in. Apps you ship should: see templates/app-starter/frontend/src/App.tsx in the app starter.
+        openkey: { client: openkey, mode: "iframe" },
         sessionExpirationMs: SESSION_EXPIRATION_MS,
       });
       setTcw(signedTcw);

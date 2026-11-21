@@ -89,6 +89,7 @@ async function main() {
     createAuthRouter({
       nonceStore,
       privateKey: backendPrivateKey,
+      frontendUrl: FRONTEND_URL,
     }),
   );
   app.use(

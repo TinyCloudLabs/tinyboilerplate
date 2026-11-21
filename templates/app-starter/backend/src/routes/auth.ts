@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import {
+  isExpectedSiweOrigin,
   issueSessionToken,
   verifyRenewal,
   verifySIWE,
@@ -11,6 +12,8 @@ import {
 interface AuthRoutesConfig {
   nonceStore: NonceStore;
   privateKey: string;
+  /** The frontend URL: a grant is accepted only when its SIWE domain is this host. */
+  frontendUrl: string;
   /** Pinned node and renewer for `/verify-renewal`; absent, that route answers 503. */
   renewal?: RenewalVerifyConfig;
   /** Test seam for the node relay. */
@@ -39,7 +42,14 @@ export function createAuthRouter(config: AuthRoutesConfig) {
     }
 
     try {
-      const { address, nonce } = await verifySIWE(message, signature);
+      const { address, nonce, domain, uri } = await verifySIWE(message, signature);
+      if (!isExpectedSiweOrigin(domain, uri, config.frontendUrl)) {
+        res.status(400).json({
+          error: "invalid_origin",
+          message: "SIWE domain or URI does not match this application",
+        });
+        return;
+      }
       if (!config.nonceStore.validate(address, nonce)) {
         res
           .status(401)

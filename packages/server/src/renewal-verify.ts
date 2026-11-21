@@ -1,4 +1,4 @@
-import { verifySiweSession, type VerifiedSiweSession } from "./auth.js";
+import { isExpectedSiweOrigin, verifySiweSession, type VerifiedSiweSession } from "./auth.js";
 import {
   decodeBase64Url,
   parseCompactUcanAuthorization,
@@ -29,6 +29,8 @@ export interface RenewalVerifyConfig {
   /** The TinyCloud node the status invocation is relayed to (`TINYCLOUD_HOST`). */
   nodeOrigin: string;
   nodeDid: string;
+  /** The frontend URL; the owner's grant must name its host as the SIWE domain. */
+  frontendUrl: string;
   /** The lease audience: the node's renewer DID (in production, OpenKey's `OPENKEY_RENEWAL_RENEWER_DID`). */
   renewerDid: string;
 }
@@ -63,6 +65,7 @@ function canonicalOrigin(name: string, value: string, production: boolean): stri
 export function renewalVerifyConfigFromEnv(
   env: NodeJS.ProcessEnv,
   nodeHost: string,
+  frontendUrl: string,
 ): RenewalVerifyConfig | undefined {
   const backendOrigin = env.RENEWAL_BACKEND_ORIGIN?.trim();
   const nodeDid = env.RENEWAL_NODE_DID?.trim();
@@ -81,6 +84,7 @@ export function renewalVerifyConfigFromEnv(
     backendOrigin: canonicalOrigin("RENEWAL_BACKEND_ORIGIN", backendOrigin, production),
     nodeOrigin: canonicalOrigin("TINYCLOUD_HOST", nodeHost, production),
     nodeDid,
+    frontendUrl,
     renewerDid,
   };
 }
@@ -286,6 +290,10 @@ export async function verifyRenewal(
     return refuse("invalid_grant");
   }
   if (session.address.toLowerCase() !== input.address.toLowerCase()) return refuse("wrong_owner");
+  // A grant the owner gave another app must not mint this app's bearers.
+  if (!isExpectedSiweOrigin(session.domain, session.uri, config.frontendUrl)) {
+    return refuse("invalid_origin");
+  }
   if (!session.expirationTime || !session.uri.startsWith("did:key:"))
     return refuse("invalid_grant");
   const holderDid = principal(session.uri);

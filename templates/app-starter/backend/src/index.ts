@@ -91,7 +91,8 @@ async function main() {
     createAuthRouter({
       nonceStore,
       privateKey: backendPrivateKey,
-      renewal: renewalVerifyConfigFromEnv(process.env, TINYCLOUD_HOST),
+      frontendUrl: FRONTEND_URL,
+      renewal: renewalVerifyConfigFromEnv(process.env, TINYCLOUD_HOST, FRONTEND_URL),
     }),
   );
   app.use(

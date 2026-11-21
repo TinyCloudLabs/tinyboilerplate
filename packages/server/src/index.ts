@@ -17,6 +17,7 @@ export type { DelegatedAccess } from "@tinycloud/node-sdk";
 export {
   createNonceStore,
   verifySIWE,
+  isExpectedSiweOrigin,
   verifySiweSession,
   issueSessionToken,
   verifySessionToken,

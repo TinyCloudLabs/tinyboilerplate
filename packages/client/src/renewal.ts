@@ -184,6 +184,35 @@ export function renewalRestoreVerdict(
   return offline || isTransientRestoreError(error) ? "keep" : "drop";
 }
 
+/** The codes `/api/auth/verify-renewal` answers when the grant, the lease or the renewal itself is refused. */
+const RENEWAL_REFUSAL_CODES = new Set([
+  "invalid_grant",
+  "wrong_owner",
+  "invalid_origin",
+  "grant_cid_mismatch",
+  "invalid_holder_proof",
+  "invalid_lease",
+  "invalid_status_invocation",
+  "lease_expired",
+  "lease_wrong_audience",
+  "lease_wrong_owner",
+  "lease_wrong_scope",
+  "renewal_history_invalid",
+  "renewal_inactive",
+]);
+
+/**
+ * What a failed backend reissue means. `retry-nonce`: the nonce was used or lapsed (another backend instance, a
+ * double send), so ask for a fresh one and try once more. `drop`: the grant, the lease or the renewal was refused, so
+ * the saved session and receipt end. `keep`: anything else (a generic 401, a rate limit, the backend down) leaves them
+ * for the next load.
+ */
+export function renewalReissueVerdict(error: unknown): "retry-nonce" | "drop" | "keep" {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === "invalid_nonce") return "retry-nonce";
+  return typeof code === "string" && RENEWAL_REFUSAL_CODES.has(code) ? "drop" : "keep";
+}
+
 /** Acts on a failed restore of `address`: an authoritative answer clears the saved session and its receipt. */
 export function settleFailedRestore(
   address: string,

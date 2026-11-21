@@ -26,7 +26,7 @@ import {
   openKeyRenewalClient,
   openKeySignOutNotice,
   renewalRestoreFor,
-  isTransientRestoreError,
+  renewalReissueVerdict,
   settleFailedRestore,
   renewalVerifyProof,
   requestNonce,
@@ -83,7 +83,7 @@ export function App() {
   // When the session's renewal lease ends. Set only for a lease that checked out and that the node admitted.
   const [renewsUntil, setRenewsUntil] = useState<string | null>(null);
   const openkeyRef = useRef<OpenKey | null>(null);
-  // Draft copy, the copy owner words it: shown after sign-out when OpenKey could not confirm that it ended the renewal.
+  // Draft copy, the copy owner words it: shown after sign-out, saying whether OpenKey ended the renewal.
   const [signOutNotice, setSignOutNotice] = useState<string | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
   const [probe, setProbe] = useState<ProbeValue | null>(null);
@@ -164,25 +164,35 @@ export function App() {
             return;
           }
           try {
-            const nonce = await requestNonce(BACKEND_URL, renewal.address);
-            const proof = await renewalVerifyProof({
-              tcw: leased.tcw,
-              record: renewal.record,
-              backendOrigin: new URL(BACKEND_URL).origin,
-              nonce,
-            });
-            const verified = await verifyRenewedSession(BACKEND_URL, {
-              ...proof,
-              address: renewal.address,
-              nonce,
-              leaseAuthorization: renewal.leaseAuthorization,
-            });
-            sessionStore.setSession(verified.token, verified.expiresIn, renewal.address);
+            // A nonce another backend instance never saw (or one used twice) answers `invalid_nonce`: ask for a fresh
+            // one and try once more before leaving the receipt for the next load.
+            for (let attempt = 0; ; attempt++) {
+              try {
+                const nonce = await requestNonce(BACKEND_URL, renewal.address);
+                const proof = await renewalVerifyProof({
+                  tcw: leased.tcw,
+                  record: renewal.record,
+                  backendOrigin: new URL(BACKEND_URL).origin,
+                  nonce,
+                });
+                const verified = await verifyRenewedSession(BACKEND_URL, {
+                  ...proof,
+                  address: renewal.address,
+                  nonce,
+                  leaseAuthorization: renewal.leaseAuthorization,
+                });
+                sessionStore.setSession(verified.token, verified.expiresIn, renewal.address);
+                break;
+              } catch (caught) {
+                if (attempt === 0 && renewalReissueVerdict(caught) === "retry-nonce") continue;
+                throw caught;
+              }
+            }
           } catch (caught) {
             leased.tcw.cleanup();
-            // Only a clearly transient failure (network, timeout, 408, 429, 5xx, offline) keeps the saved session
-            // and its receipt for the next load; any other refusal ends them.
-            if (!isTransientRestoreError(caught) && navigator.onLine !== false) {
+            // The grant, the lease or the renewal was refused: the saved session and receipt end. Anything else
+            // (a generic 401, a rate limit, the backend or the network down) keeps them for the next load.
+            if (renewalReissueVerdict(caught) === "drop") {
               clearPersistedSession(renewal.address);
               sessionStore.clear();
               setState("unauthenticated");
@@ -465,7 +475,7 @@ export function App() {
 
           {surfaceStatus && <SurfaceStatus {...surfaceStatus} />}
           {signOutNotice && state === "unauthenticated" && (
-            <SurfaceStatus title="Renewal may still be on" body={signOutNotice} />
+            <SurfaceStatus title="Signed out" body={signOutNotice} />
           )}
           {saveError && <SurfaceStatus title="Storage full" body={saveError} tone="error" />}
 

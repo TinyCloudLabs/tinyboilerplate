@@ -47,8 +47,10 @@ describe("signOutOpenKey", () => {
 });
 
 describe("openKeySignOutNotice", () => {
-  test("a confirmed revocation shows no notice", () => {
-    expect(openKeySignOutNotice(true, "App Starter")).toBeNull();
+  test("a confirmed revocation says the access won't renew", () => {
+    expect(openKeySignOutNotice(true, "App Starter")).toBe(
+      "Signed out of App Starter in this browser. App Starter's access won't renew.",
+    );
   });
 
   test("an unconfirmed one gives the standing text with the app's name", () => {

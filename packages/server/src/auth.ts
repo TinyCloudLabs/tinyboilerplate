@@ -89,7 +89,7 @@ export function createNonceStore(): NonceStore {
 export async function verifySIWE(
   message: string,
   signature: string,
-): Promise<{ address: string; nonce: string }> {
+): Promise<{ address: string; nonce: string; domain: string; uri: string }> {
   // Dynamic import to avoid requiring siwe at module load time
   const { SiweMessage } = await import("siwe");
 
@@ -103,7 +103,24 @@ export async function verifySIWE(
   return {
     address: result.data.address,
     nonce: result.data.nonce,
+    domain: result.data.domain,
+    uri: result.data.uri,
   };
+}
+
+/**
+ * Is a SIWE grant meant for this app? Its domain must be the frontend's host, and its URI either the session key the
+ * grant delegates to or the frontend's own origin. Without this, a grant the owner gave another app would sign this
+ * app's backend in as the owner.
+ */
+export function isExpectedSiweOrigin(domain: string, uri: string, frontendUrl: string): boolean {
+  let frontend: URL;
+  try {
+    frontend = new URL(frontendUrl);
+  } catch {
+    return false;
+  }
+  return domain === frontend.host && (uri === frontend.origin || /^did:key:z/.test(uri));
 }
 
 /** What a SIWE message and signature prove, checked without the nonce store. */

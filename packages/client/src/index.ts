@@ -16,6 +16,7 @@ export {
   admitSignInRenewal,
   keptLeaseEnd,
   isTransientRestoreError,
+  renewalReissueVerdict,
   renewalRestoreFor,
   renewalRestoreVerdict,
   settleFailedRestore,

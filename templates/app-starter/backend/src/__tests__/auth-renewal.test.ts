@@ -20,7 +20,15 @@ async function backend(renewal?: Parameters<typeof createAuthRouter>[0]["renewal
   const nonceStore = createNonceStore();
   const app = express();
   app.use(express.json());
-  app.use("/api/auth", createAuthRouter({ nonceStore, privateKey: "test-key", renewal }));
+  app.use(
+    "/api/auth",
+    createAuthRouter({
+      nonceStore,
+      privateKey: "test-key",
+      frontendUrl: "https://app.example.com",
+      renewal,
+    }),
+  );
   const server = app.listen(0, "127.0.0.1");
   servers.push(server);
   await new Promise((resolve) => server.once("listening", resolve));
@@ -42,6 +50,7 @@ const config = {
   backendOrigin: "https://api.example.com",
   nodeOrigin: "https://node.example.com",
   nodeDid: "did:key:node",
+  frontendUrl: "https://app.example.com",
   renewerDid: "did:key:renewer",
 };
 

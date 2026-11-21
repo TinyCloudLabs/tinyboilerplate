@@ -295,6 +295,7 @@ function renewalConfig(overrides: Partial<RenewalVerifyConfig> = {}): RenewalVer
     backendOrigin: BACKEND_ORIGIN,
     nodeOrigin: node.origin,
     nodeDid: node.identity.nodeDid,
+    frontendUrl: "http://localhost",
     renewerDid: node.identity.renewerDid,
     ...overrides,
   };
@@ -394,6 +395,17 @@ describe("verifyRenewal", () => {
   test("a grant signed by another owner than the address is refused", async () => {
     const other = privateKeyToAccount(generatePrivateKey());
     await refusedBeforeNode(await requestBody(grant, lease, other.address), "wrong_owner");
+  });
+
+  test("a grant the owner gave another app is refused, and one for this app's host passes that check", async () => {
+    const body = await requestBody(grant, lease);
+    nodeRenews(grant, lease, nowSeconds() + HOUR);
+    const calls = nodeCalls();
+    expect(
+      await verify(body, renewalConfig({ frontendUrl: "https://other-app.example.org" })),
+    ).toEqual({ ok: false, status: 401, code: "invalid_origin" });
+    expect(nodeCalls()).toBe(calls);
+    expect((await verify(body, renewalConfig({ frontendUrl: "http://localhost" }))).ok).toBe(true);
   });
 
   test("a lease signed by another owner is refused", async () => {
@@ -578,11 +590,14 @@ describe("renewalVerifyConfigFromEnv", () => {
   };
 
   test("is off without settings and refuses a partial set", () => {
-    expect(renewalVerifyConfigFromEnv({}, "https://node.tinycloud.xyz")).toBeUndefined();
+    expect(
+      renewalVerifyConfigFromEnv({}, "https://node.tinycloud.xyz", "https://app.example.com"),
+    ).toBeUndefined();
     expect(() =>
       renewalVerifyConfigFromEnv(
         { RENEWAL_NODE_DID: dids.RENEWAL_NODE_DID },
         "https://node.tinycloud.xyz",
+        "https://app.example.com",
       ),
     ).toThrow("set together");
   });
@@ -593,19 +608,28 @@ describe("renewalVerifyConfigFromEnv", () => {
       renewalVerifyConfigFromEnv(
         { ...env, NODE_ENV: "production" },
         "https://tee.node.tinycloud.xyz",
+        "https://app.example.com",
       ),
     ).toEqual({
       backendOrigin: "https://api.example.com",
       nodeOrigin: "https://tee.node.tinycloud.xyz",
       nodeDid: dids.RENEWAL_NODE_DID,
+      frontendUrl: "https://app.example.com",
       renewerDid: dids.RENEWAL_RENEWER_DID,
     });
     expect(
-      renewalVerifyConfigFromEnv({ ...env, NODE_ENV: "development" }, "http://127.0.0.1:8000")
-        ?.nodeOrigin,
+      renewalVerifyConfigFromEnv(
+        { ...env, NODE_ENV: "development" },
+        "http://127.0.0.1:8000",
+        "https://app.example.com",
+      )?.nodeOrigin,
     ).toBe("http://127.0.0.1:8000");
     expect(() =>
-      renewalVerifyConfigFromEnv({ ...env, NODE_ENV: "production" }, "http://127.0.0.1:8000"),
+      renewalVerifyConfigFromEnv(
+        { ...env, NODE_ENV: "production" },
+        "http://127.0.0.1:8000",
+        "https://app.example.com",
+      ),
     ).toThrow("https origin");
   });
 });

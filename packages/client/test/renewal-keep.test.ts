@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, setSystemTime, spyOn, test } from "bun:test";
 import { TinyCloudWeb } from "@tinycloud/web-sdk";
 
-import { renewalRestoreFor, renewalRestoreVerdict, settleFailedRestore } from "../src/renewal.js";
+import {
+  renewalReissueVerdict,
+  renewalRestoreFor,
+  renewalRestoreVerdict,
+  settleFailedRestore,
+} from "../src/renewal.js";
 import { loadRenewalReceipt, saveRenewalReceipt } from "../src/session-persistence.js";
 import { restoreTinyCloudWebSession } from "../src/tinycloud.js";
 import { fixture } from "./renewal.fixture.js";
@@ -122,5 +127,33 @@ describe("a receipt whose lease end has passed", () => {
     setSystemTime(new Date(Date.parse(receipt.receipt.leaseExpiresAt) + 1_000));
     expect(await renewalRestoreFor(owner.address, candidateStorage(record))).toBeNull();
     expect(loadRenewalReceipt(owner.address)).toBeNull();
+  });
+});
+
+describe("a failed backend reissue", () => {
+  const refused = (code: string, status = 401) => Object.assign(new Error(code), { status, code });
+
+  test("asks for a fresh nonce on invalid_nonce, so a backend instance that never saw it does not end the session", () => {
+    expect(renewalReissueVerdict(refused("invalid_nonce"))).toBe("retry-nonce");
+  });
+
+  test("ends the session only when the grant, the lease or the renewal is refused", () => {
+    for (const code of [
+      "invalid_grant",
+      "invalid_origin",
+      "wrong_owner",
+      "invalid_lease",
+      "lease_expired",
+      "renewal_inactive",
+    ]) {
+      expect(renewalReissueVerdict(refused(code))).toBe("drop");
+    }
+  });
+
+  test("keeps the session on a generic 401, a rate limit, a backend that is down or no answer at all", () => {
+    expect(renewalReissueVerdict(refused("verification_failed"))).toBe("keep");
+    expect(renewalReissueVerdict(refused("rate_limited", 429))).toBe("keep");
+    expect(renewalReissueVerdict(refused("renewal_unavailable", 503))).toBe("keep");
+    expect(renewalReissueVerdict(new TypeError("fetch failed"))).toBe("keep");
   });
 });

@@ -159,6 +159,7 @@ export async function verifyRenewedSession(
       new Error(`Renewed session verification failed: ${err.message ?? err.error}`),
       {
         status: res.status,
+        code: typeof err.error === "string" ? err.error : undefined,
       },
     );
   }

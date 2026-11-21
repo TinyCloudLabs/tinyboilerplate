@@ -11,7 +11,7 @@
     "@openkey/sdk": "^0.12.2",
     "@tinyboilerplate/client": "workspace:*",
     "@tinyboilerplate/core": "workspace:*",
-    "@tinycloud/web-sdk": "3.11.4",
+    "@tinycloud/web-sdk": "3.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

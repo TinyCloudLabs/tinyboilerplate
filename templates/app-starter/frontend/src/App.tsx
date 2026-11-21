@@ -83,6 +83,8 @@ export function App() {
   // When the session's renewal lease ends. Set only for a lease that checked out and that the node admitted.
   const [renewsUntil, setRenewsUntil] = useState<string | null>(null);
   const openkeyRef = useRef<OpenKey | null>(null);
+  // Counts sign-ins and sign-outs, so an OpenKey answer that arrives after a newer one is dropped.
+  const authGenerationRef = useRef(0);
   // Draft copy, the copy owner words it: shown after sign-out, saying whether OpenKey ended the renewal.
   const [signOutNotice, setSignOutNotice] = useState<string | null>(null);
   const [api, setApi] = useState<ApiClient | null>(null);
@@ -246,6 +248,7 @@ export function App() {
   }, [fetchPolicy, loadProbe]);
 
   const signIn = useCallback(async () => {
+    authGenerationRef.current++;
     setError(null);
     setSignOutNotice(null);
     setSaveError(null);
@@ -348,6 +351,8 @@ export function App() {
     // restored through the lease builds one. OpenKey is always asked, so a lost receipt cannot leave a lease behind.
     const openkey = openkeyRef.current;
     openkeyRef.current = null;
+    // A sign-in or another sign-out that starts while OpenKey's window is open makes this answer stale.
+    const generation = ++authGenerationRef.current;
     const revoked = await signOutLocalFirst({
       clearLocal: async () => {
         if (tcw) await tcw.signOut?.();
@@ -355,6 +360,8 @@ export function App() {
         // `clearPersistedSession` drops the receipt; a signed-out SDK session leaves it, so clear it here too.
         if (address) clearRenewalReceipt(address);
         sessionStoreRef.current.clear();
+      },
+      showSignedOut: () => {
         setRenewsUntil(null);
         setAddress(null);
         setDid(null);
@@ -372,7 +379,9 @@ export function App() {
       current: openkey,
       fallback: () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
     });
-    setSignOutNotice(openKeySignOutNotice(revoked, "App Starter"));
+    if (generation === authGenerationRef.current) {
+      setSignOutNotice(openKeySignOutNotice(revoked, "App Starter"));
+    }
   }, [address, tcw]);
 
   // A storage rejection enters the read-only state and keeps reads usable;

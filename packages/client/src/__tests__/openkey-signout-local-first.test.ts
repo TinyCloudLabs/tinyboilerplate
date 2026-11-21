@@ -16,6 +16,7 @@ describe("signOutLocalFirst", () => {
       clearLocal: () => {
         order.push("cleared");
       },
+      showSignedOut: () => order.push("screen"),
       current: {
         signOut: () => {
           order.push("asked");
@@ -28,7 +29,7 @@ describe("signOutLocalFirst", () => {
       timeoutMs: 50,
     });
     await new Promise((resolve) => setTimeout(resolve, 5));
-    expect(order).toEqual(["cleared", "asked"]);
+    expect(order).toEqual(["cleared", "screen", "asked"]);
     expect(await pending).toBe(false);
   });
 
@@ -37,6 +38,7 @@ describe("signOutLocalFirst", () => {
     expect(
       await signOutLocalFirst({
         clearLocal: () => {},
+        showSignedOut: () => {},
         current: answersAfter(150, true),
         fallback,
         timeoutMs: 300,
@@ -45,11 +47,33 @@ describe("signOutLocalFirst", () => {
     expect(
       await signOutLocalFirst({
         clearLocal: () => {},
+        showSignedOut: () => {},
         current: answersAfter(400, true),
         fallback,
         timeoutMs: 300,
       }),
     ).toBe(false);
+  });
+
+  test("shows the signed-out screen before asking OpenKey even when the local sign-out throws", async () => {
+    const order: string[] = [];
+    const revoked = await signOutLocalFirst({
+      clearLocal: () => {
+        throw new Error("storage unavailable");
+      },
+      showSignedOut: () => order.push("screen"),
+      current: {
+        signOut: async () => {
+          order.push("asked");
+          return { requestId: "r", revoked: true };
+        },
+      } as unknown as NonNullable<Current>,
+      fallback: () => {
+        throw new Error("unused");
+      },
+    });
+    expect(order).toEqual(["screen", "asked"]);
+    expect(revoked).toBe(true);
   });
 
   test("the cap is 120 seconds", () => {

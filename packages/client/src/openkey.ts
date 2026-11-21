@@ -109,16 +109,24 @@ export async function signOutOpenKey(
 }
 
 /**
- * Signs out locally, then asks OpenKey. `clearLocal` runs first and never waits for OpenKey, so the signed-out screen
- * shows at once; the answer only decides the notice (`openKeySignOutNotice`).
+ * Signs out locally, then asks OpenKey. `clearLocal` ends the app's own session and receipt; `showSignedOut` swaps the
+ * screen and always runs, right after it and even when it throws, before OpenKey is asked. Neither waits for OpenKey,
+ * so the signed-out screen shows at once; the answer only decides the notice (`openKeySignOutNotice`).
  */
 export async function signOutLocalFirst(options: {
   clearLocal: () => void | Promise<void>;
+  showSignedOut: () => void;
   current: Pick<OpenKey, "signOut"> | null;
   fallback: () => Pick<OpenKey, "signOut">;
   timeoutMs?: number;
 }): Promise<boolean> {
-  await options.clearLocal();
+  try {
+    await options.clearLocal();
+  } catch (error) {
+    console.error("[sign-out] local sign-out failed:", error);
+  } finally {
+    options.showSignedOut();
+  }
   return signOutOpenKey(options.current, options.fallback, options.timeoutMs);
 }
 

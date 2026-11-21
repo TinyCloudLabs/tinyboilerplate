@@ -1,5 +1,6 @@
 // ── Re-export everything ─────────────────────────────────────────────
 
+export { createSignOutGuard, type SignOutGuard } from "./signout-guard.js";
 export {
   connectWallet,
   openKeyRenewalClient,

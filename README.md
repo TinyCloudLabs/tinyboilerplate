@@ -378,6 +378,13 @@ For the architecture behind these choices, see
 | `TINYCLOUD_HOST` | No | `https://node.tinycloud.xyz` | TinyCloud node URL |
 | `FRONTEND_URL` | No | Derived from cert mode, usually `http://localhost:5175` | Frontend origin allowed by backend CORS |
 | `PORT` | No | `3003` | Backend port |
+| `RENEWAL_BACKEND_ORIGIN` | No | - | This backend's public https origin. Set with the two below, or not at all |
+| `RENEWAL_NODE_DID` | No | - | The `nodeDid` the node publishes at `/.well-known/tinycloud/node-keys` |
+| `RENEWAL_RENEWER_DID` | No | - | The `renewerDid` the node publishes there |
+
+With the three `RENEWAL_*` variables set, `POST /api/auth/verify-renewal` reissues the 24 hour session token for a
+TinyCloud session that OpenKey's renewal lease keeps alive. Without them the route answers 503 and sign-in stays finite.
+The route is adapted from TinyChat's `renewal-verify.ts`. Like `/verify`, it does not check the SIWE domain.
 
 ### App Starter Frontend
 

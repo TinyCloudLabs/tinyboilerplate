@@ -1,3 +1,4 @@
+import "./buffer-global.js";
 import { TinyCloudWeb, BrowserSessionStorage } from "@tinycloud/web-sdk";
 import type {
   ClientSession,
@@ -7,14 +8,16 @@ import type {
   SessionRestoreResult,
   SiweConfig,
 } from "@tinycloud/web-sdk";
-import type { EIP1193Provider } from "./openkey.js";
+import { composeManifestRequest } from "@tinycloud/sdk-core";
+import type { EIP1193Provider } from "@openkey/sdk";
 
 // ── Configuration ────────────────────────────────────────────────────
 
 export interface TinyCloudWebConfig {
   tinycloudHosts?: string[];
   tinycloudRegistryUrl?: string | null;
-  tinycloudFallbackHosts?: string[] | null;
+  /** Host hint for owners absent from both registries. Default https://node.tinycloud.xyz; null disables onboarding. */
+  newUserHost?: string | null;
   autoCreateSpace?: boolean;
   siweConfig?: SiweConfig;
   /**
@@ -32,6 +35,13 @@ export interface TinyCloudWebConfig {
   sessionExpirationMs?: number;
 }
 
+/**
+ * OpenKey client for sign-in: `{ client: openkey }` with the `openkey` returned by
+ * `connectWallet`. TinyCloud sign-in is OpenKey's versioned approval, where the
+ * owner reviews the permissions the session will hold.
+ */
+export type OpenKeySignInConfig = NonNullable<TinyCloudWebSdkConfig["openkey"]>;
+
 export interface RestoreTinyCloudWebSessionResult {
   tcw: TinyCloudWeb | null;
   status: SessionRestoreResult["status"];
@@ -46,14 +56,15 @@ export interface RestoreTinyCloudWebSessionResult {
  */
 export function createTinyCloudWeb(
   web3Provider: EIP1193Provider,
-  config?: TinyCloudWebConfig,
+  config?: TinyCloudWebConfig & { openkey?: OpenKeySignInConfig },
 ): TinyCloudWeb {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
   const tcwConfig: TinyCloudWebSdkConfig = {
     provider: web3Provider,
+    openkey: config?.openkey,
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
-    tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
+    newUserHost: config?.newUserHost,
     autoCreateSpace: config?.autoCreateSpace ?? true,
     sessionStorage: new BrowserSessionStorage(),
     nonce: config?.nonce,
@@ -68,7 +79,7 @@ export function createTinyCloudWeb(
 }
 
 /**
- * Create a TinyCloudWeb instance and sign in.
+ * Create a TinyCloudWeb instance and sign in through OpenKey's approval.
  *
  * Accepts an optional `nonce` to pass through to the SDK's SIWE message
  * construction, optional manifest/capability request inputs that drive
@@ -78,17 +89,64 @@ export function createTinyCloudWeb(
  */
 export async function createAndSignIn(
   web3Provider: EIP1193Provider,
-  config?: TinyCloudWebConfig & { address?: string },
+  config: TinyCloudWebConfig & { openkey: OpenKeySignInConfig; address?: string },
 ): Promise<{ tcw: TinyCloudWeb; session: ClientSession }> {
-  const siweConfig = config?.nonce
-    ? { ...config?.siweConfig, nonce: config.nonce }
-    : config?.siweConfig;
+  const siweConfig = config.nonce
+    ? { ...config.siweConfig, nonce: config.nonce }
+    : config.siweConfig;
   const tcw = createTinyCloudWeb(web3Provider, { ...config, siweConfig });
-  if (config?.nonce) {
+  if (config.nonce) {
     await tcw.clearPersistedSession(config.address);
   }
-  const session = await tcw.signIn(config?.nonce ? { nonce: config.nonce } : undefined);
+  // The nonce travels in the config above: the OpenKey path refuses per-call SIWE overrides.
+  const session = await tcw.signIn();
+
+  // The owner can untick permissions in OpenKey and the SDK accepts the narrower session.
+  // The app cannot work without what it asked for, so refuse it and leave no session.
+  const required = requestedResources(config);
+  if (required.length > 0 && !tcw.hasPermissions(required)) {
+    // Best effort: the refusal below is the result, whether or not cleanup succeeds.
+    await tcw.signOut().catch(() => {});
+    throw new Error(narrowedApprovalMessage(requestedManifests(config)));
+  }
   return { tcw, session };
+}
+
+function requestedManifests(config: TinyCloudWebConfig): Manifest[] {
+  const manifests = config.manifest ?? config.capabilityRequest?.manifests ?? [];
+  return Array.isArray(manifests) ? manifests : [manifests];
+}
+
+/** The permissions the sign-in asked OpenKey to approve. */
+function requestedResources(config: TinyCloudWebConfig) {
+  if (config.capabilityRequest) return config.capabilityRequest.resources;
+  const manifests = requestedManifests(config);
+  if (manifests.length === 0) return [];
+  return composeManifestRequest(manifests, {
+    includeAccountRegistryPermissions: config.includeAccountRegistryPermissions,
+  }).resources;
+}
+
+/**
+ * Plain words for an owner who narrowed the approval: which permissions the app
+ * needs (the manifest's own descriptions) and what to do. Draft copy, the copy owner words it.
+ */
+export function narrowedApprovalMessage(manifests: readonly Manifest[]): string {
+  const name = manifests[0]?.name ?? "This app";
+  const reasons = [
+    ...new Set(
+      manifests.flatMap((manifest) =>
+        (manifest.permissions ?? []).flatMap((permission) =>
+          permission.description ? [permission.description] : [],
+        ),
+      ),
+    ),
+  ];
+  const needs =
+    reasons.length > 0
+      ? `${name} needs all the permissions it asks for: ${reasons.join(" ")}`
+      : `${name} needs all the permissions it asks for.`;
+  return `${needs} Sign in again and allow each one.`;
 }
 
 /**
@@ -99,13 +157,13 @@ export async function createAndSignIn(
  */
 export async function restoreTinyCloudWebSession(
   address: string,
-  config?: TinyCloudWebConfig,
+  config?: TinyCloudWebConfig & { renewalLeaseAuthorization?: string },
 ): Promise<RestoreTinyCloudWebSessionResult> {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
   const tcwConfig: TinyCloudWebSdkConfig = {
     tinycloudHosts: config?.tinycloudHosts,
     tinycloudRegistryUrl: config?.tinycloudRegistryUrl,
-    tinycloudFallbackHosts: config?.tinycloudFallbackHosts,
+    newUserHost: config?.newUserHost,
     autoCreateSpace: config?.autoCreateSpace ?? false,
     sessionStorage: new BrowserSessionStorage(),
     nonce: config?.nonce,
@@ -118,7 +176,11 @@ export async function restoreTinyCloudWebSession(
   const tcw = new TinyCloudWeb(tcwConfig);
 
   try {
-    const result = await tcw.restoreSession(address);
+    // Past the saved session's signed end, only its verified renewal lease carries it (the node is asked first).
+    const result =
+      config?.renewalLeaseAuthorization !== undefined
+        ? await tcw.restoreSessionWithRenewal(config.renewalLeaseAuthorization, address)
+        : await tcw.restoreSession(address);
     if (result.status === "restored") {
       return { tcw, status: result.status, session: result.session };
     }

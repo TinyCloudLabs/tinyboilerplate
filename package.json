@@ -12,13 +12,13 @@
     "examples/notes/backend"
   ],
   "overrides": {
-    "@tinycloud/sdk-core": "2.6.3",
-    "@tinycloud/sdk-services": "2.6.3",
-    "@tinycloud/web-sdk": "2.6.3",
-    "@tinycloud/node-sdk": "2.6.3",
+    "@tinycloud/sdk-core": "3.13.0",
+    "@tinycloud/sdk-services": "3.13.0",
+    "@tinycloud/web-sdk": "3.13.0",
+    "@tinycloud/node-sdk": "3.13.0",
     "@tinycloud/web-core": "1.7.0",
-    "@tinycloud/node-sdk-wasm": "1.7.4",
-    "@tinycloud/web-sdk-wasm": "1.7.4",
+    "@tinycloud/node-sdk-wasm": "1.7.9",
+    "@tinycloud/web-sdk-wasm": "1.7.8",
     "ethers": "6.16.0",
     "ws": "8.20.1"
   },
@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tinycloud/node-sdk": "2.6.3",
+    "@tinycloud/node-sdk": "3.13.0",
     "eslint": "^10.1.0",
     "husky": "^9.1.7",
     "portless": "^0.13.0",

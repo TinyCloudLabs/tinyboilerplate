@@ -29,6 +29,7 @@
     "@openkey/sdk": "^0.12.2",
     "@tinycloud/node-sdk": "3.13.0",
     "@tinycloud/web-sdk": "3.13.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "viem": "^2.52.0"
   }
 }

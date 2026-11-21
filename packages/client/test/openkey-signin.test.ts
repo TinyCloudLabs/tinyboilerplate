@@ -6,6 +6,7 @@ import {
   parseCanonicalRecapResource,
   type Manifest,
 } from "@tinycloud/sdk-core";
+import { privateKeyToAccount } from "viem/accounts";
 import { loadPersistedSession } from "../src/session-persistence.js";
 import { createAndSignIn } from "../src/tinycloud.js";
 
@@ -103,6 +104,12 @@ function withoutSql(siwe: string): string {
       delete recap.att[resource];
     }
   }
+  const statementAt = lines.findIndex((line) => line.startsWith("I further authorize"));
+  let n = 0;
+  lines[statementAt] = lines[statementAt]!.replace(
+    / \(\d+\) '[^']+': [^.]*? for '[^']+'\./g,
+    (clause) => (clause.includes("'tinycloud.sql'") ? "" : clause),
+  ).replace(/ \(\d+\) /g, () => ` (${++n}) `);
   lines[index] = `- urn:recap:${Buffer.from(JSON.stringify(recap)).toString("base64url")}`;
   return lines.join("\n");
 }
@@ -110,7 +117,7 @@ function withoutSql(siwe: string): string {
 const realFetch = globalThis.fetch;
 const realLocalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
 
-beforeEach(() => {
+beforeEach(async () => {
   const store = new Map<string, string>();
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
@@ -121,10 +128,48 @@ beforeEach(() => {
     },
   });
   // The node answers /info, and every delegation activation succeeds.
+  const owner = privateKeyToAccount(`0x${"1".padStart(64, "0")}`);
+  const payloadFields = {
+    version: 2,
+    subject: `did:pkh:eip155:1:${owner.address}`,
+    nodes: [
+      {
+        did: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+        url: "https://node.example",
+      },
+    ],
+    spaces: ["applications", "default"].map((name) => ({
+      space: `tinycloud:pkh:eip155:1:${owner.address}:${name}`,
+      nodes: [
+        { did: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK", mode: "read-write" },
+      ],
+    })),
+    encryptionNode: null,
+    updated_at: "2026-07-14T00:00:00.000Z",
+    sequence: 1,
+  };
+  const signature = await owner.signMessage({ message: JSON.stringify(payloadFields) });
+  Object.defineProperty(globalThis.navigator, "locks", {
+    configurable: true,
+    value: {
+      request: async (_name: string, ...rest: unknown[]) =>
+        (rest.at(-1) as (lock: object) => unknown)({}),
+    },
+  });
   globalThis.fetch = (async (input: string | URL | Request) => {
-    const body = String(input).endsWith("/info")
-      ? { protocol: 1, version: "1.0.0", features: [] }
-      : { activated: [], skipped: [] };
+    const url = String(input);
+    const body = url.includes("/v2/locations/")
+      ? { record: { ...payloadFields, signature } }
+      : url.endsWith("/.well-known/tinycloud/node-keys")
+        ? { nodeDid: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK" }
+        : url.endsWith("/info")
+          ? {
+              protocol: 1,
+              version: "1.0.0",
+              features: [],
+              nodeId: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+            }
+          : { activated: [], skipped: [] };
     return new Response(JSON.stringify(body), {
       status: 200,
       headers: { "content-type": "application/json" },

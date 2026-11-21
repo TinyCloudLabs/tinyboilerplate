@@ -14,6 +14,7 @@ import {
   DelegationStore,
   createCsrfMiddleware,
   createNonceStore,
+  renewalVerifyConfigFromEnv,
 } from "@tinyboilerplate/server";
 import { applySecurityDefaults } from "./security.js";
 import { createAuthMiddleware } from "./middleware/auth.js";
@@ -90,6 +91,7 @@ async function main() {
     createAuthRouter({
       nonceStore,
       privateKey: backendPrivateKey,
+      renewal: renewalVerifyConfigFromEnv(process.env, TINYCLOUD_HOST),
     }),
   );
   app.use(

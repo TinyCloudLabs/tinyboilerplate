@@ -70,9 +70,10 @@
       "dependencies": {
         "@tinyboilerplate/core": "workspace:*",
         "@tinycloud/sdk-core": "3.13.0",
+        "@tinycloud/share-envelope": "1.6.0",
       },
       "devDependencies": {
-        "@openkey/sdk": "^0.12.2",
+        "@openkey/sdk": "0.13.0-beta.3",
         "@tinycloud/node-sdk": "3.13.0",
         "@tinycloud/web-sdk": "3.13.0",
         "typescript": "^5.7.0",
@@ -96,6 +97,8 @@
       "dependencies": {
         "@tinyboilerplate/core": "workspace:*",
         "@tinycloud/node-sdk": "3.13.0",
+        "@tinycloud/node-sdk-wasm": "1.7.9",
+        "@tinycloud/sdk-core": "3.13.0",
         "jose": "^5.0.0",
         "siwe": "^2.3.2",
       },
@@ -128,7 +131,7 @@
     "templates/app-starter/frontend": {
       "name": "@tinyboilerplate/app-starter-frontend",
       "dependencies": {
-        "@openkey/sdk": "^0.12.2",
+        "@openkey/sdk": "0.13.0-beta.3",
         "@tinyboilerplate/client": "workspace:*",
         "@tinyboilerplate/core": "workspace:*",
         "@tinycloud/web-sdk": "3.13.0",
@@ -304,9 +307,9 @@
 
     "@noble/hashes": ["@noble/hashes@1.8.0", "", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
 
-    "@openkey/core": ["@openkey/core@0.12.2", "", { "dependencies": { "@noble/curves": "^1.9.7" } }, "sha512-YOJ8pW7olOO609pK+5zXTAgytaFroUruOam0RwD7VA1JHcCo74WgU6cyIDxOW9+xDJ0SLNOKoeufy8sJ6mGkWw=="],
+    "@openkey/core": ["@openkey/core@0.13.0-beta.3", "", { "dependencies": { "@noble/curves": "^1.9.7" } }, "sha512-CWZVFKpCTyBHY1De6mxv9/puiuf5C1KE62zOOfFOMsQ2Fe5qmw+2LBVMzm5twB5N6WuC6kSlJx/e1MAXss4I7g=="],
 
-    "@openkey/sdk": ["@openkey/sdk@0.12.2", "", { "dependencies": { "@openkey/core": "^0.12.2" } }, "sha512-DOarcQHh5smbEBlVej33Fn1akA4GYmM5RFNtdAwYLhBjzidqFX/8hahFm4QcGOX718BpndIemmQGxavc/IqJng=="],
+    "@openkey/sdk": ["@openkey/sdk@0.13.0-beta.3", "", { "dependencies": { "@openkey/core": "^0.13.0-beta.3" } }, "sha512-C3kfRTi9Itz+uaWT6yL5JO2cUFi10FfIAzdAXTiSmsUzLo7h43DrBkgReTpC+gjP6uLxiGptz1BkeL0p0f+TrA=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.27", "", {}, "sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA=="],
 
@@ -926,6 +929,8 @@
 
     "@multiformats/multiaddr/multiformats": ["multiformats@14.0.0", "", {}, "sha512-iWK1RrAS58p2NDfeZFuSUSv3ZPewTIhsGbh/5NgeGGJwJmRljLxGtjRR3nkn+loG3zl+IrfR/W1590QnrSK+Gg=="],
 
+    "@tinyboilerplate/notes-frontend/@openkey/sdk": ["@openkey/sdk@0.12.2", "", { "dependencies": { "@openkey/core": "^0.12.2" } }, "sha512-DOarcQHh5smbEBlVej33Fn1akA4GYmM5RFNtdAwYLhBjzidqFX/8hahFm4QcGOX718BpndIemmQGxavc/IqJng=="],
+
     "@tinycloud/bootstrap/viem": ["viem@2.50.4", "", { "dependencies": { "@noble/curves": "1.9.1", "@noble/hashes": "1.8.0", "@scure/bip32": "1.7.0", "@scure/bip39": "1.6.0", "abitype": "1.2.3", "isows": "1.0.7", "ox": "0.14.22", "ws": "8.20.1" }, "peerDependencies": { "typescript": ">=5.0.4" }, "optionalPeers": ["typescript"] }, "sha512-rf98F4s3Vlb+uJZEKfay3IbBw3CNCbVtx5Y3UIljlO2tSX420g/J0WQSYsjzBSasUFgxgsXabji14O9kGbiqgg=="],
 
     "@tinycloud/node-sdk/siwe": ["siwe@3.0.0", "", { "dependencies": { "@spruceid/siwe-parser": "^3.0.0", "@stablelib/random": "^1.0.1" }, "peerDependencies": { "ethers": "^5.6.8 || ^6.0.8" } }, "sha512-P2/ry7dHYJA6JJ5+veS//Gn2XDwNb3JMvuD6xiXX8L/PJ1SNVD4a3a8xqEbmANx+7kNQcD8YAh1B9bNKKvRy/g=="],
@@ -961,6 +966,8 @@
     "uint8arrays/multiformats": ["multiformats@14.0.0", "", {}, "sha512-iWK1RrAS58p2NDfeZFuSUSv3ZPewTIhsGbh/5NgeGGJwJmRljLxGtjRR3nkn+loG3zl+IrfR/W1590QnrSK+Gg=="],
 
     "viem/@noble/curves": ["@noble/curves@1.9.1", "", { "dependencies": { "@noble/hashes": "1.8.0" } }, "sha512-k11yZxZg+t+gWvBbIswW0yoJlu8cHOC7dhunwOzoWH/mXGBiYyR4YY6hAEK/3EUs4UpB8la1RfdRpeGsFHkWsA=="],
+
+    "@tinyboilerplate/notes-frontend/@openkey/sdk/@openkey/core": ["@openkey/core@0.12.2", "", { "dependencies": { "@noble/curves": "^1.9.7" } }, "sha512-YOJ8pW7olOO609pK+5zXTAgytaFroUruOam0RwD7VA1JHcCo74WgU6cyIDxOW9+xDJ0SLNOKoeufy8sJ6mGkWw=="],
 
     "@tinycloud/bootstrap/viem/@noble/curves": ["@noble/curves@1.9.1", "", { "dependencies": { "@noble/hashes": "1.8.0" } }, "sha512-k11yZxZg+t+gWvBbIswW0yoJlu8cHOC7dhunwOzoWH/mXGBiYyR4YY6hAEK/3EUs4UpB8la1RfdRpeGsFHkWsA=="],
 

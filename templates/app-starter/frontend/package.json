@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@openkey/sdk": "^0.12.2",
+    "@openkey/sdk": "0.13.0-beta.3",
     "@tinyboilerplate/client": "workspace:*",
     "@tinyboilerplate/core": "workspace:*",
     "@tinycloud/web-sdk": "3.13.0",

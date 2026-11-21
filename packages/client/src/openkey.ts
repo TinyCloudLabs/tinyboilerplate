@@ -1,4 +1,5 @@
 import OpenKey, { OpenKeyProvider, type EIP1193Provider } from "@openkey/sdk";
+import type { Config as TinyCloudWebSdkConfig } from "@tinycloud/web-sdk";
 
 // ── Configuration ────────────────────────────────────────────────────
 
@@ -18,6 +19,80 @@ export interface ConnectWalletResult {
   openkey: OpenKey;
   /** Gives TinyCloudWeb the account address. It is not used to sign the session. */
   web3Provider: EIP1193Provider;
+}
+
+// ── Sign-in with renewal ─────────────────────────────────────────────
+
+/**
+ * The renewal ask for OpenKey's sign-in window. OpenKey offers it only beside `expiryChangeable: true`, and only to
+ * an `@openkey/sdk` that forwards it (0.13.0-beta.0 and later); an older one ignores it and the sign-in stays finite.
+ */
+export interface OpenKeyRenewalAsk {
+  version: 1;
+  leaseLifetimeSeconds: number;
+  purpose?: "standing" | "task";
+}
+
+/** What the sign-in result says about renewal. An @openkey/sdk without sign-in renewal leaves both out. */
+export interface OpenKeyRenewalOutcome {
+  renewalChoice?: unknown;
+  /** The lease receipt OpenKey signed, unverified and not yet admitted at the node. */
+  renewal?: unknown;
+}
+
+type OpenKeySignInClient = NonNullable<TinyCloudWebSdkConfig["openkey"]>["client"];
+
+/**
+ * The OpenKey client the SDK's sign-in calls, adding the renewal ask to OpenKey's request and handing what comes
+ * back about renewal to `onOutcome` before the SDK builds the session from the signed result.
+ */
+export function openKeyRenewalClient(
+  openkey: OpenKey,
+  renewal: OpenKeyRenewalAsk,
+  onOutcome: (outcome: OpenKeyRenewalOutcome) => void,
+): OpenKeySignInClient {
+  return {
+    authorizeTinyCloud: async (request, opts) => {
+      const result = await openkey.authorizeTinyCloud(
+        { ...request, renewal } as Parameters<OpenKey["authorizeTinyCloud"]>[0],
+        opts,
+      );
+      const { renewalChoice, renewal: receipt } = result as OpenKeyRenewalOutcome;
+      onOutcome({ renewalChoice, renewal: receipt });
+      return result;
+    },
+  };
+}
+
+/** How long the app waits for OpenKey to confirm a sign-out before it goes on. */
+const OPENKEY_SIGN_OUT_TIMEOUT_MS = 5_000;
+
+/**
+ * Ends the OpenKey session, which also stops the renewal lease that sign-in recorded for it. Prefers the client that
+ * signed in; a restored session has none, so `fallback` builds one and OpenKey's own window signs the browser session
+ * out. Never throws. Resolves true only when OpenKey confirmed the revocation: every other outcome (cancelled,
+ * unreachable, no token found) leaves a live OpenKey session that the owner can stop in OpenKey's settings.
+ */
+export async function signOutOpenKey(
+  current: Pick<OpenKey, "signOut"> | null,
+  fallback: () => Pick<OpenKey, "signOut">,
+  timeoutMs = OPENKEY_SIGN_OUT_TIMEOUT_MS,
+): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error("OpenKey sign-out timed out")), timeoutMs);
+  });
+  try {
+    const acknowledgement = await Promise.race([
+      Promise.resolve().then(() => (current ?? fallback()).signOut()),
+      deadline,
+    ]);
+    return acknowledgement.revoked === true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ── Connect Wallet ──────────────────────────────────────────────────

@@ -156,7 +156,7 @@ export function narrowedApprovalMessage(manifests: readonly Manifest[]): string 
  */
 export async function restoreTinyCloudWebSession(
   address: string,
-  config?: TinyCloudWebConfig,
+  config?: TinyCloudWebConfig & { renewalLeaseAuthorization?: string },
 ): Promise<RestoreTinyCloudWebSessionResult> {
   const manifest = config?.manifest ?? config?.capabilityRequest?.manifests;
   const tcwConfig: TinyCloudWebSdkConfig = {
@@ -175,7 +175,11 @@ export async function restoreTinyCloudWebSession(
   const tcw = new TinyCloudWeb(tcwConfig);
 
   try {
-    const result = await tcw.restoreSession(address);
+    // Past the saved session's signed end, only its verified renewal lease carries it (the node is asked first).
+    const result =
+      config?.renewalLeaseAuthorization !== undefined
+        ? await tcw.restoreSessionWithRenewal(config.renewalLeaseAuthorization, address)
+        : await tcw.restoreSession(address);
     if (result.status === "restored") {
       return { tcw, status: result.status, session: result.session };
     }

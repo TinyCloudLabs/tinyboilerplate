@@ -106,6 +106,44 @@ export async function verifySIWE(
   };
 }
 
+/** What a SIWE message and signature prove, checked without the nonce store. */
+export interface VerifiedSiweSession {
+  address: string;
+  chainId: number;
+  uri: string;
+  domain: string;
+  expirationTime?: string;
+}
+
+/**
+ * Verify a SIWE signature locally. A SIWE past its expiry is checked at its last valid instant, so a caller can tell a
+ * genuine session that has ended (a renewal lease may carry it on) from a forged signature.
+ */
+export async function verifySiweSession(
+  message: string,
+  signature: string,
+): Promise<VerifiedSiweSession> {
+  const { SiweMessage } = await import("siwe");
+
+  const siweMessage = new SiweMessage(message);
+  const expiry = Date.parse(siweMessage.expirationTime ?? "");
+  const time =
+    Number.isFinite(expiry) && expiry <= Date.now()
+      ? new Date(expiry - 1).toISOString()
+      : undefined;
+  const result = await siweMessage.verify({ signature, ...(time ? { time } : {}) });
+  if (!result.success) {
+    throw new Error("SIWE signature verification failed");
+  }
+  return {
+    address: result.data.address,
+    chainId: result.data.chainId,
+    uri: result.data.uri,
+    domain: result.data.domain,
+    expirationTime: result.data.expirationTime,
+  };
+}
+
 // ── Session Token ───────────────────────────────────────────────────
 
 /**
@@ -115,15 +153,24 @@ export async function verifySIWE(
 export async function issueSessionToken(
   address: string,
   privateKey: string,
+  options?: { notAfter?: Date },
 ): Promise<{ token: string; expiresIn: number }> {
   const secret = new TextEncoder().encode(privateKey);
-  const expiresIn = 24 * 60 * 60; // 24 hours in seconds
+  const now = Math.floor(Date.now() / 1000);
+  let exp = now + 24 * 60 * 60; // 24 hours
+  if (options?.notAfter) {
+    const notAfter = options.notAfter.getTime();
+    if (!Number.isFinite(notAfter)) throw new Error("Invalid session expiration");
+    exp = Math.min(exp, Math.floor(notAfter / 1000));
+  }
+  const expiresIn = exp - now;
+  if (expiresIn <= 0) throw new Error("Session expiration must be in the future");
 
   const token = await new SignJWT({ address: address.toLowerCase() })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(address.toLowerCase())
-    .setIssuedAt()
-    .setExpirationTime("24h")
+    .setIssuedAt(now)
+    .setExpirationTime(exp)
     .sign(secret);
 
   return { token, expiresIn };

@@ -1,6 +1,23 @@
 // ── Re-export everything ─────────────────────────────────────────────
 
-export { connectWallet, type ConnectWalletConfig, type ConnectWalletResult } from "./openkey.js";
+export {
+  connectWallet,
+  openKeyRenewalClient,
+  signOutOpenKey,
+  type ConnectWalletConfig,
+  type ConnectWalletResult,
+  type OpenKeyRenewalAsk,
+  type OpenKeyRenewalOutcome,
+} from "./openkey.js";
+
+export {
+  SIGN_IN_RENEWAL_ASK,
+  admitSignInRenewal,
+  keptLeaseEnd,
+  renewalRestoreFor,
+  verifiedRenewalLease,
+  type RenewalRestore,
+} from "./renewal.js";
 
 export {
   createTinyCloudWeb,
@@ -23,6 +40,9 @@ export {
 export {
   loadPersistedSession,
   clearPersistedSession,
+  clearRenewalReceipt,
+  loadRenewalReceipt,
+  saveRenewalReceipt,
   type PersistedTinyCloudSession,
 } from "./session-persistence.js";
 
@@ -34,7 +54,17 @@ export {
   revokeDelegation,
 } from "./delegation.js";
 
-export { requestNonce, verifySession, type VerifyResponse } from "./auth.js";
+export {
+  requestNonce,
+  renewalHolderProofMessage,
+  renewalVerifyProof,
+  verifyRenewedSession,
+  verifySession,
+  type RenewalVerifyProof,
+  type VerifyRenewedSessionBody,
+  type VerifyRenewedSessionResponse,
+  type VerifyResponse,
+} from "./auth.js";
 
 export { DEFAULT_REQUEST_HEADER_NAME, DEFAULT_REQUEST_HEADER_VALUE } from "./request-headers.js";
 

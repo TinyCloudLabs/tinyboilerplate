@@ -16,6 +16,8 @@ export {
   admitSignInRenewal,
   keptLeaseEnd,
   renewalRestoreFor,
+  renewalRestoreVerdict,
+  settleFailedRestore,
   verifiedRenewalLease,
   type RenewalRestore,
 } from "./renewal.js";

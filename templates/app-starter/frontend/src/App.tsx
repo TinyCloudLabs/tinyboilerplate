@@ -23,10 +23,10 @@ import {
   createManifestDelegation,
   keptLeaseEnd,
   loadAppManifest,
-  loadRenewalReceipt,
   openKeyRenewalClient,
   openKeySignOutNotice,
   renewalRestoreFor,
+  settleFailedRestore,
   renewalVerifyProof,
   requestNonce,
   restoreTinyCloudWebSession,
@@ -155,9 +155,9 @@ export function App() {
               : {}),
           });
           if (leased.status !== "restored" || !leased.tcw) {
-            // A lease the node no longer honours ends the saved session. Anything else (offline, node down)
-            // keeps it for the next attempt.
-            if (leased.status !== "restore-failed") clearPersistedSession(renewal.address);
+            // An answer that the saved session is gone or expired ends it. Anything else (offline, node down,
+            // storage that cannot be read) keeps the session and its lease receipt for the next attempt.
+            settleFailedRestore(renewal.address, leased.status);
             sessionStore.clear();
             setState("unauthenticated");
             return;
@@ -332,17 +332,13 @@ export function App() {
     if (token) revokeDelegation(BACKEND_URL, token).catch(() => {});
     // A kept lease keeps renewing at the node until OpenKey stops it, and OpenKey stops it when its session signs
     // out. Do this first: it can open OpenKey's window, which needs the click that started the sign-out.
-    // The tab that signed in has the client in memory; a tab restored through the lease builds one, but only when a
-    // lease receipt says there is something to stop.
-    const leased = address !== null && loadRenewalReceipt(address) !== null;
-    let notice: string | null = null;
-    if (leased || openkeyRef.current) {
-      const revoked = await signOutOpenKey(
-        openkeyRef.current,
-        () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
-      );
-      notice = leased ? openKeySignOutNotice(revoked) : null;
-    }
+    // The tab that signed in has the client in memory; a tab restored through the lease builds one. OpenKey is always
+    // asked, so a lost receipt cannot leave a lease behind.
+    const revoked = await signOutOpenKey(
+      openkeyRef.current,
+      () => new OpenKey({ host: OPENKEY_HOST, appName: APP_NAME }),
+    );
+    const notice = openKeySignOutNotice(revoked);
     openkeyRef.current = null;
     if (tcw) await tcw.signOut?.();
     else if (address) clearPersistedSession(address);

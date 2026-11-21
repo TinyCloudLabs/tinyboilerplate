@@ -6,7 +6,12 @@ import {
   type PersistedSessionData,
   type TinyCloudWeb,
 } from "@tinycloud/web-sdk";
-import { loadRenewalReceipt, saveRenewalReceipt } from "./session-persistence.js";
+import {
+  clearPersistedSession,
+  clearRenewalReceipt,
+  loadRenewalReceipt,
+  saveRenewalReceipt,
+} from "./session-persistence.js";
 
 // ── Renewal lease ────────────────────────────────────────────────────
 //
@@ -130,6 +135,24 @@ export async function admitSignInRenewal(input: {
   }
 }
 
+/**
+ * What a failed restore means for the saved session and its renewal receipt. Only an authoritative answer drops them:
+ * the saved session is expired, corrupt, stale or missing. A transient failure (network, timeout, 5xx, storage that
+ * cannot be read) and any error that is not recognisably an answer keep both, so the next load tries again.
+ */
+export function renewalRestoreVerdict(status: string): "drop" | "keep" {
+  return status === "expired" || status === "corrupt" || status === "stale" || status === "missing"
+    ? "drop"
+    : "keep";
+}
+
+/** Acts on a failed restore of `address`: an authoritative answer clears the saved session and its receipt. */
+export function settleFailedRestore(address: string, status: string): "drop" | "keep" {
+  const verdict = renewalRestoreVerdict(status);
+  if (verdict === "drop") clearPersistedSession(address);
+  return verdict;
+}
+
 export interface RenewalRestore {
   address: string;
   leaseAuthorization: string;
@@ -161,6 +184,11 @@ export async function renewalRestoreFor(
   if (candidate.status !== "renewal-candidate" && candidate.status !== "loaded") return null;
   const leaseAuthorization = await verifiedRenewalLease(receipt, candidate.data);
   if (!leaseAuthorization) return null;
+  // A lease past its own end can renew nothing: drop its receipt, and the plain restore decides.
+  if (Date.parse(parseApprovalRenewal(receipt).receipt.leaseExpiresAt) <= Date.now()) {
+    clearRenewalReceipt(address);
+    return null;
+  }
   return {
     address,
     leaseAuthorization,

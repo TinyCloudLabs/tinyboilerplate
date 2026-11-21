@@ -26,6 +26,7 @@ import {
   openKeyRenewalClient,
   openKeySignOutNotice,
   renewalRestoreFor,
+  isTransientRestoreError,
   settleFailedRestore,
   renewalVerifyProof,
   requestNonce,
@@ -157,7 +158,7 @@ export function App() {
           if (leased.status !== "restored" || !leased.tcw) {
             // An answer that the saved session is gone or expired ends it. Anything else (offline, node down,
             // storage that cannot be read) keeps the session and its lease receipt for the next attempt.
-            settleFailedRestore(renewal.address, leased.status);
+            settleFailedRestore(renewal.address, leased.status, leased.error);
             sessionStore.clear();
             setState("unauthenticated");
             return;
@@ -179,8 +180,9 @@ export function App() {
             sessionStore.setSession(verified.token, verified.expiresIn, renewal.address);
           } catch (caught) {
             leased.tcw.cleanup();
-            const status = (caught as { status?: number } | null)?.status;
-            if (status === 401 || status === 403) {
+            // Only a clearly transient failure (network, timeout, 408, 429, 5xx, offline) keeps the saved session
+            // and its receipt for the next load; any other refusal ends them.
+            if (!isTransientRestoreError(caught) && navigator.onLine !== false) {
               clearPersistedSession(renewal.address);
               sessionStore.clear();
               setState("unauthenticated");

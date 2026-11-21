@@ -33,53 +33,79 @@ function candidateStorage(record: unknown) {
 }
 
 describe("a failed restore through the lease", () => {
-  test("keeps the receipt on a transient failure: network, timeout, 5xx, unreadable storage", async () => {
-    const { owner, receipt } = await fixture();
-    for (const failure of [
-      new TypeError("fetch failed"),
-      Object.assign(new Error("timed out"), { name: "TimeoutError" }),
-      Object.assign(new Error("HTTP 503"), { status: 503 }),
-    ]) {
-      saveRenewalReceipt(owner.address, receipt);
-      const restore = spyOn(TinyCloudWeb.prototype, "restoreSessionWithRenewal").mockRejectedValue(
-        failure,
-      );
-      try {
-        const result = await restoreTinyCloudWebSession(owner.address, {
-          renewalLeaseAuthorization: "lease-token",
-        });
-        expect(result.status).toBe("restore-failed");
-        expect(settleFailedRestore(owner.address, result.status)).toBe("keep");
-        expect(loadRenewalReceipt(owner.address)).toEqual(receipt);
-      } finally {
-        restore.mockRestore();
-      }
-    }
-    saveRenewalReceipt(owner.address, receipt);
-    expect(settleFailedRestore(owner.address, "storage-unavailable")).toBe("keep");
-    expect(loadRenewalReceipt(owner.address)).toEqual(receipt);
-  });
-
-  test("keeps the receipt on an error that is not recognisably an answer", async () => {
-    const { owner, receipt } = await fixture();
-    saveRenewalReceipt(owner.address, receipt);
+  async function restoreFailing(failure: unknown) {
     const restore = spyOn(TinyCloudWeb.prototype, "restoreSessionWithRenewal").mockRejectedValue(
-      new Error("something unexpected"),
+      failure,
     );
     try {
-      const result = await restoreTinyCloudWebSession(owner.address, {
+      return await restoreTinyCloudWebSession("0xabc", {
         renewalLeaseAuthorization: "lease-token",
       });
-      expect(settleFailedRestore(owner.address, result.status)).toBe("keep");
-      expect(loadRenewalReceipt(owner.address)).toEqual(receipt);
     } finally {
       restore.mockRestore();
     }
+  }
+
+  test("keeps the receipt on a clearly transient failure: network, wrapped network, timeout, 408, 429, 5xx", async () => {
+    const { owner, receipt } = await fixture();
+    for (const failure of [
+      new TypeError("fetch failed"),
+      Object.assign(new Error("restore failed"), { cause: new TypeError("Failed to fetch") }),
+      Object.assign(new Error("timed out"), { name: "TimeoutError" }),
+      Object.assign(new Error("aborted"), { name: "AbortError" }),
+      Object.assign(new Error("HTTP 408"), { status: 408 }),
+      Object.assign(new Error("slow down"), { status: 429 }),
+      Object.assign(new Error("bad gateway"), { status: 503 }),
+    ]) {
+      saveRenewalReceipt(owner.address, receipt);
+      const result = await restoreFailing(failure);
+      expect(result.status).toBe("restore-failed");
+      expect(settleFailedRestore(owner.address, result.status, result.error, false)).toBe("keep");
+      expect(loadRenewalReceipt(owner.address)).toEqual(receipt);
+    }
   });
 
-  test("drops the receipt on an expired, corrupt, stale or missing answer", async () => {
+  test("keeps the receipt while the device is offline, whatever the error", async () => {
     const { owner, receipt } = await fixture();
-    for (const status of ["expired", "corrupt", "stale", "missing"]) {
+    saveRenewalReceipt(owner.address, receipt);
+    expect(settleFailedRestore(owner.address, "restore-failed", new Error("odd"), true)).toBe(
+      "keep",
+    );
+    expect(loadRenewalReceipt(owner.address)).toEqual(receipt);
+  });
+
+  test("drops the receipt on a 403 and keeps it on a 503", async () => {
+    const { owner, receipt } = await fixture();
+    saveRenewalReceipt(owner.address, receipt);
+    const unavailable = await restoreFailing(Object.assign(new Error("HTTP 503"), { status: 503 }));
+    expect(settleFailedRestore(owner.address, unavailable.status, unavailable.error, false)).toBe(
+      "keep",
+    );
+    expect(loadRenewalReceipt(owner.address)).toEqual(receipt);
+    const refused = await restoreFailing(Object.assign(new Error("HTTP 403"), { status: 403 }));
+    expect(settleFailedRestore(owner.address, refused.status, refused.error, false)).toBe("drop");
+    expect(loadRenewalReceipt(owner.address)).toBeNull();
+  });
+
+  test("drops the receipt on an ended lease code, a 4xx and an error that is not recognisably transient", async () => {
+    const { owner, receipt } = await fixture();
+    for (const failure of [
+      Object.assign(new Error("lease ended"), { code: "RENEWAL_LEASE_EXPIRED" }),
+      Object.assign(new Error("original ended"), { code: "RENEWAL_LEASE_ORIGINAL_EXPIRED" }),
+      Object.assign(new Error("authority"), { code: "RENEWAL_AUTHORITY_INACTIVE" }),
+      Object.assign(new Error("not found"), { status: 404 }),
+      new Error("something unexpected"),
+    ]) {
+      saveRenewalReceipt(owner.address, receipt);
+      const result = await restoreFailing(failure);
+      expect(settleFailedRestore(owner.address, result.status, result.error, false)).toBe("drop");
+      expect(loadRenewalReceipt(owner.address)).toBeNull();
+    }
+  });
+
+  test("drops the receipt on every status that is a verdict: expired, corrupt, stale, missing, storage-unavailable", async () => {
+    const { owner, receipt } = await fixture();
+    for (const status of ["expired", "corrupt", "stale", "missing", "storage-unavailable"]) {
       saveRenewalReceipt(owner.address, receipt);
       expect(renewalRestoreVerdict(status)).toBe("drop");
       expect(settleFailedRestore(owner.address, status)).toBe("drop");

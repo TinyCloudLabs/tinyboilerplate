@@ -135,20 +135,63 @@ export async function admitSignInRenewal(input: {
   }
 }
 
+/** What a failed fetch looks like per engine: Chromium, Firefox, Safari and undici (Node). */
+const NETWORK_FAILURE =
+  /failed to fetch|networkerror|load failed|network request failed|fetch failed|timed? ?out/i;
+
 /**
- * What a failed restore means for the saved session and its renewal receipt. Only an authoritative answer drops them:
- * the saved session is expired, corrupt, stale or missing. A transient failure (network, timeout, 5xx, storage that
- * cannot be read) and any error that is not recognisably an answer keep both, so the next load tries again.
+ * Does this error mean "couldn't reach the server" rather than "the server (or the saved session) said no"?
+ * Network failures, aborts, timeouts and 408, 429 and 5xx answers qualify. Follows `cause` a few links, because SDK
+ * layers wrap the underlying fetch error. Adapted from TinyChat's `isTransientRestoreError`.
  */
-export function renewalRestoreVerdict(status: string): "drop" | "keep" {
-  return status === "expired" || status === "corrupt" || status === "stale" || status === "missing"
-    ? "drop"
-    : "keep";
+export function isTransientRestoreError(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current != null; depth++) {
+    if (typeof current !== "object") {
+      return typeof current === "string" && NETWORK_FAILURE.test(current);
+    }
+    const { name, message, status } = current as {
+      name?: unknown;
+      message?: unknown;
+      status?: unknown;
+    };
+    if (name === "AbortError" || name === "TimeoutError") return true;
+    if (typeof status === "number" && (status >= 500 || status === 408 || status === 429))
+      return true;
+    if (typeof message === "string") {
+      if (NETWORK_FAILURE.test(message)) return true;
+      if (/\bHTTP (5\d\d|408|429)\b/.test(message)) return true;
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+/**
+ * What a failed restore means for the saved session and its renewal receipt. Only a clearly transient failure keeps
+ * them: a network failure, an abort or timeout, a 408, 429 or 5xx answer, or a device that is offline (it cannot tell
+ * the two apart, and waiting costs one more restore while clearing costs a sign-in). Every other failure drops
+ * them: an expired, corrupt, stale or missing session, a refused or ended lease, and any error that is not
+ * recognisably transient. Only `restore-failed` wraps something thrown while rebuilding the session; every other
+ * status is a verdict read from the saved session itself.
+ */
+export function renewalRestoreVerdict(
+  status: string,
+  error?: unknown,
+  offline = typeof navigator !== "undefined" && navigator.onLine === false,
+): "drop" | "keep" {
+  if (status !== "restore-failed") return "drop";
+  return offline || isTransientRestoreError(error) ? "keep" : "drop";
 }
 
 /** Acts on a failed restore of `address`: an authoritative answer clears the saved session and its receipt. */
-export function settleFailedRestore(address: string, status: string): "drop" | "keep" {
-  const verdict = renewalRestoreVerdict(status);
+export function settleFailedRestore(
+  address: string,
+  status: string,
+  error?: unknown,
+  offline?: boolean,
+): "drop" | "keep" {
+  const verdict = renewalRestoreVerdict(status, error, offline);
   if (verdict === "drop") clearPersistedSession(address);
   return verdict;
 }

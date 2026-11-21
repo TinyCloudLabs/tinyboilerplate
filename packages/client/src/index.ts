@@ -15,6 +15,7 @@ export {
   SIGN_IN_RENEWAL_ASK,
   admitSignInRenewal,
   keptLeaseEnd,
+  isTransientRestoreError,
   renewalRestoreFor,
   renewalRestoreVerdict,
   settleFailedRestore,

@@ -225,6 +225,7 @@ export function App() {
         capabilityRequest: composed,
         // The owner reviews the session's permissions in OpenKey. "iframe" keeps the approval
         // in the page, like the passkey step before it, so no popup can be blocked.
+        // This example doesn't renew its sign-in. Apps you ship should: see templates/app-starter/frontend/src/App.tsx in the app starter.
         openkey: { client: openkey, mode: "iframe" },
         sessionExpirationMs: SESSION_EXPIRATION_MS,
       });

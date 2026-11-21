@@ -20,7 +20,8 @@
   "dependencies": {
     "@tinyboilerplate/core": "workspace:*",
     "@tinycloud/sdk-core": "3.13.0",
-    "@tinycloud/share-envelope": "1.6.0"
+    "@tinycloud/share-envelope": "1.6.0",
+    "buffer": "^6.0.3"
   },
   "peerDependencies": {
     "@openkey/sdk": ">=0.12.2",

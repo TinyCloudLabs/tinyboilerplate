@@ -1,3 +1,4 @@
+import "./buffer-global.js";
 import { TinyCloudWeb, BrowserSessionStorage } from "@tinycloud/web-sdk";
 import type {
   ClientSession,
